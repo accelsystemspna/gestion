@@ -1,9 +1,9 @@
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '../lib/AuthContext'
 
-export default function ProtectedRoute({ children }) {
-  const { session, loading } = useAuth()
-  if (loading) {
+export default function ProtectedRoute({ children, soloAdmin = false }) {
+  const { session, profile, loading, profileLoading } = useAuth()
+  if (loading || (session && profileLoading)) {
     return (
       <div style={{ padding: 40, textAlign: 'center', color: '#64748b' }}>
         Cargando...
@@ -11,5 +11,6 @@ export default function ProtectedRoute({ children }) {
     )
   }
   if (!session) return <Navigate to="/login" replace />
+  if (soloAdmin && profile?.rol !== 'admin') return <Navigate to="/ventas" replace />
   return children
 }

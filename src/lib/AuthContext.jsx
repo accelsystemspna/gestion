@@ -7,6 +7,7 @@ export function AuthProvider({ children }) {
   const [session, setSession] = useState(null)
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [profileLoading, setProfileLoading] = useState(false)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -24,12 +25,16 @@ export function AuthProvider({ children }) {
       setProfile(null)
       return
     }
+    setProfileLoading(true)
     supabase
       .from('profiles')
       .select('*')
       .eq('id', session.user.id)
       .maybeSingle()
-      .then(({ data }) => setProfile(data))
+      .then(({ data }) => {
+        setProfile(data)
+        setProfileLoading(false)
+      })
   }, [session])
 
   const signIn = (email, password) =>
@@ -46,7 +51,7 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider
-      value={{ session, user: session?.user ?? null, profile, loading, signIn, signUp, signOut }}
+      value={{ session, user: session?.user ?? null, profile, loading, profileLoading, signIn, signUp, signOut }}
     >
       {children}
     </AuthContext.Provider>

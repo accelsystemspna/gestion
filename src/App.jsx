@@ -34,7 +34,7 @@ export default function App() {
             <Route path="/clientes" element={<Clientes />} />
             <Route path="/ventas" element={<Ventas />} />
             <Route path="/facturas" element={<Facturas />} />
-            <Route path="/configuracion" element={<Configuracion />} />
+            <Route path="/configuracion" element={<ProtectedRoute soloAdmin><Configuracion /></ProtectedRoute>} />
           </Route>
           <Route path="*" element={<Navigate to="/ventas" replace />} />
         </Routes>

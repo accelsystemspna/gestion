@@ -9,11 +9,12 @@ const navItems = [
   { to: '/clientes',      label: 'Clientes',       icon: '👥' },
   { to: '/facturas',      label: 'Facturas',       icon: '🏛️' },
   { to: '/dashboard',     label: 'Dashboard',      icon: '📊' },
-  { to: '/configuracion', label: 'Configuración',  icon: '⚙️' },
+  { to: '/configuracion', label: 'Configuración',  icon: '⚙️', soloAdmin: true },
 ]
 
 export default function Layout() {
   const { user, profile, signOut } = useAuth()
+  const esAdmin = profile?.rol === 'admin'
   const navigate = useNavigate()
 
   const handleLogout = async () => {
@@ -43,7 +44,7 @@ export default function Layout() {
         </div>
 
         <nav style={{ flex: 1, padding: '12px 8px', display: 'flex', flexDirection: 'column', gap: 2 }}>
-          {navItems.map((item) => (
+          {navItems.filter(item => !item.soloAdmin || esAdmin).map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
