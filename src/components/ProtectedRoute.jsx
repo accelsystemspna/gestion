@@ -11,6 +11,6 @@ export default function ProtectedRoute({ children, soloAdmin = false }) {
     )
   }
   if (!session) return <Navigate to="/login" replace />
-  if (soloAdmin && profile?.rol !== 'admin') return <Navigate to="/ventas" replace />
+  if (soloAdmin && profile !== null && profile?.rol !== 'admin') return <Navigate to="/ventas" replace />
   return children
 }

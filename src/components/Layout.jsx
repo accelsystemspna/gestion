@@ -14,7 +14,7 @@ const navItems = [
 
 export default function Layout() {
   const { user, profile, signOut } = useAuth()
-  const esAdmin = profile?.rol === 'admin'
+  const esAdmin = !profile || profile?.rol === 'admin'
   const navigate = useNavigate()
 
   const handleLogout = async () => {
