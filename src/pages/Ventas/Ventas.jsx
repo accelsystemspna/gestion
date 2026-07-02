@@ -143,7 +143,7 @@ export default function Ventas() {
   // ── Carga inicial ────────────────────────────────────────────────────────
   useEffect(() => {
     Promise.all([
-      supabase.from('productos').select('id, nombre, sku, costo_base, imagen_url, categoria_id').order('nombre'),
+      supabase.from('productos').select('id, nombre, sku, costo_base, imagen_url, categoria_id').eq('activo', true).order('nombre'),
       supabase.from('categorias').select('id, nombre').order('nombre'),
       supabase.from('listas_precios').select('*').order('created_at'),
       supabase.from('clientes').select('*').order('nombre'),
@@ -279,8 +279,8 @@ export default function Ventas() {
 
     const sortBySku = (a, b) => (a.sku ?? '').localeCompare(b.sku ?? '', undefined, { numeric: true, sensitivity: 'base' })
 
-    if (catFiltro) {
-      // Categoría activa: lista plana ordenada por SKU, sin encabezado
+    if (catFiltro && !q) {
+      // Categoría activa sin búsqueda: lista plana ordenada por SKU, sin encabezado
       const filtered = list.filter(p => String(p.categoria_id) === catFiltro).sort(sortBySku)
       return [{ categoria: categorias.find(c => String(c.id) === catFiltro) ?? null, productos: filtered, showHeader: false }]
     }
