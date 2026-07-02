@@ -12,3 +12,10 @@ createRoot(document.getElementById('root')).render(
     <App />
   </StrictMode>,
 )
+
+if ('serviceWorker' in navigator) {
+  import('virtual:pwa-register').then(({ registerSW }) => {
+    // autoUpdate: detecta versión nueva y recarga sola, sin pedirle nada al usuario
+    registerSW({ immediate: true })
+  })
+}
