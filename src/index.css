@@ -276,3 +276,37 @@ h1, h2, h3, h4 {
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+
+/* ── Responsive ─────────────────────────────────────────── */
+@media (max-width: 768px) {
+  /* Mostrar top bar, ocultar sidebar fijo */
+  .mobile-topbar  { display: flex !important; }
+  .layout-sidebar { display: none !important; }
+
+  /* Main con padding reducido */
+  .layout-main { padding: 16px !important; }
+
+  /* Tablas: scroll horizontal */
+  .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .table { min-width: 540px; }
+
+  /* Cards en columna */
+  .card-grid { grid-template-columns: 1fr !important; }
+
+  /* Modales full-screen */
+  .modal {
+    margin: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-height: 100dvh;
+    border-radius: 0 !important;
+  }
+
+  /* Formularios: columna única */
+  .form-grid-2 { grid-template-columns: 1fr !important; }
+  .form-grid-3 { grid-template-columns: 1fr !important; }
+
+  /* Botones de acción full-width en mobile */
+  .btn-group-mobile { flex-direction: column; }
+  .btn-group-mobile .btn { width: 100%; justify-content: center; }
+}
