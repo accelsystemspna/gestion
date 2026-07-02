@@ -319,7 +319,7 @@ h1, h2, h3, h4 {
 
   /* POS top bar: compacto en mobile */
   .pos-btn-historial { display: none !important; }
-  .pos-cliente-row { width: 100%; min-width: 0 !important; order: -1; }
+  .pos-cliente-row { width: 100%; min-width: 0 !important; }
 
   /* ── Presupuesto ─────────────────────────────── */
   .layout-main:has(.presupuesto-root) {
