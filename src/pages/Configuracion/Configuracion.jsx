@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useAuth } from '../../lib/AuthContext'
 import Branding from './Branding'
 import ListasPrecios from './ListasPrecios'
 import Usuarios from './Usuarios'
@@ -15,13 +16,15 @@ const TABS = [
   { id: 'rubros',        label: '🗂 Rubros' },
   { id: 'categorias',    label: 'Categorías' },
   { id: 'integraciones', label: '🔗 Integraciones' },
-  { id: 'usuarios',      label: 'Usuarios y roles' },
-  { id: 'backup',        label: '💾 Backup' },
-  { id: 'arca',          label: '🏛️ ARCA / Facturación' },
   { id: 'apariencia',    label: '🌙 Apariencia' },
+  { id: 'usuarios',      label: 'Usuarios y roles',      soloMaster: true },
+  { id: 'backup',        label: '💾 Backup',             soloMaster: true },
+  { id: 'arca',          label: '🏛️ ARCA / Facturación', soloMaster: true },
 ]
 
 export default function Configuracion() {
+  const { isMaster } = useAuth()
+  const tabs = TABS.filter(t => !t.soloMaster || isMaster)
   const [tab, setTab] = useState('branding')
 
   return (
@@ -32,7 +35,7 @@ export default function Configuracion() {
       </div>
 
       <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', marginBottom: 24 }}>
-        {TABS.map((t) => (
+        {tabs.map((t) => (
           <button
             key={t.id}
             onClick={() => setTab(t.id)}

@@ -95,7 +95,8 @@ export default function Usuarios() {
           <div>
             <label style={{ fontSize: 12, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>Rol</label>
             <select className="select" value={form.rol} onChange={e => set('rol', e.target.value)}>
-              <option value="admin">Admin — acceso total</option>
+              <option value="master">Master — control total</option>
+              <option value="admin">Admin — sin ARCA ni usuarios</option>
               <option value="vendedor">Vendedor — solo ventas</option>
             </select>
           </div>
@@ -154,6 +155,7 @@ export default function Usuarios() {
                         value={u.rol}
                         onChange={(e) => cambiarRol(u.id, e.target.value)}
                       >
+                        <option value="master">Master</option>
                         <option value="admin">Admin</option>
                         <option value="vendedor">Vendedor</option>
                       </select>

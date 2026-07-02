@@ -2,19 +2,18 @@ import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { useAuth } from '../lib/AuthContext'
 
 const navItems = [
-  { to: '/ventas',        label: 'Ventas',        icon: '🛒' },
-  { to: '/productos',     label: 'Productos',      icon: '📦' },
-  { to: '/materiales',    label: 'Materiales',     icon: '🪵' },
-  { to: '/presupuesto',   label: 'Presupuestos',   icon: '📄' },
-  { to: '/clientes',      label: 'Clientes',       icon: '👥' },
-  { to: '/facturas',      label: 'Facturas',       icon: '🏛️' },
-  { to: '/dashboard',     label: 'Dashboard',      icon: '📊' },
-  { to: '/configuracion', label: 'Configuración',  icon: '⚙️', soloAdmin: true },
+  { to: '/ventas',        label: 'Ventas',       icon: '🛒' },
+  { to: '/presupuesto',   label: 'Presupuestos', icon: '📄' },
+  { to: '/clientes',      label: 'Clientes',     icon: '👥' },
+  { to: '/productos',     label: 'Productos',    icon: '📦', minAdmin: true },
+  { to: '/materiales',    label: 'Materiales',   icon: '🪵', minAdmin: true },
+  { to: '/facturas',      label: 'Facturas',     icon: '🏛️', minAdmin: true },
+  { to: '/dashboard',     label: 'Dashboard',    icon: '📊', minAdmin: true },
+  { to: '/configuracion', label: 'Configuración',icon: '⚙️', minAdmin: true },
 ]
 
 export default function Layout() {
-  const { user, profile, signOut } = useAuth()
-  const esAdmin = !profile || profile?.rol === 'admin'
+  const { user, profile, signOut, isMaster, isAdmin } = useAuth()
   const navigate = useNavigate()
 
   const handleLogout = async () => {
@@ -44,7 +43,7 @@ export default function Layout() {
         </div>
 
         <nav style={{ flex: 1, padding: '12px 8px', display: 'flex', flexDirection: 'column', gap: 2 }}>
-          {navItems.filter(item => !item.soloAdmin || esAdmin).map((item) => (
+          {navItems.filter(item => !item.minAdmin || isAdmin).map((item) => (
             <NavLink
               key={item.to}
               to={item.to}

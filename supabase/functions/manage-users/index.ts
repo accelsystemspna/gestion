@@ -25,7 +25,7 @@ serve(async (req) => {
     if (authErr || !user) return json({ error: 'Token inválido' }, 401)
 
     const { data: caller } = await admin.from('profiles').select('rol').eq('id', user.id).maybeSingle()
-    if (caller !== null && caller?.rol !== 'admin') return json({ error: 'Solo admins pueden gestionar usuarios' }, 403)
+    if (caller !== null && caller?.rol !== 'master') return json({ error: 'Solo el master puede gestionar usuarios' }, 403)
 
     const body = await req.json()
     const { action } = body
