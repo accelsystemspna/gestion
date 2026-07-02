@@ -23,8 +23,8 @@ export default defineConfig({
         name: 'Gestión — Carpintería · Melamina · Impresión 3D',
         short_name: 'Gestión',
         description: 'Panel de gestión: ventas, presupuestos, clientes y productos',
-        theme_color: '#0ea5e9',
-        background_color: '#1e293b',
+        theme_color: '#241C5C',
+        background_color: '#F0ECE2',
         display: 'standalone',
         start_url: '/ventas',
         icons: [
