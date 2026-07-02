@@ -96,9 +96,6 @@ export default function Presupuesto() {
   const [historial,      setHistorial]      = useState([])
   const [histLoading,    setHistLoading]    = useState(false)
 
-  // Mobile tabs
-  const [mobilePestaña, setMobilePestaña] = useState('datos')
-
   useEffect(() => {
     Promise.all([
       supabase.from('listas_precios').select('*').order('created_at'),
@@ -369,9 +366,9 @@ export default function Presupuesto() {
     <div className="presupuesto-root" style={{ display:'flex', flexDirection:'column', height:'calc(100vh - 60px)', overflow:'hidden' }}>
 
       {/* ── Barra superior ─────────────────────────────────────────────── */}
-      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'10px 20px', borderBottom:'1px solid var(--border)', flexShrink:0, background:'var(--surface)' }}>
+      <div className="pres-topbar" style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'10px 20px', borderBottom:'1px solid var(--border)', flexShrink:0, background:'var(--surface)' }}>
         <h1 style={{ fontSize:20, fontWeight:700, margin:0 }}>Nuevo presupuesto</h1>
-        <div style={{ display:'flex', gap:8 }}>
+        <div className="pres-topbar-actions" style={{ display:'flex', gap:8 }}>
           <button className="btn" onClick={abrirHistorial}>
             📋 Historial
           </button>
@@ -397,22 +394,12 @@ export default function Presupuesto() {
         </div>
       )}
 
-      {/* ── Tab bar mobile ──────────────────────────────────────────────── */}
-      <div className="pres-tab-bar" style={{ display:'none', borderBottom:'1px solid var(--border)', flexShrink:0 }}>
-        {[['datos','📋 Datos'],['items','🪵 Ítems'],['resumen','💰 Resumen']].map(([id, label]) => (
-          <button key={id} onClick={() => setMobilePestaña(id)}
-            className={`pres-tab-btn${mobilePestaña === id ? ' activo' : ''}`}>
-            {label}
-          </button>
-        ))}
-      </div>
-
-      {/* ── 3 columnas ──────────────────────────────────────────────────── */}
+      {/* ── 3 columnas (desktop) / flujo vertical (mobile) ────────────────── */}
       <div className="pres-main" style={{ flex:1, minHeight:0, display:'grid', gridTemplateColumns:'0.7fr 1.3fr 0.65fr', overflow:'hidden' }}>
 
         {/* ══ COL 1 — Datos del presupuesto ══════════════════════════════ */}
-        <div className={`pres-col-datos${mobilePestaña === 'datos' ? ' activo' : ''}`} style={{ ...colStyle, borderRight:'1px solid var(--border)' }}>
-          {secLabel('Datos del presupuesto')}
+        <div className="pres-col-datos" style={{ ...colStyle, borderRight:'1px solid var(--border)' }}>
+          {secLabel('1. Datos del presupuesto')}
 
           <F label="Cliente *">
             <div style={{ display:'flex', flexDirection:'column', gap:0 }}>
@@ -522,8 +509,8 @@ export default function Presupuesto() {
         </div>
 
         {/* ══ COL 2 — Materiales, Tarifas y Catálogo ═════════════════════ */}
-        <div className={`pres-col-items${mobilePestaña === 'items' ? ' activo' : ''}`} style={{ ...colStyle, borderRight:'1px solid var(--border)' }}>
-          {secLabel('Materiales y tarifas')}
+        <div className="pres-col-items" style={{ ...colStyle, borderRight:'1px solid var(--border)' }}>
+          {secLabel('2. Materiales y tarifas')}
 
           {/* Piezas */}
           <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
@@ -737,8 +724,8 @@ export default function Presupuesto() {
         </div>
 
         {/* ══ COL 3 — Resumen ════════════════════════════════════════════ */}
-        <div className={`pres-col-resumen${mobilePestaña === 'resumen' ? ' activo' : ''}`} style={{ ...colStyle, background:'var(--bg-muted)' }}>
-          {secLabel('Resumen de costos')}
+        <div className="pres-col-resumen" style={{ ...colStyle, background:'var(--bg-muted)' }}>
+          {secLabel('3. Resumen de costos')}
 
           {/* Desglose línea a línea */}
           {desglose.lines.length === 0 ? (

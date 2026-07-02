@@ -350,48 +350,39 @@ h1, h2, h3, h4 {
     flex: 0 0 auto !important;
   }
 
-  /* ── Presupuesto ─────────────────────────────── */
-  .layout-main:has(.presupuesto-root) {
-    padding: 0 !important;
-    overflow: hidden !important;
-  }
+  /* ── Presupuesto: flujo vertical continuo (sin tabs) ───────────── */
   .presupuesto-root {
-    height: calc(100dvh - 56px) !important;
+    height: auto !important;
+    overflow: visible !important;
   }
-  .pres-tab-bar {
+  .pres-topbar {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 10px !important;
+  }
+  .pres-topbar-actions {
     display: flex !important;
-    background: var(--bg-card);
-    border-bottom: 1px solid var(--border);
-    flex-shrink: 0;
+    gap: 6px !important;
   }
-  .pres-tab-btn {
+  .pres-topbar-actions .btn {
     flex: 1;
-    padding: 10px 8px;
-    border: none;
-    background: none;
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--text-muted);
-    cursor: pointer;
-    border-bottom: 2px solid transparent;
-    transition: color 0.15s, border-color 0.15s;
-  }
-  .pres-tab-btn.activo {
-    color: var(--primary);
-    border-bottom-color: var(--primary);
+    font-size: 12px !important;
+    padding: 8px 4px !important;
+    white-space: nowrap;
   }
   .pres-main {
     grid-template-columns: 1fr !important;
+    height: auto !important;
+    overflow: visible !important;
   }
   .pres-col-datos,
   .pres-col-items,
   .pres-col-resumen {
-    display: none !important;
-  }
-  .pres-col-datos.activo,
-  .pres-col-items.activo,
-  .pres-col-resumen.activo {
     display: flex !important;
+    height: auto !important;
+    overflow: visible !important;
+    border-right: none !important;
+    border-bottom: 8px solid var(--bg);
   }
 
   /* Tab bar: mostrar */
