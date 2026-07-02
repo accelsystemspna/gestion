@@ -37,15 +37,17 @@ export function AuthProvider({ children }) {
       })
   }, [session])
 
-  const signIn = (email, password) =>
-    supabase.auth.signInWithPassword({ email, password })
+  const toEmail = (usuario) => {
+    if (usuario.includes('@')) return usuario
+    return usuario.toLowerCase().trim()
+      .normalize('NFD').replace(/[̀-ͯ]/g, '')
+      .replace(/\s+/g, '.')
+      .replace(/[^a-z0-9.]/g, '')
+      + '@gestion.internal'
+  }
 
-  const signUp = (email, password, nombre) =>
-    supabase.auth.signUp({
-      email,
-      password,
-      options: { data: { nombre } },
-    })
+  const signIn = (usuario, password) =>
+    supabase.auth.signInWithPassword({ email: toEmail(usuario), password })
 
   const signOut = () => supabase.auth.signOut()
 

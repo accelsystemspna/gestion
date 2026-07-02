@@ -24,16 +24,18 @@ serve(async (req) => {
     const { data: { user }, error: authErr } = await admin.auth.getUser(token)
     if (authErr || !user) return json({ error: 'Token inválido' }, 401)
 
-    const { data: caller } = await admin.from('profiles').select('rol').eq('id', user.id).single()
-    if (caller?.rol !== 'admin') return json({ error: 'Solo admins pueden gestionar usuarios' }, 403)
+    const { data: caller } = await admin.from('profiles').select('rol').eq('id', user.id).maybeSingle()
+    if (caller !== null && caller?.rol !== 'admin') return json({ error: 'Solo admins pueden gestionar usuarios' }, 403)
 
     const body = await req.json()
     const { action } = body
 
     // ── Crear usuario ────────────────────────────────────────────────
     if (action === 'create') {
-      const { email, password, nombre, rol } = body
-      if (!email || !password || !nombre) return json({ error: 'Faltan campos' }, 400)
+      const { password, nombre, rol } = body
+      if (!password || !nombre) return json({ error: 'Faltan campos' }, 400)
+
+      const email = toEmail(nombre)
 
       const { data: created, error: createErr } = await admin.auth.admin.createUser({
         email,
@@ -79,6 +81,14 @@ serve(async (req) => {
     return json({ error: e.message }, 500)
   }
 })
+
+function toEmail(nombre: string): string {
+  return nombre.toLowerCase().trim()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/\s+/g, '.')
+    .replace(/[^a-z0-9.]/g, '')
+    + '@gestion.internal'
+}
 
 function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {

@@ -20,7 +20,7 @@ async function callEdge(action, body = {}) {
   return data
 }
 
-const blank = { nombre: '', email: '', password: '', rol: 'vendedor' }
+const blank = { nombre: '', password: '', rol: 'vendedor' }
 
 export default function Usuarios() {
   const { user } = useAuth()
@@ -89,16 +89,8 @@ export default function Usuarios() {
         <h3 style={{ margin: '0 0 16px', fontSize: 15, color: 'var(--text)' }}>Nuevo usuario</h3>
         <form onSubmit={crearUsuario} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
           <div>
-            <label style={{ fontSize: 12, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>Nombre</label>
+            <label style={{ fontSize: 12, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>Nombre (será su usuario para entrar)</label>
             <input className="input" value={form.nombre} onChange={e => set('nombre', e.target.value)} required placeholder="Ej. María" />
-          </div>
-          <div>
-            <label style={{ fontSize: 12, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>Email</label>
-            <input className="input" type="email" value={form.email} onChange={e => set('email', e.target.value)} required placeholder="maria@empresa.com" />
-          </div>
-          <div>
-            <label style={{ fontSize: 12, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>Contraseña</label>
-            <input className="input" type="password" value={form.password} onChange={e => set('password', e.target.value)} required minLength={6} placeholder="Mínimo 6 caracteres" />
           </div>
           <div>
             <label style={{ fontSize: 12, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>Rol</label>
@@ -106,6 +98,10 @@ export default function Usuarios() {
               <option value="admin">Admin — acceso total</option>
               <option value="vendedor">Vendedor — solo ventas</option>
             </select>
+          </div>
+          <div style={{ gridColumn: '1/-1' }}>
+            <label style={{ fontSize: 12, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>Contraseña</label>
+            <input className="input" type="password" value={form.password} onChange={e => set('password', e.target.value)} required minLength={6} placeholder="Mínimo 6 caracteres" />
           </div>
 
           {error && (
