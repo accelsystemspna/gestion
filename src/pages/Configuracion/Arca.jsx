@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
+import { useAuth } from '../../lib/AuthContext'
 
 // Definido FUERA del componente para evitar pérdida de foco en cada render
 function Input({ label, value, onChange, type = 'text', placeholder }) {
@@ -13,6 +14,7 @@ function Input({ label, value, onChange, type = 'text', placeholder }) {
 }
 
 export default function Arca() {
+  const { user } = useAuth()
   const [form, setForm]       = useState({
     cuit: '', punto_venta: 3, razon_social: '', concepto: 1,
     modo: 'homologacion', cert_pem: '', key_pem: '',
@@ -26,9 +28,10 @@ export default function Arca() {
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
 
   useEffect(() => {
-    supabase.from('arca_config').select('*').eq('id', 1).maybeSingle()
+    if (!user) return
+    supabase.from('arca_config').select('*').eq('user_id', user.id).maybeSingle()
       .then(({ data }) => { if (data) setForm(f => ({ ...f, ...data })) })
-  }, [])
+  }, [user])
 
   const handleSave = async () => {
     if (!form.cuit)        return alert('Ingresá el CUIT')
@@ -36,9 +39,10 @@ export default function Arca() {
     if (!form.cert_pem)    return alert('Pegá el certificado PEM')
     if (!form.key_pem)     return alert('Pegá la clave privada PEM')
     setSaving(true)
+    const { id: _id, ...rest } = form
     const { error } = await supabase.from('arca_config').upsert({
-      id: 1, ...form, updated_at: new Date().toISOString(),
-    })
+      ...rest, user_id: user.id, updated_at: new Date().toISOString(),
+    }, { onConflict: 'user_id' })
     setSaving(false)
     if (error) return alert('Error al guardar: ' + error.message)
     setSaved(true)

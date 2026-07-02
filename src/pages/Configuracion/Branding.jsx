@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
+import { useAuth } from '../../lib/AuthContext'
 
 const FIELDS = [
   { key: 'nombre', label: 'Nombre del emprendimiento' },
@@ -20,15 +21,17 @@ const SOCIAL = [
 ]
 
 export default function Branding() {
+  const { user } = useAuth()
   const [data, setData] = useState({})
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [msg, setMsg] = useState(null)
 
   useEffect(() => {
-    supabase.from('branding').select('*').eq('id', 1).maybeSingle()
+    if (!user) return
+    supabase.from('branding').select('*').eq('user_id', user.id).maybeSingle()
       .then(({ data }) => setData(data || {}))
-  }, [])
+  }, [user])
 
   const set = (k, v) => setData((d) => ({ ...d, [k]: v }))
 
@@ -54,8 +57,9 @@ export default function Branding() {
   const handleSave = async () => {
     setSaving(true)
     setMsg(null)
-    const payload = { ...data, id: 1, updated_at: new Date().toISOString() }
-    const { error } = await supabase.from('branding').upsert(payload)
+    const { id: _id, ...rest } = data
+    const payload = { ...rest, user_id: user.id, updated_at: new Date().toISOString() }
+    const { error } = await supabase.from('branding').upsert(payload, { onConflict: 'user_id' })
     setSaving(false)
     setMsg(error ? { type: 'error', text: error.message } : { type: 'ok', text: 'Guardado correctamente' })
   }
