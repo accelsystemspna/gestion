@@ -156,7 +156,7 @@ export default function Productos() {
           <h1 style={{ fontSize: 24, marginBottom: 4 }}>Productos</h1>
           <p style={{ color: 'var(--text-muted)' }}>Catálogo con cálculo de costos automático</p>
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <button className="btn btn-primary" onClick={() => { setFormKey(k => k + 1); setEditing({}) }}>+ Nuevo producto</button>
           <button
             className="btn"

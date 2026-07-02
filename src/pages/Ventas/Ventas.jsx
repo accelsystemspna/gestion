@@ -73,6 +73,7 @@ const tabBtn = (active) => ({
 // ════════════════════════════════════════════════════════════════════════════
 export default function Ventas() {
   const { orgId } = useAuth()
+  const [mobilePestaña, setMobilePestaña] = useState('productos')
 
   // ── Datos maestros ───────────────────────────────────────────────────────
   const [productos,  setProductos]  = useState([])
@@ -586,7 +587,7 @@ export default function Ventas() {
 
   // ════════════════════════════════════════════════════════════════════════
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 60px)', overflow: 'hidden' }}>
+    <div className="pos-root" style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
       {/* ══════════════════════════════════════════════════════════
           BARRA SUPERIOR
@@ -600,7 +601,7 @@ export default function Ventas() {
         />
 
         {/* Búsqueda / tarjeta de cliente */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1, minWidth: 220 }}>
+        <div className="pos-cliente-row" style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1, minWidth: 220 }}>
           <div style={{ position: 'relative', flex: 1 }}>
             {cliente ? (
               /* ── Cliente seleccionado ── */
@@ -731,6 +732,7 @@ export default function Ventas() {
 
         {/* Historial completo */}
         <button onClick={() => setShowHistorialCompleto(true)}
+          className="pos-btn-historial"
           style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 13px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--surface)', cursor: 'pointer', fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', flexShrink: 0 }}>
           📋 Historial
         </button>
@@ -739,12 +741,28 @@ export default function Ventas() {
       {/* ══════════════════════════════════════════════════════════
           PANEL PRINCIPAL — Productos (izq) + Carrito (der)
       ══════════════════════════════════════════════════════════ */}
-      <div style={{ flex: 1, minHeight: 0, display: 'grid', gridTemplateColumns: '1.15fr 1fr', overflow: 'hidden' }}>
+      {/* Tab bar mobile */}
+      <div className="pos-tab-bar" style={{ display: 'none', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
+        <button
+          onClick={() => setMobilePestaña('productos')}
+          className={`pos-tab-btn${mobilePestaña === 'productos' ? ' activo' : ''}`}
+        >
+          📦 Productos
+        </button>
+        <button
+          onClick={() => setMobilePestaña('carrito')}
+          className={`pos-tab-btn${mobilePestaña === 'carrito' ? ' activo' : ''}`}
+        >
+          🛒 Carrito {items.length > 0 && `(${items.length})`}
+        </button>
+      </div>
+
+      <div className="pos-main" style={{ flex: 1, minHeight: 0, display: 'grid', gridTemplateColumns: '1.15fr 1fr', overflow: 'hidden' }}>
 
         {/* ──────────────────────────────────────────────────────
             IZQUIERDA — Grilla de productos
         ────────────────────────────────────────────────────── */}
-        <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', borderRight: '1px solid var(--border)' }}>
+        <div className={`pos-panel-productos${mobilePestaña === 'productos' ? ' activo' : ''}`} style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', borderRight: '1px solid var(--border)' }}>
 
           {/* Buscador + tabs de categorías */}
           <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--border)', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -861,7 +879,7 @@ export default function Ventas() {
         {/* ──────────────────────────────────────────────────────
             DERECHA — Carrito / Ticket
         ────────────────────────────────────────────────────── */}
-        <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <div className={`pos-panel-carrito${mobilePestaña === 'carrito' ? ' activo' : ''}`} style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
           {/* Aviso: sin lista */}
           {!listaSel && (

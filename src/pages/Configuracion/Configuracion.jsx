@@ -34,7 +34,7 @@ export default function Configuracion() {
         <p style={{ color: 'var(--text-muted)' }}>Branding, listas de precios, usuarios y categorías</p>
       </div>
 
-      <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', marginBottom: 24 }}>
+      <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', marginBottom: 24, overflowX: 'auto', flexShrink: 0 }}>
         {tabs.map((t) => (
           <button
             key={t.id}
@@ -50,6 +50,8 @@ export default function Configuracion() {
               borderBottom: tab === t.id ? '2px solid var(--primary)' : '2px solid transparent',
               marginBottom: -1,
               transition: 'color 0.15s',
+              whiteSpace: 'nowrap',
+              flexShrink: 0,
             }}
           >
             {t.label}

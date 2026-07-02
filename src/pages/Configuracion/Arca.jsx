@@ -122,7 +122,7 @@ export default function Arca() {
           Datos fiscales
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+        <div className="form-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
           <Input label="CUIT (sin guiones)" value={form.cuit}
             onChange={v => set('cuit', v)} placeholder="20370802395" />
           <Input label="Punto de venta" type="number" value={form.punto_venta}

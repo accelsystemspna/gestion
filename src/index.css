@@ -93,11 +93,13 @@ html.dark .badge { background: #1e3a5f; color: #7dd3fc; }
 html, body, #root {
   margin: 0;
   padding: 0;
+  width: 100%;
   height: 100%;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   font-size: 14px;
   color: var(--text);
   background: var(--bg);
+  overflow-x: hidden;
 }
 
 button {
@@ -279,34 +281,124 @@ h1, h2, h3, h4 {
 
 /* ── Responsive ─────────────────────────────────────────── */
 @media (max-width: 768px) {
-  /* Mostrar top bar, ocultar sidebar fijo */
+  /* Layout */
   .mobile-topbar  { display: flex !important; }
   .layout-sidebar { display: none !important; }
-
-  /* Main con padding reducido */
-  .layout-main { padding: 16px !important; }
+  .layout-main    { padding: 12px !important; }
 
   /* Tablas: scroll horizontal */
   .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-  .table { min-width: 540px; }
+  .table      { min-width: 540px; }
 
-  /* Cards en columna */
+  /* Cards */
   .card-grid { grid-template-columns: 1fr !important; }
 
   /* Modales full-screen */
   .modal {
     margin: 0 !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    min-height: 100dvh;
+    width: 100vw !important;
+    max-width: 100vw !important;
+    max-height: 100dvh !important;
     border-radius: 0 !important;
+    overflow-y: auto;
   }
 
   /* Formularios: columna única */
   .form-grid-2 { grid-template-columns: 1fr !important; }
   .form-grid-3 { grid-template-columns: 1fr !important; }
 
-  /* Botones de acción full-width en mobile */
-  .btn-group-mobile { flex-direction: column; }
-  .btn-group-mobile .btn { width: 100%; justify-content: center; }
+  /* ── POS Ventas ────────────────────────────────── */
+  /* Cuando layout-main contiene el POS: sin padding ni scroll externo */
+  .layout-main:has(.pos-root) {
+    padding: 0 !important;
+    overflow: hidden !important;
+  }
+  .pos-root {
+    height: calc(100dvh - 56px) !important;
+  }
+
+  /* POS top bar: compacto en mobile */
+  .pos-btn-historial { display: none !important; }
+  .pos-cliente-row { width: 100%; min-width: 0 !important; order: -1; }
+
+  /* ── Presupuesto ─────────────────────────────── */
+  .layout-main:has(.presupuesto-root) {
+    padding: 0 !important;
+    overflow: hidden !important;
+  }
+  .presupuesto-root {
+    height: calc(100dvh - 56px) !important;
+  }
+  .pres-tab-bar {
+    display: flex !important;
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .pres-tab-btn {
+    flex: 1;
+    padding: 10px 8px;
+    border: none;
+    background: none;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .pres-tab-btn.activo {
+    color: var(--primary);
+    border-bottom-color: var(--primary);
+  }
+  .pres-main {
+    grid-template-columns: 1fr !important;
+  }
+  .pres-col-datos,
+  .pres-col-items,
+  .pres-col-resumen {
+    display: none !important;
+  }
+  .pres-col-datos.activo,
+  .pres-col-items.activo,
+  .pres-col-resumen.activo {
+    display: flex !important;
+  }
+
+  /* Tab bar: mostrar */
+  .pos-tab-bar {
+    display: flex !important;
+    background: var(--bg-card);
+  }
+  .pos-tab-btn {
+    flex: 1;
+    padding: 10px 8px;
+    border: none;
+    background: none;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .pos-tab-btn.activo {
+    color: var(--primary);
+    border-bottom-color: var(--primary);
+  }
+
+  /* Grid: una sola columna */
+  .pos-main {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Paneles: ocultos por defecto, visibles con .activo */
+  .pos-panel-productos,
+  .pos-panel-carrito {
+    display: none !important;
+  }
+  .pos-panel-productos.activo,
+  .pos-panel-carrito.activo {
+    display: flex !important;
+  }
 }
