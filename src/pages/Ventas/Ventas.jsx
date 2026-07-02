@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
+import { useAuth } from '../../lib/AuthContext'
 import { fmtMoney } from '../../lib/format'
 import { calcInsumo, precioVenta } from '../../lib/pricing'
 
@@ -71,6 +72,7 @@ const tabBtn = (active) => ({
 
 // ════════════════════════════════════════════════════════════════════════════
 export default function Ventas() {
+  const { orgId } = useAuth()
 
   // ── Datos maestros ───────────────────────────────────────────────────────
   const [productos,  setProductos]  = useState([])
@@ -459,6 +461,7 @@ export default function Ventas() {
       forma_pago:           formaPago,
       estado,
       notas:                null,
+      org_id:               orgId,
     }
 
     const { data: ventaData, error: ventaErr } = await supabase

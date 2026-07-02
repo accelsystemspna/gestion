@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react'
 import * as XLSX from 'xlsx'
 import { supabase } from '../../lib/supabase'
+import { useAuth } from '../../lib/AuthContext'
 
 // columnas que intentamos mapear automáticamente
 const CAMPO_ALIASES = {
@@ -37,6 +38,7 @@ const inputStyle = {
 }
 
 export default function ImportarModal({ onClose, onImported, etiquetasExistentes = [] }) {
+  const { orgId } = useAuth()
   const fileRef = useRef(null)
   const [step, setStep] = useState('upload') // 'upload' | 'map' | 'preview' | 'done'
   const [sheets, setSheets] = useState([])        // [{ name, rows[] }]
@@ -132,7 +134,7 @@ export default function ImportarModal({ onClose, onImported, etiquetasExistentes
           notas: colMapping.notas ? String(row[colMapping.notas] || '').trim() || null : null,
           etiqueta: etiqueta || null,
         }
-        const { error: err } = await supabase.from('clientes').insert([payload])
+        const { error: err } = await supabase.from('clientes').insert([{ ...payload, org_id: orgId }])
         if (err) skipped++
         else inserted++
       }

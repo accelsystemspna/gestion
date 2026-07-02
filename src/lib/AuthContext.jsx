@@ -53,10 +53,11 @@ export function AuthProvider({ children }) {
 
   const isMaster = !profile || profile?.rol === 'master'
   const isAdmin  = isMaster || profile?.rol === 'admin'
+  const orgId    = profile?.org_id ?? session?.user?.id ?? null
 
   return (
     <AuthContext.Provider
-      value={{ session, user: session?.user ?? null, profile, loading, profileLoading, isMaster, isAdmin, signIn, signOut }}
+      value={{ session, user: session?.user ?? null, profile, loading, profileLoading, isMaster, isAdmin, orgId, signIn, signOut }}
     >
       {children}
     </AuthContext.Provider>

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
+import { useAuth } from '../../lib/AuthContext'
 
 const ESTADOS = ['pagado', 'pendiente', 'cancelado']
 
@@ -28,6 +29,7 @@ const inputStyle = {
 
 // ── modal ─────────────────────────────────────────────────────────────────────
 export default function ClienteForm({ cliente, onClose, onSaved, etiquetas = [] }) {
+  const { orgId } = useAuth()
   const [form, setForm] = useState({
     nombre: '',
     email: '',
@@ -100,7 +102,7 @@ export default function ClienteForm({ cliente, onClose, onSaved, etiquetas = [] 
     if (cliente) {
       ;({ error: err } = await supabase.from('clientes').update(payload).eq('id', cliente.id))
     } else {
-      ;({ error: err } = await supabase.from('clientes').insert([payload]))
+      ;({ error: err } = await supabase.from('clientes').insert([{ ...payload, org_id: orgId }]))
     }
     setSaving(false)
     if (err) { setError(err.message); return }

@@ -5,6 +5,7 @@ import { fmtMoney } from '../../lib/format'
 import { calcInsumo, precioVenta } from '../../lib/pricing'
 import ImageThumb from '../../components/ImageThumb'
 import { exportPresupuestoPDF } from '../../lib/pdf'
+import { useAuth } from '../../lib/AuthContext'
 
 const blankPieza = { material_id: '', ancho: '', alto: '', cantidad: 1, gramos: '', metros: '', incremento: '' }
 const blankTarifaSel = { tarifa_id: '', fab_minutos: '', fab_segundos: '', incremento: '' }
@@ -53,6 +54,7 @@ const subLabel = (txt) => (
 )
 
 export default function Presupuesto() {
+  const { orgId } = useAuth()
   const navigate = useNavigate()
   const [listas, setListas] = useState([])
   const [productos, setProductos] = useState([])
@@ -274,6 +276,7 @@ export default function Presupuesto() {
     const payload = {
       cliente: cliente || null, lista_id: listaSel || null, total: totalGeneral,
       items: [itemsMedida, ...itemsExtras], notas: notas || null,
+      org_id: orgId,
     }
     const { error } = await supabase.from('presupuestos').insert(payload)
     setSaving(false)

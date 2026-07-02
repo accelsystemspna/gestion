@@ -3,6 +3,7 @@ import { supabase } from '../../lib/supabase'
 import { fmtMoney } from '../../lib/format'
 import { precioVenta } from '../../lib/pricing'
 import ImageThumb from '../../components/ImageThumb'
+import { useAuth } from '../../lib/AuthContext'
 
 let _k = 0
 const newKey = () => `vi${++_k}`
@@ -26,6 +27,7 @@ const inputStyle = {
 const blankCustom = { descripcion: '', cantidad: 1, precio_unitario: '' }
 
 export default function NuevaVenta({ venta, onClose, onSaved }) {
+  const { orgId } = useAuth()
   // datos de cabecera
   const [clienteNombre, setClienteNombre] = useState('')
   const [clienteId,     setClienteId]     = useState(null)
@@ -181,6 +183,7 @@ export default function NuevaVenta({ venta, onClose, onSaved }) {
       lista_id:      listaSel || null,
       fecha,
       total,
+      org_id: orgId,
       estado:        estadoGuardar ?? estado,
       notas:         notas.trim() || null,
     }

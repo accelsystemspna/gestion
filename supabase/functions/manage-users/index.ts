@@ -24,8 +24,10 @@ serve(async (req) => {
     const { data: { user }, error: authErr } = await admin.auth.getUser(token)
     if (authErr || !user) return json({ error: 'Token inválido' }, 401)
 
-    const { data: caller } = await admin.from('profiles').select('rol').eq('id', user.id).maybeSingle()
+    const { data: caller } = await admin.from('profiles').select('rol, org_id').eq('id', user.id).maybeSingle()
     if (caller !== null && caller?.rol !== 'master') return json({ error: 'Solo el master puede gestionar usuarios' }, 403)
+    // org_id del master: si tiene perfil usa su org_id, si no usa su propio id
+    const callerOrgId = caller?.org_id ?? user.id
 
     const body = await req.json()
     const { action } = body
@@ -44,11 +46,16 @@ serve(async (req) => {
       })
       if (createErr) return json({ error: createErr.message }, 400)
 
+      // Para nuevos masters, su org_id es su propio id. Para admin/vendedor, heredan el org del caller.
+      const nuevoRol = rol || 'vendedor'
+      const nuevoOrgId = nuevoRol === 'master' ? created.user.id : callerOrgId
+
       const { error: profileErr } = await admin.from('profiles').insert({
         id: created.user.id,
         email,
         nombre,
-        rol: rol || 'vendedor',
+        rol: nuevoRol,
+        org_id: nuevoOrgId,
       })
       if (profileErr) {
         await admin.auth.admin.deleteUser(created.user.id)
