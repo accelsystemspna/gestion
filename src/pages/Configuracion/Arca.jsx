@@ -14,7 +14,7 @@ function Input({ label, value, onChange, type = 'text', placeholder }) {
 }
 
 export default function Arca() {
-  const { user } = useAuth()
+  const { orgId } = useAuth()
   const [form, setForm]       = useState({
     cuit: '', punto_venta: 3, razon_social: '', concepto: 1,
     modo: 'homologacion', cert_pem: '', key_pem: '',
@@ -28,10 +28,10 @@ export default function Arca() {
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
 
   useEffect(() => {
-    if (!user) return
-    supabase.from('arca_config').select('*').eq('user_id', user.id).maybeSingle()
+    if (!orgId) return
+    supabase.from('arca_config').select('*').eq('user_id', orgId).maybeSingle()
       .then(({ data }) => { if (data) setForm(f => ({ ...f, ...data })) })
-  }, [user])
+  }, [orgId])
 
   const handleSave = async () => {
     if (!form.cuit)        return alert('Ingresá el CUIT')
@@ -41,7 +41,7 @@ export default function Arca() {
     setSaving(true)
     const { id: _id, ...rest } = form
     const { error } = await supabase.from('arca_config').upsert({
-      ...rest, user_id: user.id, updated_at: new Date().toISOString(),
+      ...rest, user_id: orgId, updated_at: new Date().toISOString(),
     }, { onConflict: 'user_id' })
     setSaving(false)
     if (error) return alert('Error al guardar: ' + error.message)

@@ -51,7 +51,7 @@ const blank = {
 }
 
 export default function Integraciones() {
-  const { user } = useAuth()
+  const { orgId } = useAuth()
   const [tiendas, setTiendas]     = useState([])
   const [listas, setListas]       = useState([])
   const [categorias, setCategorias] = useState([])
@@ -61,7 +61,7 @@ export default function Integraciones() {
   const load = async () => {
     setLoading(true)
     const [t, l, c] = await Promise.all([
-      supabase.from('tiendas').select('*').eq('user_id', user.id).order('created_at'),
+      supabase.from('tiendas').select('*').eq('user_id', orgId).order('created_at'),
       supabase.from('listas_precios').select('id, nombre').order('created_at'),
       supabase.from('categorias').select('id, nombre').order('nombre'),
     ])
@@ -88,7 +88,7 @@ export default function Integraciones() {
     }
     const res = form.id
       ? await supabase.from('tiendas').update(payload).eq('id', form.id)
-      : await supabase.from('tiendas').insert({ ...payload, user_id: user.id })
+      : await supabase.from('tiendas').insert({ ...payload, user_id: orgId })
     if (res.error) { alert('Error: ' + res.error.message); return }
     setEditing(null)
     load()
