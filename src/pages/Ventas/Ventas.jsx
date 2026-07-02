@@ -592,10 +592,11 @@ export default function Ventas() {
       {/* ══════════════════════════════════════════════════════════
           BARRA SUPERIOR
       ══════════════════════════════════════════════════════════ */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 14px', borderBottom: '1px solid var(--border)', background: 'var(--surface)', flexShrink: 0, flexWrap: 'wrap' }}>
+      <div className="pos-topbar" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 14px', borderBottom: '1px solid var(--border)', background: 'var(--surface)', flexShrink: 0, flexWrap: 'wrap' }}>
 
         {/* Fecha */}
         <input
+          className="pos-fecha"
           type="date" value={fecha} onChange={e => setFecha(e.target.value)}
           style={inp({ width: 136 })}
         />
@@ -699,7 +700,7 @@ export default function Ventas() {
         </div>
 
         {/* Lista de precios */}
-        <div style={{ position: 'relative', flexShrink: 0 }}>
+        <div className="pos-lista-wrap" style={{ position: 'relative', flexShrink: 0 }}>
           <select
             value={listaSel}
             onChange={e => setListaSel(e.target.value)}
@@ -711,7 +712,7 @@ export default function Ventas() {
         </div>
 
         {/* Selector de comprobante */}
-        <div style={{ position: 'relative', flexShrink: 0 }}>
+        <div className="pos-comprobante-wrap" style={{ position: 'relative', flexShrink: 0 }}>
           <select
             value={comprobante}
             onChange={e => setComprobante(e.target.value)}
@@ -723,6 +724,7 @@ export default function Ventas() {
 
         {/* Ventas del día */}
         <button onClick={() => setShowHistorial(true)}
+          className="pos-btn-hoy"
           style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 13px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--surface)', cursor: 'pointer', fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', flexShrink: 0 }}>
           🧾 Hoy
           {ventasHoy.length > 0 && (

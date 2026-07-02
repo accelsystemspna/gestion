@@ -317,9 +317,38 @@ h1, h2, h3, h4 {
     height: calc(100dvh - 56px) !important;
   }
 
-  /* POS top bar: compacto en mobile */
+  /* POS top bar: reordenar en filas claras en mobile */
   .pos-btn-historial { display: none !important; }
-  .pos-cliente-row { width: 100%; min-width: 0 !important; }
+
+  .pos-fecha {
+    order: 1;
+    flex: 0 0 128px !important;
+    width: 128px !important;
+  }
+  .pos-comprobante-wrap {
+    order: 2;
+    flex: 1 1 auto !important;
+  }
+  .pos-comprobante-wrap select {
+    width: 100% !important;
+  }
+  .pos-cliente-row {
+    order: 3;
+    flex: 1 1 100% !important;
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+  .pos-lista-wrap {
+    order: 4;
+    flex: 1 1 100% !important;
+  }
+  .pos-lista-wrap select {
+    width: 100% !important;
+  }
+  .pos-btn-hoy {
+    order: 5;
+    flex: 0 0 auto !important;
+  }
 
   /* ── Presupuesto ─────────────────────────────── */
   .layout-main:has(.presupuesto-root) {
