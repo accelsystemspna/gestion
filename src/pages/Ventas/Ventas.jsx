@@ -161,6 +161,41 @@ export default function Ventas() {
     })
   }, [])
 
+  // ── Borrador de venta en curso ───────────────────────────────────────────
+  // En mobile, Android puede descargar/recargar la pestaña al bloquear la
+  // pantalla; sin esto se perdía la venta que se estaba armando.
+  const draftKey = `pos_draft_${orgId || 'anon'}`
+  const draftRestored = useRef(false)
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(draftKey)
+      if (raw) {
+        const d = JSON.parse(raw)
+        if (d.fecha)       setFecha(d.fecha)
+        if (d.cliente)     setCliente(d.cliente)
+        if (d.listaSel)    setListaSel(d.listaSel)
+        if (d.comprobante) setComprobante(d.comprobante)
+        if (Array.isArray(d.items) && d.items.length) setItems(d.items)
+        if (d.descuento)   setDescuento(d.descuento)
+        if (d.formaPago)   setFormaPago(d.formaPago)
+      }
+    } catch { /* borrador corrupto, se ignora */ }
+    draftRestored.current = true
+  }, [draftKey])
+
+  useEffect(() => {
+    if (!draftRestored.current) return
+    const hayVentaEnCurso = items.length > 0 || !!cliente || !!listaSel
+    try {
+      if (hayVentaEnCurso) {
+        localStorage.setItem(draftKey, JSON.stringify({ fecha, cliente, listaSel, comprobante, items, descuento, formaPago }))
+      } else {
+        localStorage.removeItem(draftKey)
+      }
+    } catch { /* localStorage lleno o no disponible */ }
+  }, [draftKey, fecha, cliente, listaSel, comprobante, items, descuento, formaPago])
+
   // ── Ventas del día ───────────────────────────────────────────────────────
   const loadVentasHoy = useCallback(async () => {
     const hoy = todayStr()
@@ -533,6 +568,7 @@ export default function Ventas() {
       }
     }
 
+    try { localStorage.removeItem(draftKey) } catch { /* noop */ }
     setSavedVenta({ ...ventaData, items, arcaResult })
     setSaving(false)
     setShowSuccess(true)
