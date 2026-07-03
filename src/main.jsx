@@ -19,11 +19,24 @@ if ('serviceWorker' in navigator) {
   // se recarga. Sin este listener, un celular que solo "reanuda" el proceso
   // (en vez de reiniciarlo) queda corriendo la versión vieja indefinidamente
   // aunque el Service Worker de fondo ya se haya actualizado.
+  //
+  // Pero recargar de golpe interrumpe una venta en curso (Ventas.jsx guarda
+  // ese borrador en localStorage con claves "pos_draft_*"). Si hay una venta
+  // sin terminar, pateamos la recarga para el próximo momento en que la app
+  // vuelva a primer plano y el carrito ya esté vacío.
+  const hayVentaEnCurso = () => Object.keys(localStorage).some(k => k.startsWith('pos_draft_'))
+
   let reloading = false
-  navigator.serviceWorker.addEventListener('controllerchange', () => {
-    if (reloading) return
+  let pendingReload = false
+  const reloadIfSafe = () => {
+    if (reloading || !pendingReload || hayVentaEnCurso()) return
     reloading = true
     window.location.reload()
+  }
+
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    pendingReload = true
+    reloadIfSafe()
   })
 
   import('virtual:pwa-register').then(({ registerSW }) => {
@@ -35,7 +48,7 @@ if ('serviceWorker' in navigator) {
       immediate: true,
       onRegisteredSW(_url, registration) {
         if (!registration) return
-        const checkForUpdate = () => registration.update().catch(() => {})
+        const checkForUpdate = () => { registration.update().catch(() => {}); reloadIfSafe() }
         document.addEventListener('visibilitychange', () => {
           if (document.visibilityState === 'visible') checkForUpdate()
         })
