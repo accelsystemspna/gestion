@@ -99,7 +99,7 @@ export default function Presupuesto() {
   useEffect(() => {
     Promise.all([
       supabase.from('listas_precios').select('*').order('created_at'),
-      supabase.from('productos').select('*').order('nombre'),
+      supabase.from('productos').select('*').eq('activo', true).order('nombre'),
       supabase.from('materiales').select('*').order('nombre'),
       supabase.from('tarifas').select('*').order('id'),
       supabase.from('branding').select('*').eq('id', 1).maybeSingle(),

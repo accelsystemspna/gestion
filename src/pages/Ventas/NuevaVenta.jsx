@@ -67,7 +67,7 @@ export default function NuevaVenta({ venta, onClose, onSaved }) {
     Promise.all([
       supabase.from('listas_precios').select('*').order('created_at'),
       supabase.from('clientes').select('id, nombre, email, telefono').order('nombre'),
-      supabase.from('productos').select('id, nombre, sku, costo_base, imagen_url, categoria_id').order('nombre'),
+      supabase.from('productos').select('id, nombre, sku, costo_base, imagen_url, categoria_id').eq('activo', true).order('nombre'),
     ]).then(([l, c, p]) => {
       setListas(l.data ?? [])
       setClientes(c.data ?? [])
