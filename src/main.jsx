@@ -14,6 +14,18 @@ createRoot(document.getElementById('root')).render(
 )
 
 if ('serviceWorker' in navigator) {
+  // El SW nuevo toma control (skipWaiting + clientsClaim) sin avisarle a esta
+  // pestaña ya cargada, que sigue ejecutando el JS viejo en memoria hasta que
+  // se recarga. Sin este listener, un celular que solo "reanuda" el proceso
+  // (en vez de reiniciarlo) queda corriendo la versión vieja indefinidamente
+  // aunque el Service Worker de fondo ya se haya actualizado.
+  let reloading = false
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (reloading) return
+    reloading = true
+    window.location.reload()
+  })
+
   import('virtual:pwa-register').then(({ registerSW }) => {
     // autoUpdate: detecta versión nueva y recarga sola, sin pedirle nada al usuario.
     // El navegador solo revisa el SW en una navegación nueva; en una PWA que queda
