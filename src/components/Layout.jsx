@@ -84,6 +84,9 @@ export default function Layout() {
         >
           Cerrar sesión
         </button>
+        <div style={{ marginTop: 8, fontSize: 10, color: '#64748b', textAlign: 'center' }}>
+          v{__BUILD_TIME__.slice(0, 16).replace('T', ' ')}
+        </div>
       </div>
     </>
   )

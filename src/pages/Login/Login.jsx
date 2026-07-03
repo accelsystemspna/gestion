@@ -82,6 +82,10 @@ export default function Login() {
             {loading ? 'Ingresando...' : 'Ingresar'}
           </button>
         </form>
+
+        <div style={{ textAlign: 'center', marginTop: 18, fontSize: 10, color: 'var(--text-light)' }}>
+          v{__BUILD_TIME__.slice(0, 16).replace('T', ' ')}
+        </div>
       </div>
     </div>
   )
