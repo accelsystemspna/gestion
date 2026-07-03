@@ -15,7 +15,21 @@ createRoot(document.getElementById('root')).render(
 
 if ('serviceWorker' in navigator) {
   import('virtual:pwa-register').then(({ registerSW }) => {
-    // autoUpdate: detecta versión nueva y recarga sola, sin pedirle nada al usuario
-    registerSW({ immediate: true })
+    // autoUpdate: detecta versión nueva y recarga sola, sin pedirle nada al usuario.
+    // El navegador solo revisa el SW en una navegación nueva; en una PWA que queda
+    // abierta en segundo plano (p.ej. al bloquear el celular) eso nunca pasa solo,
+    // así que forzamos el chequeo cada vez que la app vuelve a primer plano.
+    registerSW({
+      immediate: true,
+      onRegisteredSW(_url, registration) {
+        if (!registration) return
+        const checkForUpdate = () => registration.update().catch(() => {})
+        document.addEventListener('visibilitychange', () => {
+          if (document.visibilityState === 'visible') checkForUpdate()
+        })
+        window.addEventListener('focus', checkForUpdate)
+        setInterval(checkForUpdate, 30 * 60 * 1000)
+      },
+    })
   })
 }
