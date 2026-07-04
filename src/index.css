@@ -421,4 +421,35 @@ h1, h2, h3, h4 {
   .pos-panel-carrito.activo {
     display: flex !important;
   }
+
+  /* Carrito: la fila no entra en una sola línea (checkbox + miniatura +
+     nombre + cantidad + total + borrar); se apila en 2 líneas: arriba
+     identificación del ítem, abajo los controles. */
+  .pos-cart-row {
+    flex-wrap: wrap !important;
+  }
+  .pos-cart-info {
+    flex: 1 1 100% !important;
+    order: 1 !important;
+    margin-bottom: 2px;
+  }
+  .pos-cart-check {
+    order: 2 !important;
+    width: 22px !important;
+    height: 22px !important;
+  }
+  .pos-cart-thumb {
+    order: 3 !important;
+  }
+  .pos-cart-qty {
+    order: 4 !important;
+    margin-left: auto !important;
+  }
+  .pos-cart-total {
+    order: 5 !important;
+    min-width: auto !important;
+  }
+  .pos-cart-remove {
+    order: 6 !important;
+  }
 }

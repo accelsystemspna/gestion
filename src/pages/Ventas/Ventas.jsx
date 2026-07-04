@@ -946,15 +946,17 @@ export default function Ventas() {
               </div>
             ) : (
               items.map(item => (
-                <div key={item._key} style={{ display: 'flex', gap: 8, padding: '8px 10px', borderRadius: 7, border: '1px solid var(--border)', background: 'var(--surface)', alignItems: 'center' }}>
+                <div className="pos-cart-row" key={item._key} style={{ display: 'flex', gap: 8, padding: '8px 10px', borderRadius: 7, border: '1px solid var(--border)', background: 'var(--surface)', alignItems: 'center' }}>
                   {descPct > 0 && (
-                    <input type="checkbox" checked={item.aplicaDescuento !== false} onChange={() => toggleDescItem(item._key)}
+                    <input type="checkbox" className="pos-cart-check" checked={item.aplicaDescuento !== false} onChange={() => toggleDescItem(item._key)}
                       title="Aplicar descuento a este ítem" style={{ width: 16, height: 16, flexShrink: 0, cursor: 'pointer' }} />
                   )}
                   {item.imagen_url && (
-                    <ImageThumb src={item.imagen_url} size={38} radius={5} />
+                    <span className="pos-cart-thumb" style={{ display: 'flex', flexShrink: 0 }}>
+                      <ImageThumb src={item.imagen_url} size={38} radius={5} />
+                    </span>
                   )}
-                  <div style={{ flex: 1, minWidth: 0 }}>
+                  <div className="pos-cart-info" style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 1 }}>
                       <span style={{ fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.nombre}</span>
                     </div>
@@ -962,7 +964,7 @@ export default function Ventas() {
                     <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{fmtMoney(item.precio)} c/u</div>
                   </div>
                   {/* Controles de cantidad */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0 }}>
+                  <div className="pos-cart-qty" style={{ display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0 }}>
                     <button onClick={() => updateQty(item._key, -1)}
                       style={{ width: 26, height: 26, borderRadius: 4, border: '1px solid var(--border)', background: 'var(--surface)', cursor: 'pointer', fontSize: 15, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text)' }}>−</button>
                     <input type="number" value={item.cantidad} onChange={e => setQty(item._key, e.target.value)}
@@ -970,8 +972,8 @@ export default function Ventas() {
                     <button onClick={() => updateQty(item._key, +1)}
                       style={{ width: 26, height: 26, borderRadius: 4, border: 'none', background: 'var(--primary)', color: 'white', cursor: 'pointer', fontSize: 15, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
                   </div>
-                  <div style={{ fontSize: 14, fontWeight: 700, minWidth: 64, textAlign: 'right', flexShrink: 0 }}>{fmtMoney(item.precio * item.cantidad)}</div>
-                  <button onClick={() => removeItem(item._key)}
+                  <div className="pos-cart-total" style={{ fontSize: 14, fontWeight: 700, minWidth: 64, textAlign: 'right', flexShrink: 0 }}>{fmtMoney(item.precio * item.cantidad)}</div>
+                  <button className="pos-cart-remove" onClick={() => removeItem(item._key)}
                     style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', fontSize: 15, padding: '2px 3px', flexShrink: 0 }}>✕</button>
                 </div>
               ))
