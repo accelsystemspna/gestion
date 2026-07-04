@@ -567,18 +567,21 @@ export default function Ventas() {
 
     // Factura C → emitir a ARCA automáticamente
     let arcaResult = null
+    let arcaFallo   = null
     if (comprobante === 'factura_c' && arcaConfig) {
       try {
-        const { data: arcaData } = await supabase.functions.invoke('emitir-factura', {
+        const { data: arcaData, error: arcaErr } = await supabase.functions.invoke('emitir-factura', {
           body: {
-            accion:     'emitir',
-            ventaId:    ventaData.id,
-            concepto:   1,
-            docTipo:    99,
-            docNro:     '0',
-            importeTotal: total,
+            accion:   'emitir',
+            venta_id: ventaData.id,
+            concepto: arcaConfig?.concepto ?? 1,
+            doc_tipo: 99,
+            doc_nro:  '0',
+            importe:  total,
           }
         })
+        if (arcaErr)          arcaFallo = arcaErr.message
+        else if (!arcaData?.ok) arcaFallo = arcaData?.error || 'Error desconocido'
         if (arcaData?.ok) {
           arcaResult = arcaData
           await supabase.from('ventas').update({
@@ -589,7 +592,11 @@ export default function Ventas() {
           }).eq('id', ventaData.id)
         }
       } catch (e) {
-        console.warn('[ARCA] Error al emitir automáticamente:', e.message)
+        arcaFallo = e.message
+      }
+      if (arcaFallo) {
+        console.warn('[ARCA] Error al emitir automáticamente:', arcaFallo)
+        alert('La venta se guardó, pero la Factura C no se pudo emitir a ARCA:\n' + arcaFallo + '\n\nPodés reintentar desde el detalle de la venta (Historial → abrir la venta → Emitir Factura C).')
       }
     }
 
