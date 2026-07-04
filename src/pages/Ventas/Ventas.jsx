@@ -367,8 +367,21 @@ export default function Ventas() {
   const itemsConDescuento = useMemo(() => items.filter(i => i.aplicaDescuento !== false), [items])
   const baseDescuento = useMemo(() => itemsConDescuento.reduce((s, i) => s + i.precio * i.cantidad, 0), [itemsConDescuento])
   const descPct   = Math.min(100, Math.max(0, Number(descuento) || 0))
-  const descMonto = baseDescuento * (descPct / 100)
-  const total     = subtotal - descMonto
+  const descMontoBruto = baseDescuento * (descPct / 100)
+  // El total con descuento respeta la regla de redondeo configurada en la
+  // lista de precios activa (misma regla que se usa al calcular cada precio).
+  let totalRedondeado = subtotal - descMontoBruto
+  if (descMontoBruto > 0 && lista) {
+    const rv = Number(lista.redondeo_valor) || 0
+    if (rv > 0) {
+      const tipo = lista.redondeo_tipo || 'arriba'
+      if (tipo === 'arriba')     totalRedondeado = Math.ceil(totalRedondeado / rv) * rv
+      else if (tipo === 'abajo') totalRedondeado = Math.floor(totalRedondeado / rv) * rv
+      else                       totalRedondeado = Math.round(totalRedondeado / rv) * rv
+    }
+  }
+  const total     = totalRedondeado
+  const descMonto = subtotal - total
 
   // ── Seleccionar cliente ──────────────────────────────────────────────────
   const selectCliente = (c) => {
@@ -426,10 +439,14 @@ export default function Ventas() {
   const removeItem = (key) => setItems(prev => prev.filter(i => i._key !== key))
   const toggleDescItem = (key) =>
     setItems(prev => prev.map(i => i._key === key ? { ...i, aplicaDescuento: i.aplicaDescuento === false ? true : false } : i))
+  const setPrecio  = (key, val) =>
+    setItems(prev => prev.map(i => i._key === key ? { ...i, precio: Math.max(0, Number(val) || 0), precioManual: true } : i))
 
   // ── Recalcular precios al cambiar lista ───────────────────────────────────
   useEffect(() => {
     setItems(prev => prev.map(i => {
+      // Precio editado a mano por el vendedor: no se toca al cambiar de lista.
+      if (i.precioManual) return i
       // Ítems libres con costoBase (cotizador o inline): recalcular al cambiar lista
       if (i.esLibre && i.costoBase != null) {
         return { ...i, precio: precioVenta(i.costoBase, lista) }
@@ -961,7 +978,15 @@ export default function Ventas() {
                       <span style={{ fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.nombre}</span>
                     </div>
                     {item.sku && <div style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'monospace', marginBottom: 1 }}>SKU: {item.sku}</div>}
-                    <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{fmtMoney(item.precio)} c/u</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>$</span>
+                      <input type="number" min={0} step="0.01" value={item.precio}
+                        onChange={e => setPrecio(item._key, e.target.value)}
+                        title="Editar precio unitario"
+                        style={{ width: 72, padding: '2px 5px', fontSize: 12, border: `1px solid ${item.precioManual ? 'var(--primary)' : 'var(--border)'}`, borderRadius: 4, background: 'var(--surface)', color: 'inherit', outline: 'none' }}
+                      />
+                      <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>c/u{item.precioManual ? ' ✎' : ''}</span>
+                    </div>
                   </div>
                   {/* Controles de cantidad */}
                   <div className="pos-cart-qty" style={{ display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0 }}>
