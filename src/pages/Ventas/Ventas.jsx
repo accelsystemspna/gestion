@@ -440,12 +440,12 @@ export default function Ventas() {
   const addCustom = () => {
     if (!customForm.descripcion.trim()) { setCustomErr('Ingresá una descripción.'); return }
     if (!customForm.precio || Number(customForm.precio) <= 0) { setCustomErr('Ingresá un precio mayor a 0.'); return }
-    const costoBase = Number(customForm.precio)
     setItems(prev => [...prev, {
       _key: nk(), productoId: null,
       nombre: customForm.descripcion.trim(),
-      costoBase,
-      precio: precioVenta(costoBase, lista),
+      // Sin costoBase: es el precio final tal cual lo escribe el vendedor,
+      // no un costo al que haya que aplicarle el margen de la lista.
+      precio: Number(customForm.precio),
       cantidad: Number(customForm.cantidad) || 1, esLibre: true,
     }])
     setCustomForm({ descripcion: '', precio: '', cantidad: 1 })
@@ -457,12 +457,12 @@ export default function Ventas() {
   const addInlineLibre = () => {
     if (!inlineLibre.descripcion.trim()) { setInlineErr('Descripción requerida'); return }
     if (!inlineLibre.precio || Number(inlineLibre.precio) <= 0) { setInlineErr('Precio inválido'); return }
-    const costoBase = Number(inlineLibre.precio)
     setItems(prev => [...prev, {
       _key: nk(), productoId: null,
       nombre:    inlineLibre.descripcion.trim(),
-      costoBase,
-      precio:    precioVenta(costoBase, lista),
+      // Sin costoBase: es el precio final tal cual lo escribe el vendedor,
+      // no un costo al que haya que aplicarle el margen de la lista.
+      precio:    Number(inlineLibre.precio),
       cantidad:  Number(inlineLibre.cantidad) || 1, esLibre: true,
     }])
     setInlineLibre({ descripcion: '', precio: '', cantidad: 1 })
