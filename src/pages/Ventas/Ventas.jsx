@@ -96,9 +96,10 @@ export default function Ventas() {
   const [prodSearch, setProdSearch] = useState('')
 
   // ── Carrito ──────────────────────────────────────────────────────────────
-  const [items,     setItems]     = useState([])
-  const [descuento, setDescuento] = useState('')
-  const [formaPago, setFormaPago] = useState('efectivo')
+  const [items,          setItems]          = useState([])
+  const [descuento,      setDescuento]      = useState('')
+  const [razonDescuento, setRazonDescuento] = useState('')
+  const [formaPago,      setFormaPago]      = useState('efectivo')
 
   // ── UI ───────────────────────────────────────────────────────────────────
   const [searchParams] = useSearchParams()
@@ -177,8 +178,9 @@ export default function Ventas() {
         if (d.listaSel)    setListaSel(d.listaSel)
         if (d.comprobante) setComprobante(d.comprobante)
         if (Array.isArray(d.items) && d.items.length) setItems(d.items)
-        if (d.descuento)   setDescuento(d.descuento)
-        if (d.formaPago)   setFormaPago(d.formaPago)
+        if (d.descuento)      setDescuento(d.descuento)
+        if (d.razonDescuento) setRazonDescuento(d.razonDescuento)
+        if (d.formaPago)      setFormaPago(d.formaPago)
       }
     } catch { /* borrador corrupto, se ignora */ }
     draftRestored.current = true
@@ -189,12 +191,12 @@ export default function Ventas() {
     const hayVentaEnCurso = items.length > 0 || !!cliente || !!listaSel
     try {
       if (hayVentaEnCurso) {
-        localStorage.setItem(draftKey, JSON.stringify({ fecha, cliente, listaSel, comprobante, items, descuento, formaPago }))
+        localStorage.setItem(draftKey, JSON.stringify({ fecha, cliente, listaSel, comprobante, items, descuento, razonDescuento, formaPago }))
       } else {
         localStorage.removeItem(draftKey)
       }
     } catch { /* localStorage lleno o no disponible */ }
-  }, [draftKey, fecha, cliente, listaSel, comprobante, items, descuento, formaPago])
+  }, [draftKey, fecha, cliente, listaSel, comprobante, items, descuento, razonDescuento, formaPago])
 
   // ── Ventas del día ───────────────────────────────────────────────────────
   const loadVentasHoy = useCallback(async () => {
@@ -360,8 +362,12 @@ export default function Ventas() {
 
   // ── Totales ──────────────────────────────────────────────────────────────
   const subtotal  = useMemo(() => items.reduce((s, i) => s + i.precio * i.cantidad, 0), [items])
+  // El descuento solo se aplica a los ítems que no fueron excluidos manualmente
+  // (p.ej. productos que no admiten descuento por pago en efectivo).
+  const itemsConDescuento = useMemo(() => items.filter(i => i.aplicaDescuento !== false), [items])
+  const baseDescuento = useMemo(() => itemsConDescuento.reduce((s, i) => s + i.precio * i.cantidad, 0), [itemsConDescuento])
   const descPct   = Math.min(100, Math.max(0, Number(descuento) || 0))
-  const descMonto = subtotal * (descPct / 100)
+  const descMonto = baseDescuento * (descPct / 100)
   const total     = subtotal - descMonto
 
   // ── Seleccionar cliente ──────────────────────────────────────────────────
@@ -418,6 +424,8 @@ export default function Ventas() {
   const setQty     = (key, val) =>
     setItems(prev => prev.map(i => i._key === key ? { ...i, cantidad: Math.max(1, Number(val) || 1) } : i))
   const removeItem = (key) => setItems(prev => prev.filter(i => i._key !== key))
+  const toggleDescItem = (key) =>
+    setItems(prev => prev.map(i => i._key === key ? { ...i, aplicaDescuento: i.aplicaDescuento === false ? true : false } : i))
 
   // ── Recalcular precios al cambiar lista ───────────────────────────────────
   useEffect(() => {
@@ -496,7 +504,7 @@ export default function Ventas() {
       total,
       forma_pago:           formaPago,
       estado,
-      notas:                null,
+      notas:                descPct > 0 ? (razonDescuento.trim() || null) : null,
       org_id:               orgId,
     }
 
@@ -606,6 +614,7 @@ export default function Ventas() {
   const nuevaVenta = () => {
     setItems([])
     setDescuento('')
+    setRazonDescuento('')
     setFormaPago('efectivo')
     setCliente(null)
     setCliSearch('')
@@ -938,6 +947,10 @@ export default function Ventas() {
             ) : (
               items.map(item => (
                 <div key={item._key} style={{ display: 'flex', gap: 8, padding: '8px 10px', borderRadius: 7, border: '1px solid var(--border)', background: 'var(--surface)', alignItems: 'center' }}>
+                  {descPct > 0 && (
+                    <input type="checkbox" checked={item.aplicaDescuento !== false} onChange={() => toggleDescItem(item._key)}
+                      title="Aplicar descuento a este ítem" style={{ width: 16, height: 16, flexShrink: 0, cursor: 'pointer' }} />
+                  )}
                   {item.imagen_url && (
                     <ImageThumb src={item.imagen_url} size={38} radius={5} />
                   )}
@@ -986,6 +999,18 @@ export default function Ventas() {
               </div>
             </div>
 
+            {descPct > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)' }}>Motivo del descuento (opcional)</label>
+                <input type="text" placeholder="Ej: pago en efectivo" value={razonDescuento} onChange={e => setRazonDescuento(e.target.value)}
+                  style={{ padding: '6px 9px', fontSize: 13, border: '1px solid var(--border)', borderRadius: 6, background: 'var(--surface)', color: 'inherit', width: '100%', boxSizing: 'border-box', outline: 'none' }}
+                />
+                <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                  Tildá arriba, en cada ítem del carrito, cuáles reciben el descuento ({itemsConDescuento.length} de {items.length} lo tienen aplicado).
+                </span>
+              </div>
+            )}
+
             {/* Totales */}
             <div style={{ borderTop: '1px solid var(--border)', paddingTop: 8, display: 'flex', flexDirection: 'column', gap: 3 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: 'var(--text-muted)' }}>
@@ -993,7 +1018,7 @@ export default function Ventas() {
               </div>
               {descMonto > 0 && (
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: '#dc2626' }}>
-                  <span>Descuento ({descPct}%)</span><span>−{fmtMoney(descMonto)}</span>
+                  <span>Descuento ({descPct}% · {itemsConDescuento.length}/{items.length} ítems)</span><span>−{fmtMoney(descMonto)}</span>
                 </div>
               )}
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 22, fontWeight: 800, color: 'var(--primary)', marginTop: 4 }}>

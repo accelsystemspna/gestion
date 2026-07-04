@@ -481,10 +481,17 @@ export default function VentaDetalle({ ventaId, onClose, onUpdated }) {
               <span>{fmtMoney(venta.subtotal_items ?? venta.total)}</span>
             </div>
             {(venta.descuento_porcentaje ?? 0) > 0 && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#dc2626' }}>
-                <span>Descuento ({venta.descuento_porcentaje}%)</span>
-                <span>-{fmtMoney(venta.descuento_monto)}</span>
-              </div>
+              <>
+                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#dc2626' }}>
+                  <span>Descuento ({venta.descuento_porcentaje}%)</span>
+                  <span>-{fmtMoney(venta.descuento_monto)}</span>
+                </div>
+                {venta.notas && (
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                    Motivo: {venta.notas}
+                  </div>
+                )}
+              </>
             )}
             <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 800, fontSize: 20, color: 'var(--primary)', paddingTop: 8, borderTop: '2px solid var(--border)', marginTop: 4 }}>
               <span>Total</span>
