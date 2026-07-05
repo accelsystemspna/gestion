@@ -7,6 +7,9 @@ import { fmtMoney } from '../../lib/format'
 const fmtDate = (d) =>
   d ? new Date(d + 'T00:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' }) : '—'
 
+// fecha local sin bug UTC (usar en vez de toISOString, que corre al día siguiente/anterior según el huso)
+const isoLocal = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+
 const ESTADO_S = {
   pagado:    { color: '#16a34a', bg: '#dcfce7', label: 'Pagado' },
   pendiente: { color: '#d97706', bg: '#fef9c3', label: 'Pendiente' },
@@ -96,6 +99,13 @@ export default function Dashboard() {
   const [ultimas, setUltimas]   = useState([])
   const [deudas,  setDeudas]    = useState([])
 
+  // ── Filtro de fechas: productos vendidos en el período ────────────────────
+  const [rangoDesde,    setRangoDesde]    = useState(() => isoLocal(new Date(new Date().getFullYear(), new Date().getMonth(), 1)))
+  const [rangoHasta,    setRangoHasta]    = useState(() => isoLocal(new Date()))
+  const [productosRango, setProductosRango] = useState([])
+  const [loadingRango,  setLoadingRango]  = useState(true)
+  const [ordenRango,    setOrdenRango]    = useState('total')   // 'total' | 'cantidad'
+
   const hoy       = (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}` })()
   const mesActual = hoy.slice(0, 7)
   const mesAntStr = (() => {
@@ -159,9 +169,6 @@ export default function Dashboard() {
 
       // ── Últimas 8 ventas ───────────────────────────────────────────────────
       setUltimas(ventas.slice(0, 8))
-
-      // helper: fecha local sin bug UTC
-      const isoLocal = (d) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
 
       // ── Tendencia 30 días ─────────────────────────────────────────────────
       const d30 = []
@@ -254,6 +261,55 @@ export default function Dashboard() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // ── Productos vendidos en el rango de fechas elegido ──────────────────────
+  useEffect(() => {
+    if (!rangoDesde || !rangoHasta) return
+    let cancelado = false
+    const loadRango = async () => {
+      setLoadingRango(true)
+      const { data } = await supabase
+        .from('ventas')
+        .select('estado, venta_items(descripcion, sku, cantidad, subtotal)')
+        .gte('fecha', rangoDesde)
+        .lte('fecha', rangoHasta)
+        .neq('estado', 'anulado')
+      if (cancelado) return
+
+      const map = {}
+      for (const v of (data ?? [])) {
+        for (const it of (v.venta_items ?? [])) {
+          const key = `${it.descripcion ?? '—'}__${it.sku ?? ''}`
+          if (!map[key]) map[key] = { nombre: it.descripcion ?? '—', sku: it.sku ?? '', cantidad: 0, total: 0 }
+          map[key].cantidad += Number(it.cantidad) || 0
+          map[key].total    += Number(it.subtotal)  || 0
+        }
+      }
+      setProductosRango(Object.values(map))
+      setLoadingRango(false)
+    }
+    loadRango()
+    return () => { cancelado = true }
+  }, [rangoDesde, rangoHasta])
+
+  const setPreset = (preset) => {
+    const hoyD = new Date()
+    if (preset === 'hoy') {
+      setRangoDesde(isoLocal(hoyD)); setRangoHasta(isoLocal(hoyD))
+    } else if (preset === '7d') {
+      const d = new Date(); d.setDate(d.getDate() - 6)
+      setRangoDesde(isoLocal(d)); setRangoHasta(isoLocal(hoyD))
+    } else if (preset === '30d') {
+      const d = new Date(); d.setDate(d.getDate() - 29)
+      setRangoDesde(isoLocal(d)); setRangoHasta(isoLocal(hoyD))
+    } else if (preset === 'mes') {
+      setRangoDesde(isoLocal(new Date(hoyD.getFullYear(), hoyD.getMonth(), 1))); setRangoHasta(isoLocal(hoyD))
+    } else if (preset === 'mesAnt') {
+      const d = new Date(hoyD.getFullYear(), hoyD.getMonth() - 1, 1)
+      const fin = new Date(hoyD.getFullYear(), hoyD.getMonth(), 0)
+      setRangoDesde(isoLocal(d)); setRangoHasta(isoLocal(fin))
+    }
+  }
+
   if (loading) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh', flexDirection: 'column', gap: 14, color: 'var(--text-muted)' }}>
       <div style={{ fontSize: 40 }}>📊</div>
@@ -335,6 +391,64 @@ export default function Dashboard() {
           color="#1d4ed8"
         />
       </div>
+
+      {/* ── Productos vendidos por período (filtro de fechas) ────────────────── */}
+      <Card>
+        <CardHeader
+          title="🔍 Productos vendidos"
+          sub={loadingRango ? 'Calculando…' : `${productosRango.length} producto${productosRango.length !== 1 ? 's' : ''} distintos · ${productosRango.reduce((s, p) => s + p.cantidad, 0)} unidades · ${fmtMoney(productosRango.reduce((s, p) => s + p.total, 0))}`}
+        />
+        <div style={{ padding: '12px 16px', display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', gap: 10, borderBottom: '1px solid var(--border)' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+            <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)' }}>Desde</label>
+            <input type="date" value={rangoDesde} onChange={e => setRangoDesde(e.target.value)}
+              style={{ padding: '6px 9px', fontSize: 13, border: '1px solid var(--border)', borderRadius: 6, background: 'var(--surface)', color: 'inherit', outline: 'none' }} />
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+            <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)' }}>Hasta</label>
+            <input type="date" value={rangoHasta} onChange={e => setRangoHasta(e.target.value)}
+              style={{ padding: '6px 9px', fontSize: 13, border: '1px solid var(--border)', borderRadius: 6, background: 'var(--surface)', color: 'inherit', outline: 'none' }} />
+          </div>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            {[['hoy', 'Hoy'], ['7d', '7 días'], ['30d', '30 días'], ['mes', 'Este mes'], ['mesAnt', 'Mes anterior']].map(([v, l]) => (
+              <button key={v} className="btn btn-sm" onClick={() => setPreset(v)}>{l}</button>
+            ))}
+          </div>
+        </div>
+        {loadingRango ? (
+          <div style={{ padding: 32, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>Calculando…</div>
+        ) : productosRango.length === 0 ? (
+          <div style={{ padding: 32, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>Sin ventas en el período elegido</div>
+        ) : (
+          <div style={{ maxHeight: 360, overflowY: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+              <thead style={{ position: 'sticky', top: 0, background: 'var(--surface)' }}>
+                <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                  <th style={{ padding: '7px 16px', textAlign: 'left', fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Producto</th>
+                  <th style={{ padding: '7px 12px', textAlign: 'right', fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', cursor: 'pointer' }} onClick={() => setOrdenRango('cantidad')}>
+                    Cantidad {ordenRango === 'cantidad' && '▼'}
+                  </th>
+                  <th style={{ padding: '7px 16px', textAlign: 'right', fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', cursor: 'pointer' }} onClick={() => setOrdenRango('total')}>
+                    Total {ordenRango === 'total' && '▼'}
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {[...productosRango].sort((a, b) => b[ordenRango] - a[ordenRango]).map((p, i) => (
+                  <tr key={p.nombre + p.sku} style={{ borderBottom: '1px solid var(--border)', background: i % 2 === 1 ? 'var(--bg)' : undefined }}>
+                    <td style={{ padding: '8px 16px' }}>
+                      <div style={{ fontWeight: 600 }}>{p.nombre}</div>
+                      {p.sku && <div style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'monospace' }}>{p.sku}</div>}
+                    </td>
+                    <td style={{ padding: '8px 12px', textAlign: 'right', color: 'var(--text-muted)' }}>{p.cantidad}</td>
+                    <td style={{ padding: '8px 16px', textAlign: 'right', fontWeight: 700, color: 'var(--primary)' }}>{fmtMoney(p.total)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
 
       {/* ── Fila 2: tendencia 30 días + top productos ────────────────────────── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16 }}>
