@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../lib/AuthContext'
 import { fmtMoney } from '../../lib/format'
+import ImageThumb from '../../components/ImageThumb'
 
 const fmtDate = (d) =>
   d ? new Date(d + 'T00:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' }) : '—'
@@ -269,7 +270,7 @@ export default function Dashboard() {
       setLoadingRango(true)
       const { data } = await supabase
         .from('ventas')
-        .select('estado, venta_items(descripcion, sku, cantidad, subtotal)')
+        .select('estado, venta_items(descripcion, sku, cantidad, subtotal, producto_id)')
         .gte('fecha', rangoDesde)
         .lte('fecha', rangoHasta)
         .neq('estado', 'anulado')
@@ -279,11 +280,21 @@ export default function Dashboard() {
       for (const v of (data ?? [])) {
         for (const it of (v.venta_items ?? [])) {
           const key = `${it.descripcion ?? '—'}__${it.sku ?? ''}`
-          if (!map[key]) map[key] = { nombre: it.descripcion ?? '—', sku: it.sku ?? '', cantidad: 0, total: 0 }
+          if (!map[key]) map[key] = { nombre: it.descripcion ?? '—', sku: it.sku ?? '', productoId: it.producto_id, cantidad: 0, total: 0, imagen_url: null }
           map[key].cantidad += Number(it.cantidad) || 0
           map[key].total    += Number(it.subtotal)  || 0
         }
       }
+
+      // Traer las fotos de los productos que siguen existiendo en el catálogo
+      const ids = [...new Set(Object.values(map).map(p => p.productoId).filter(Boolean))]
+      if (ids.length > 0) {
+        const { data: fotos } = await supabase.from('productos').select('id, imagen_url').in('id', ids)
+        const fotoMap = Object.fromEntries((fotos ?? []).map(f => [f.id, f.imagen_url]))
+        for (const p of Object.values(map)) p.imagen_url = fotoMap[p.productoId] ?? null
+      }
+
+      if (cancelado) return
       setProductosRango(Object.values(map))
       setLoadingRango(false)
     }
@@ -437,8 +448,15 @@ export default function Dashboard() {
                 {[...productosRango].sort((a, b) => b[ordenRango] - a[ordenRango]).map((p, i) => (
                   <tr key={p.nombre + p.sku} style={{ borderBottom: '1px solid var(--border)', background: i % 2 === 1 ? 'var(--bg)' : undefined }}>
                     <td style={{ padding: '8px 16px' }}>
-                      <div style={{ fontWeight: 600 }}>{p.nombre}</div>
-                      {p.sku && <div style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'monospace' }}>{p.sku}</div>}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        {p.imagen_url
+                          ? <ImageThumb src={p.imagen_url} size={32} radius={5} />
+                          : <div style={{ width: 32, height: 32, borderRadius: 5, background: 'var(--bg)', flexShrink: 0 }} />}
+                        <div>
+                          <div style={{ fontWeight: 600 }}>{p.nombre}</div>
+                          {p.sku && <div style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'monospace' }}>{p.sku}</div>}
+                        </div>
+                      </div>
                     </td>
                     <td style={{ padding: '8px 12px', textAlign: 'right', color: 'var(--text-muted)' }}>{p.cantidad}</td>
                     <td style={{ padding: '8px 16px', textAlign: 'right', fontWeight: 700, color: 'var(--primary)' }}>{fmtMoney(p.total)}</td>
