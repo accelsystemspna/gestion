@@ -27,15 +27,21 @@ if ('serviceWorker' in navigator) {
   const hayVentaEnCurso = () => Object.keys(localStorage).some(k => k.startsWith('pos_draft_'))
 
   let reloading = false
-  let pendingReload = false
+  let pendingSince = null
+  // Si la traba de "venta en curso" queda activada por un carrito viejo
+  // olvidado, no tiene que bloquear la actualización para siempre: pasados
+  // unos minutos, se recarga igual.
+  const ESPERA_MAX_MS = 3 * 60 * 1000
   const reloadIfSafe = () => {
-    if (reloading || !pendingReload || hayVentaEnCurso()) return
+    if (reloading || !pendingSince) return
+    const vencido = Date.now() - pendingSince > ESPERA_MAX_MS
+    if (!vencido && hayVentaEnCurso()) return
     reloading = true
     window.location.reload()
   }
 
   navigator.serviceWorker.addEventListener('controllerchange', () => {
-    pendingReload = true
+    if (!pendingSince) pendingSince = Date.now()
     reloadIfSafe()
   })
 
