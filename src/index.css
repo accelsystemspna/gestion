@@ -102,6 +102,16 @@ html, body, #root {
   overflow-x: hidden;
 }
 
+/* Pantallas tipo POS (Ventas): en vez de que la página entera crezca con el
+   contenido y haya que scrollear todo para llegar al botón de confirmar,
+   .layout-main le da una altura fija y es .pos-root el que scrollea por
+   dentro (la lista de ítems), dejando la barra superior y el footer fijos. */
+.layout-main:has(.pos-root) {
+  padding: 0 !important;
+  overflow: hidden !important;
+  min-height: 0 !important;
+}
+
 button {
   font-family: inherit;
   cursor: pointer;

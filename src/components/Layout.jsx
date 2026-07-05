@@ -92,7 +92,7 @@ export default function Layout() {
   )
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh' }}>
+    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
 
       {/* ── Sidebar desktop ── */}
       <aside className="layout-sidebar" style={{
@@ -125,7 +125,7 @@ export default function Layout() {
       </aside>
 
       {/* ── Contenido ── */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, minHeight: 0 }}>
 
         {/* Top bar mobile */}
         <header className="mobile-topbar" style={{

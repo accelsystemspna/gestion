@@ -656,7 +656,7 @@ export default function Ventas() {
 
   // ════════════════════════════════════════════════════════════════════════
   return (
-    <div className="pos-root" style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+    <div className="pos-root" style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
 
       {/* ══════════════════════════════════════════════════════════
           BARRA SUPERIOR
@@ -961,7 +961,7 @@ export default function Ventas() {
           )}
 
           {/* Lista de ítems */}
-          <div style={{ flex: 1, overflowY: 'auto', padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 5 }}>
+          <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 5 }}>
             {items.length === 0 ? (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 10, color: 'var(--text-muted)' }}>
                 <span style={{ fontSize: 40 }}>🛒</span>
