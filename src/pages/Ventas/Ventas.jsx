@@ -181,6 +181,16 @@ export default function Ventas() {
         if (d.descuento)      setDescuento(d.descuento)
         if (d.razonDescuento) setRazonDescuento(d.razonDescuento)
         if (d.formaPago)      setFormaPago(d.formaPago)
+        // Cotizador de corte especial: si quedó a medio llenar (p.ej. el
+        // vendedor se fue a otra pantalla a chequear una medida o un tiempo
+        // de fabricación), se restaura tal cual quedó.
+        if (d.showCotizador)  setShowCotizador(d.showCotizador)
+        if (d.cotDesc)        setCotDesc(d.cotDesc)
+        if (d.cotCantidad)    setCotCantidad(d.cotCantidad)
+        if (Array.isArray(d.cotPiezas) && d.cotPiezas.length)   setCotPiezas(d.cotPiezas)
+        if (Array.isArray(d.cotTarifas) && d.cotTarifas.length) setCotTarifas(d.cotTarifas)
+        if (d.cotExpPiezas)   setCotExpPiezas(d.cotExpPiezas)
+        if (d.cotExpTarifas)  setCotExpTarifas(d.cotExpTarifas)
       }
     } catch { /* borrador corrupto, se ignora */ }
     draftRestored.current = true
@@ -188,15 +198,21 @@ export default function Ventas() {
 
   useEffect(() => {
     if (!draftRestored.current) return
-    const hayVentaEnCurso = items.length > 0 || !!cliente || !!listaSel
+    const cotizadorTocado = showCotizador || cotDesc.trim() !== '' ||
+      cotPiezas.some(p => p.material_id) || cotTarifas.some(t => t.tarifa_id)
+    const hayVentaEnCurso = items.length > 0 || !!cliente || !!listaSel || cotizadorTocado
     try {
       if (hayVentaEnCurso) {
-        localStorage.setItem(draftKey, JSON.stringify({ fecha, cliente, listaSel, comprobante, items, descuento, razonDescuento, formaPago }))
+        localStorage.setItem(draftKey, JSON.stringify({
+          fecha, cliente, listaSel, comprobante, items, descuento, razonDescuento, formaPago,
+          showCotizador, cotDesc, cotCantidad, cotPiezas, cotTarifas, cotExpPiezas, cotExpTarifas,
+        }))
       } else {
         localStorage.removeItem(draftKey)
       }
     } catch { /* localStorage lleno o no disponible */ }
-  }, [draftKey, fecha, cliente, listaSel, comprobante, items, descuento, razonDescuento, formaPago])
+  }, [draftKey, fecha, cliente, listaSel, comprobante, items, descuento, razonDescuento, formaPago,
+      showCotizador, cotDesc, cotCantidad, cotPiezas, cotTarifas, cotExpPiezas, cotExpTarifas])
 
   // ── Ventas del día ───────────────────────────────────────────────────────
   const loadVentasHoy = useCallback(async () => {
@@ -648,6 +664,10 @@ export default function Ventas() {
     setFecha(todayStr())   // siempre resetear al día actual
     setShowSuccess(false)
     setSavedVenta(null)
+    setShowCotizador(false)
+    setCotDesc(''); setCotCantidad(1)
+    setCotPiezas([{ ...blankPieza }]); setCotTarifas([{ ...blankTarifaSel }])
+    setCotExpPiezas({ 0: true }); setCotExpTarifas({ 0: true })
     setTimeout(() => prodSearchRef.current?.focus(), 100)
   }
 
