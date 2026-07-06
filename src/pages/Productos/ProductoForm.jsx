@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { fmtMoney, padId } from '../../lib/format'
 import { calcCosto3D, calcInsumo, precioVenta } from '../../lib/pricing'
 import { recalcularCCPorProductos } from '../../lib/recalcularCC'
+import { useAuth } from '../../lib/AuthContext'
 
 const SKU_RE = /^[A-Z]{3}[0-9]{6}(-V\d+)?$/
 
@@ -56,7 +57,18 @@ const calcTarifaCost = (tar, ts) => {
   return horas * (Number(tar.costo_hora) || 0)
 }
 
+// Borrador de "producto nuevo" en localStorage — solo para la creación
+// (no para edición de productos existentes). Si el navegador recarga la
+// página a medio cargar (p.ej. al volver de otro programa y encontrar una
+// actualización), esto permite recuperar lo que se venía tipeando.
+export const nuevoProductoDraftKey = (orgId) => `producto_nuevo_draft_${orgId || 'anon'}`
+
 export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, onSavedVariant }) {
+  const { orgId } = useAuth()
+  const draftKey = nuevoProductoDraftKey(orgId)
+  const esNuevo = !initial
+  const draftRestored = useRef(false)
+
   const [form, setForm] = useState(() => {
     if (initial) {
       return {
@@ -96,10 +108,30 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }))
 
+  // ── Borrador de producto nuevo (solo al crear, no al editar) ─────────────
   useEffect(() => {
-    const handler = (e) => { if (e.key === 'Escape') onCancel() }
+    if (!esNuevo) { draftRestored.current = true; return }
+    try {
+      const raw = localStorage.getItem(draftKey)
+      if (raw) setForm(JSON.parse(raw))
+    } catch { /* borrador corrupto, se ignora */ }
+    draftRestored.current = true
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  useEffect(() => {
+    if (!esNuevo || !draftRestored.current) return
+    try { localStorage.setItem(draftKey, JSON.stringify(form)) } catch { /* localStorage lleno */ }
+  }, [esNuevo, draftKey, form])
+
+  const limpiarDraft = () => { try { localStorage.removeItem(draftKey) } catch { /* noop */ } }
+  const handleCancel = () => { limpiarDraft(); onCancel() }
+
+  useEffect(() => {
+    const handler = (e) => { if (e.key === 'Escape') handleCancel() }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [onCancel])
 
   useEffect(() => {
@@ -264,6 +296,7 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
       : await supabase.from('productos').insert(payload)
     setSaving(false)
     if (res.error) return alert('Error: ' + res.error.message)
+    limpiarDraft()
 
     // Si es una edición, recalcular en background todas las CC pendientes
     // que contengan este producto, sin bloquear el flujo de guardado.
@@ -478,7 +511,7 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
       <div className="modal" style={{ maxWidth:'min(1500px, 99vw)', width:'100%', display:'flex', flexDirection:'column', maxHeight:'92vh' }}>
         <div className="modal-header">
           <h3>{form.id ? 'Editar producto' : 'Nuevo producto'}</h3>
-          <button className="btn btn-ghost btn-sm" onClick={onCancel}>✕</button>
+          <button className="btn btn-ghost btn-sm" onClick={handleCancel}>✕</button>
         </div>
 
         {/* 3 columnas sin scroll — footer siempre visible */}
@@ -684,7 +717,7 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
             </button>
           </div>
           <div style={{ display:'flex', gap:8 }}>
-            <button className="btn" onClick={onCancel} disabled={saving}>Cancelar</button>
+            <button className="btn" onClick={handleCancel} disabled={saving}>Cancelar</button>
             {!form.id && (
               <button className="btn" onClick={()=>handleSave('next')} disabled={saving} style={{ fontWeight:500 }}>
                 {saving ? 'Guardando...' : '+ Guardar y agregar otro'}

@@ -2,13 +2,15 @@ import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { fmtMoney } from '../../lib/format'
 import { precioVenta } from '../../lib/pricing'
-import ProductoForm from './ProductoForm'
+import ProductoForm, { nuevoProductoDraftKey } from './ProductoForm'
 import BarcodeModal from './BarcodeModal'
 import ImageThumb from '../../components/ImageThumb'
 import { exportCatalogoPDF } from '../../lib/pdf'
 import { exportCatalogoCSV } from '../../lib/csv'
+import { useAuth } from '../../lib/AuthContext'
 
 export default function Productos() {
+  const { orgId } = useAuth()
   const [items, setItems] = useState([])
   const [listas, setListas] = useState([])
   const [categorias, setCategorias] = useState([])
@@ -50,6 +52,18 @@ export default function Productos() {
     setLoading(false)
   }
   useEffect(() => { load() }, [])
+
+  // Si quedó un producto nuevo a medio cargar (p.ej. se recargó la página al
+  // volver de otro programa) reabrir el formulario con ese borrador.
+  useEffect(() => {
+    if (!orgId) return
+    try {
+      if (localStorage.getItem(nuevoProductoDraftKey(orgId))) {
+        setFormKey(k => k + 1)
+        setEditing({})
+      }
+    } catch { /* noop */ }
+  }, [orgId])
 
   const lista = useMemo(() => listas.find((l) => l.id === listaSel), [listas, listaSel])
 
