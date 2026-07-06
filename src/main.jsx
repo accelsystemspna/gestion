@@ -54,7 +54,20 @@ if ('serviceWorker' in navigator) {
       immediate: true,
       onRegisteredSW(_url, registration) {
         if (!registration) return
-        const checkForUpdate = () => { registration.update().catch(() => {}); reloadIfSafe() }
+        // En desktop es normal alternar entre esta pestaña y otros programas
+        // (p.ej. un software de corte) decenas de veces por hora. Revisar la
+        // versión en CADA cambio de ventana terminaba recargando la página
+        // seguido (cada chequeo que encuentra una versión nueva dispara la
+        // recarga). Se limita a revisar como máximo cada 5 minutos.
+        const INTERVALO_MIN_MS = 5 * 60 * 1000
+        let ultimoChequeo = 0
+        const checkForUpdate = () => {
+          reloadIfSafe()
+          const ahora = Date.now()
+          if (ahora - ultimoChequeo < INTERVALO_MIN_MS) return
+          ultimoChequeo = ahora
+          registration.update().catch(() => {})
+        }
         document.addEventListener('visibilitychange', () => {
           if (document.visibilityState === 'visible') checkForUpdate()
         })
