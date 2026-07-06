@@ -173,7 +173,10 @@ export default function Ventas() {
       const raw = localStorage.getItem(draftKey)
       if (raw) {
         const d = JSON.parse(raw)
-        if (d.fecha)       setFecha(d.fecha)
+        // La fecha NO se restaura del borrador: si quedó un borrador viejo de
+        // otro día, restaurar su fecha hacía que ventas nuevas se guardaran
+        // con esa fecha vieja sin que nadie lo note. La fecha siempre arranca
+        // en hoy (useState(todayStr()) ya la inicializa así).
         if (d.cliente)     setCliente(d.cliente)
         if (d.listaSel)    setListaSel(d.listaSel)
         if (d.comprobante) setComprobante(d.comprobante)
@@ -204,14 +207,14 @@ export default function Ventas() {
     try {
       if (hayVentaEnCurso) {
         localStorage.setItem(draftKey, JSON.stringify({
-          fecha, cliente, listaSel, comprobante, items, descuento, razonDescuento, formaPago,
+          cliente, listaSel, comprobante, items, descuento, razonDescuento, formaPago,
           showCotizador, cotDesc, cotCantidad, cotPiezas, cotTarifas, cotExpPiezas, cotExpTarifas,
         }))
       } else {
         localStorage.removeItem(draftKey)
       }
     } catch { /* localStorage lleno o no disponible */ }
-  }, [draftKey, fecha, cliente, listaSel, comprobante, items, descuento, razonDescuento, formaPago,
+  }, [draftKey, cliente, listaSel, comprobante, items, descuento, razonDescuento, formaPago,
       showCotizador, cotDesc, cotCantidad, cotPiezas, cotTarifas, cotExpPiezas, cotExpTarifas])
 
   // ── Ventas del día ───────────────────────────────────────────────────────
