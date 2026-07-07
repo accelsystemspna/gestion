@@ -335,8 +335,9 @@ export default function Ventas() {
 
     const sortBySku = (a, b) => (a.sku ?? '').localeCompare(b.sku ?? '', undefined, { numeric: true, sensitivity: 'base' })
 
-    if (catFiltro && !q) {
-      // Categoría activa sin búsqueda: lista plana ordenada por SKU, sin encabezado
+    if (catFiltro) {
+      // Categoría activa: lista plana ordenada por SKU, sin encabezado.
+      // La búsqueda (si hay) filtra DENTRO de la categoría, no la ignora.
       const filtered = list.filter(p => String(p.categoria_id) === catFiltro).sort(sortBySku)
       return [{ categoria: categorias.find(c => String(c.id) === catFiltro) ?? null, productos: filtered, showHeader: false }]
     }
