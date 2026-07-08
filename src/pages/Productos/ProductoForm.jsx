@@ -39,6 +39,8 @@ const blank = {
   alto_producto: '',
   ancho_producto: '',
   imagen_url: '',
+  imagen_web_url: '',
+  imagenes_web: [],
   tiendas_ids: [],
   piezas: [{ ...blankPieza }],
   tarifas_sel: [{ ...blankTarifaSel }],
@@ -77,6 +79,8 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
         categoria_id: initial.categoria_id || '',
         subcategoria_id: initial.subcategoria_id || '',
         imagen_url: initial.imagen_url || '',
+        imagen_web_url: initial.imagen_web_url || '',
+        imagenes_web: initial.imagenes_web || [],
         incremento: initial.incremento || 0,
         tiendas_ids: initial.tiendas_ids || [],
         tarifas_sel: initial.tarifas_producto || [{ ...blankTarifaSel }],
@@ -101,10 +105,13 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
   const [rubroFiltro, setRubroFiltro] = useState('')
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
+  const [uploadingWeb, setUploadingWeb] = useState(false)
+  const [uploadingGaleria, setUploadingGaleria] = useState(false)
   const [skuError, setSkuError] = useState(null)
   const [expandedPieza, setExpandedPieza] = useState(0)
   const [expandedTarifa, setExpandedTarifa] = useState(0)
   const [savedFlash, setSavedFlash] = useState(false)  // ✅ flash "Guardado"
+  const [tab, setTab] = useState('general')  // 'general' | 'web'
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }))
 
@@ -235,6 +242,40 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
     setUploading(false)
   }
 
+  const handleWebCoverUpload = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploadingWeb(true)
+    const ext = file.name.split('.').pop()
+    const path = `web/${Date.now()}.${ext}`
+    const { error } = await supabase.storage.from('productos').upload(path, file, { upsert: true })
+    if (error) { alert('Error al subir imagen: ' + error.message); setUploadingWeb(false); return }
+    const { data } = supabase.storage.from('productos').getPublicUrl(path)
+    set('imagen_web_url', data.publicUrl)
+    setUploadingWeb(false)
+  }
+
+  const handleGaleriaUpload = async (e) => {
+    const files = [...(e.target.files || [])]
+    if (files.length === 0) return
+    setUploadingGaleria(true)
+    const nuevas = []
+    for (const file of files) {
+      const ext = file.name.split('.').pop()
+      const path = `web/${Date.now()}-${Math.round(Math.random() * 1e6)}.${ext}`
+      const { error } = await supabase.storage.from('productos').upload(path, file)
+      if (error) { alert('Error al subir imagen: ' + error.message); continue }
+      const { data } = supabase.storage.from('productos').getPublicUrl(path)
+      nuevas.push(data.publicUrl)
+    }
+    if (nuevas.length) setForm(f => ({ ...f, imagenes_web: [...(f.imagenes_web || []), ...nuevas] }))
+    setUploadingGaleria(false)
+    e.target.value = ''
+  }
+
+  const quitarImagenGaleria = (url) =>
+    setForm(f => ({ ...f, imagenes_web: (f.imagenes_web || []).filter(u => u !== url) }))
+
   const setPieza = (idx, k, v) => setForm((f) => {
     const piezas = [...f.piezas]; piezas[idx] = { ...piezas[idx], [k]: v }; return { ...f, piezas }
   })
@@ -279,6 +320,8 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
       alto_producto: form.alto_producto !== '' ? Number(form.alto_producto) : null,
       ancho_producto: form.ancho_producto !== '' ? Number(form.ancho_producto) : null,
       imagen_url: form.imagen_url || null,
+      imagen_web_url: form.imagen_web_url || null,
+      imagenes_web: form.imagenes_web || [],
       tiendas_ids: form.tiendas_ids || [],
       incremento: Number(form.incremento) || 0,
       piezas: tipoFab === 'Melamina' ? form.piezas : null,
@@ -364,6 +407,8 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
         categoria_id:     form.categoria_id,
         subcategoria_id:  form.subcategoria_id,
         imagen_url:       form.imagen_url ?? null,
+        imagen_web_url:   form.imagen_web_url ?? null,
+        imagenes_web:     [],
         incremento:       form.incremento ?? 0,
         tiendas_ids:      form.tiendas_ids ?? [],
         // Dimensiones del producto y materiales se resetean
@@ -511,11 +556,16 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
       <div className="modal" style={{ maxWidth:'min(1500px, 99vw)', width:'100%', display:'flex', flexDirection:'column', maxHeight:'92vh' }}>
         <div className="modal-header">
           <h3>{form.id ? 'Editar producto' : 'Nuevo producto'}</h3>
+          <div style={{ display:'flex', gap:4, marginLeft:'auto', marginRight:12 }}>
+            <button type="button" onClick={()=>setTab('general')} className="btn btn-sm" style={{ background:tab==='general'?'var(--primary)':undefined, color:tab==='general'?'white':undefined, borderColor:tab==='general'?'var(--primary)':undefined }}>Producto</button>
+            <button type="button" onClick={()=>setTab('web')} className="btn btn-sm" style={{ background:tab==='web'?'var(--primary)':undefined, color:tab==='web'?'white':undefined, borderColor:tab==='web'?'var(--primary)':undefined }}>🌐 Web</button>
+          </div>
           <button className="btn btn-ghost btn-sm" onClick={handleCancel}>✕</button>
         </div>
 
         {/* 3 columnas sin scroll — footer siempre visible */}
-        <div className="modal-body" style={{ padding:0, flex:1, minHeight:0, display:'grid', gridTemplateColumns:'0.75fr 1.3fr 0.65fr', overflow:'hidden' }}>
+        <div className="modal-body" style={{ padding:0, flex:1, minHeight:0, display: tab==='general' ? 'grid' : 'block', gridTemplateColumns:'0.75fr 1.3fr 0.65fr', overflow: tab==='general' ? 'hidden' : 'auto' }}>
+          {tab !== 'general' ? null : (
           <div style={{ display:'contents' }}>
 
             {/* ══ COL 1 — Características ══════════════════ */}
@@ -661,32 +711,104 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
                         ))}
                       </div>
                     )}
-
-                    {/* Canales de venta */}
-                    {tiendas.length > 0 && (
-                      <div style={{ display:'flex', flexDirection:'column', gap:3 }}>
-                        <div style={{ fontSize:11, fontWeight:700, color:'var(--text-muted)', textTransform:'uppercase' }}>Canales de venta</div>
-                        {tiendas.map(t=>{
-                          const COLORS={woocommerce:['#7c3aed','#f5f3ff'],mercadolibre:['#d97706','#fffbeb']}
-                          const [color,bg]=COLORS[t.tipo]||['#64748b','#f1f5f9']
-                          const sel=(form.tiendas_ids||[]).map(String).includes(String(t.id))
-                          const toggle=()=>{ const ids=(form.tiendas_ids||[]).map(String); const sid=String(t.id); set('tiendas_ids',sel?ids.filter(i=>i!==sid):[...ids,sid]) }
-                          return (
-                            <label key={t.id} onClick={toggle} style={{ display:'flex', alignItems:'center', gap:6, cursor:'pointer', padding:'5px 8px', borderRadius:5, userSelect:'none', border:`1px solid ${sel?color:'var(--border)'}`, background:sel?bg:'var(--bg-cell)', transition:'all 0.15s' }}>
-                              <div style={{ width:7, height:7, borderRadius:'50%', background:sel?color:'#cbd5e1', flexShrink:0 }} />
-                              <span style={{ fontSize:12, fontWeight:sel?600:400, color:sel?color:'var(--text)', flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{t.nombre}</span>
-                              <span style={{ fontSize:10, fontWeight:700, padding:'1px 5px', borderRadius:3, background:sel?color:'#e2e8f0', color:sel?'white':'#94a3b8', flexShrink:0 }}>{t.tipo==='woocommerce'?'WC':'ML'}</span>
-                            </label>
-                          )
-                        })}
-                      </div>
-                    )}
                   </>
                 )
               }
             </div>
 
           </div>
+          )}
+
+          {tab === 'web' && (
+            <div style={{ padding:'18px 20px', display:'flex', flexDirection:'column', gap:20, maxWidth:900 }}>
+
+              {/* Fotos */}
+              <div>
+                {secLabel('Fotos para la web')}
+                <div style={{ display:'flex', gap:20, marginTop:10, flexWrap:'wrap' }}>
+
+                  {/* Portada */}
+                  <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+                    <span style={{ fontSize:12, fontWeight:600, color:'var(--text-muted)' }}>Foto de portada</span>
+                    {form.imagen_web_url ? (
+                      <div style={{ position:'relative' }}>
+                        <img src={form.imagen_web_url} alt="" style={{ width:140, height:140, objectFit:'cover', borderRadius:8, border:'1px solid var(--border)', display:'block' }} />
+                        <button onClick={()=>set('imagen_web_url','')} style={{ position:'absolute', top:-6, right:-6, background:'var(--danger)', color:'#fff', border:'none', borderRadius:'50%', width:20, height:20, fontSize:12, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>✕</button>
+                        <label style={{ cursor:'pointer', display:'block', marginTop:6 }}>
+                          <input type="file" accept="image/*" style={{ display:'none' }} onChange={handleWebCoverUpload} disabled={uploadingWeb} />
+                          <span className="btn btn-sm" style={{ fontSize:11, width:'100%', textAlign:'center' }}>{uploadingWeb?'Subiendo...':'Cambiar'}</span>
+                        </label>
+                      </div>
+                    ) : (
+                      <label style={{ cursor: uploadingWeb?'not-allowed':'pointer' }}>
+                        <input type="file" accept="image/*" style={{ display:'none' }} onChange={handleWebCoverUpload} disabled={uploadingWeb} />
+                        <div style={{ width:140, height:140, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:6, border:'1px dashed var(--primary)', borderRadius:8, background:'var(--bg-highlight)' }}>
+                          <span style={{ fontSize:24 }}>🖼️</span>
+                          <span style={{ fontSize:11, color:'var(--primary)', fontWeight:500, textAlign:'center', padding:'0 8px' }}>{uploadingWeb?'Subiendo...':'Subir portada'}</span>
+                        </div>
+                      </label>
+                    )}
+                  </div>
+
+                  {/* Galería */}
+                  <div style={{ display:'flex', flexDirection:'column', gap:6, flex:1, minWidth:220 }}>
+                    <span style={{ fontSize:12, fontWeight:600, color:'var(--text-muted)' }}>Galería (fotos adicionales)</span>
+                    <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
+                      {(form.imagenes_web || []).map(url => (
+                        <div key={url} style={{ position:'relative' }}>
+                          <img src={url} alt="" style={{ width:70, height:70, objectFit:'cover', borderRadius:6, border:'1px solid var(--border)', display:'block' }} />
+                          <button onClick={()=>quitarImagenGaleria(url)} style={{ position:'absolute', top:-5, right:-5, background:'var(--danger)', color:'#fff', border:'none', borderRadius:'50%', width:16, height:16, fontSize:10, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>✕</button>
+                        </div>
+                      ))}
+                      <label style={{ cursor: uploadingGaleria?'not-allowed':'pointer' }}>
+                        <input type="file" accept="image/*" multiple style={{ display:'none' }} onChange={handleGaleriaUpload} disabled={uploadingGaleria} />
+                        <div style={{ width:70, height:70, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:2, border:'1px dashed var(--border)', borderRadius:6, background:'var(--bg-highlight)' }}>
+                          <span style={{ fontSize:18, color:'var(--primary)' }}>+</span>
+                          <span style={{ fontSize:9, color:'var(--primary)', fontWeight:500 }}>{uploadingGaleria?'...':'Agregar'}</span>
+                        </div>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Tamaño */}
+              <div>
+                {secLabel('Tamaño del producto')}
+                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginTop:10, maxWidth:280 }}>
+                  <F label="Alto (cm)"><input className="input" style={si()} type="number" step="0.1" value={form.alto_producto} onChange={e=>set('alto_producto',e.target.value)} placeholder="0" /></F>
+                  <F label="Ancho (cm)"><input className="input" style={si()} type="number" step="0.1" value={form.ancho_producto} onChange={e=>set('ancho_producto',e.target.value)} placeholder="0" /></F>
+                </div>
+              </div>
+
+              {/* Canales de venta */}
+              <div>
+                {secLabel('¿A qué webs se sube?')}
+                {tiendas.length === 0 ? (
+                  <div style={{ marginTop:10, fontSize:12, color:'var(--text-muted)' }}>
+                    No hay tiendas configuradas. Se agregan desde Configuración → Integraciones.
+                  </div>
+                ) : (
+                  <div style={{ display:'flex', flexWrap:'wrap', gap:8, marginTop:10 }}>
+                    {tiendas.map(t=>{
+                      const COLORS={woocommerce:['#7c3aed','#f5f3ff'],mercadolibre:['#d97706','#fffbeb']}
+                      const [color,bg]=COLORS[t.tipo]||['#64748b','#f1f5f9']
+                      const sel=(form.tiendas_ids||[]).map(String).includes(String(t.id))
+                      const toggle=()=>{ const ids=(form.tiendas_ids||[]).map(String); const sid=String(t.id); set('tiendas_ids',sel?ids.filter(i=>i!==sid):[...ids,sid]) }
+                      return (
+                        <label key={t.id} onClick={toggle} style={{ display:'flex', alignItems:'center', gap:7, cursor:'pointer', padding:'7px 12px', borderRadius:6, userSelect:'none', border:`1px solid ${sel?color:'var(--border)'}`, background:sel?bg:'var(--bg-cell)', transition:'all 0.15s' }}>
+                          <div style={{ width:8, height:8, borderRadius:'50%', background:sel?color:'#cbd5e1', flexShrink:0 }} />
+                          <span style={{ fontSize:13, fontWeight:sel?600:400, color:sel?color:'var(--text)' }}>{t.nombre}</span>
+                          <span style={{ fontSize:10, fontWeight:700, padding:'1px 5px', borderRadius:3, background:sel?color:'#e2e8f0', color:sel?'white':'#94a3b8' }}>{t.tipo==='woocommerce'?'WC':'ML'}</span>
+                        </label>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+
+            </div>
+          )}
         </div>
 
         {/* Footer fijo — siempre visible */}
