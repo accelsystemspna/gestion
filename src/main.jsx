@@ -47,31 +47,17 @@ if ('serviceWorker' in navigator) {
 
   import('virtual:pwa-register').then(({ registerSW }) => {
     // autoUpdate: detecta versión nueva y recarga sola, sin pedirle nada al usuario.
-    // El navegador solo revisa el SW en una navegación nueva; en una PWA que queda
-    // abierta en segundo plano (p.ej. al bloquear el celular) eso nunca pasa solo,
-    // así que forzamos el chequeo cada vez que la app vuelve a primer plano.
+    // El chequeo NO se dispara al cambiar de pestaña/programa ni al volver a
+    // primer plano: alternar entre esta pestaña y otro programa (o simplemente
+    // otra pestaña del navegador) es algo normal decenas de veces por hora, y
+    // atarlo a eso terminaba recargando la página en medio del trabajo. Solo
+    // se revisa por el intervalo periódico, así una actualización nunca
+    // interrumpe por el simple hecho de cambiar de ventana.
     registerSW({
       immediate: true,
       onRegisteredSW(_url, registration) {
         if (!registration) return
-        // En desktop es normal alternar entre esta pestaña y otros programas
-        // (p.ej. un software de corte) decenas de veces por hora. Revisar la
-        // versión en CADA cambio de ventana terminaba recargando la página
-        // seguido (cada chequeo que encuentra una versión nueva dispara la
-        // recarga). Se limita a revisar como máximo cada 5 minutos.
-        const INTERVALO_MIN_MS = 5 * 60 * 1000
-        let ultimoChequeo = 0
-        const checkForUpdate = () => {
-          reloadIfSafe()
-          const ahora = Date.now()
-          if (ahora - ultimoChequeo < INTERVALO_MIN_MS) return
-          ultimoChequeo = ahora
-          registration.update().catch(() => {})
-        }
-        document.addEventListener('visibilitychange', () => {
-          if (document.visibilityState === 'visible') checkForUpdate()
-        })
-        window.addEventListener('focus', checkForUpdate)
+        const checkForUpdate = () => { reloadIfSafe(); registration.update().catch(() => {}) }
         setInterval(checkForUpdate, 30 * 60 * 1000)
       },
     })
