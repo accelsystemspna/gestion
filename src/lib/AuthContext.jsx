@@ -20,8 +20,15 @@ export function AuthProvider({ children }) {
     return () => sub.subscription.unsubscribe()
   }, [])
 
+  // Ojo: depende de session?.user?.id (no de `session` entero). Supabase
+  // renueva el token solo al volver a la pestaña, y eso dispara
+  // onAuthStateChange con un objeto `session` nuevo aunque sea el mismo
+  // usuario — si este efecto dependiera de `session`, se volvería a pedir
+  // el perfil y ProtectedRoute mostraría "Cargando..." tapando la pantalla
+  // cada vez que se cambia de pestaña del navegador.
+  const userId = session?.user?.id
   useEffect(() => {
-    if (!session?.user) {
+    if (!userId) {
       setProfile(null)
       return
     }
@@ -29,13 +36,13 @@ export function AuthProvider({ children }) {
     supabase
       .from('profiles')
       .select('*')
-      .eq('id', session.user.id)
+      .eq('id', userId)
       .maybeSingle()
       .then(({ data }) => {
         setProfile(data)
         setProfileLoading(false)
       })
-  }, [session])
+  }, [userId])
 
   const toEmail = (usuario) => {
     if (usuario.includes('@')) return usuario
