@@ -26,10 +26,24 @@ export default function Layout() {
   const [open, setOpen] = useState(false)
   const [ventasWebPendientes, setVentasWebPendientes] = useState(0)
   const [toast, setToast] = useState(null)
-  const [notifStatus, setNotifStatus] = useState(
-    typeof Notification !== 'undefined' ? Notification.permission : 'unsupported'
-  )
+  // 'checking' | 'unsubscribed' | 'subscribed' | 'denied' | 'unsupported'
+  const [subState, setSubState] = useState('checking')
   const toastTimer = useRef(null)
+
+  // Estado real de la suscripción push — no alcanza con mirar
+  // Notification.permission, porque puede haber quedado "granted" de una
+  // prueba vieja sin que exista una suscripción guardada de verdad.
+  useEffect(() => {
+    if (!pushSupported()) { setSubState('unsupported'); return }
+    if (typeof Notification !== 'undefined' && Notification.permission === 'denied') {
+      setSubState('denied')
+      return
+    }
+    navigator.serviceWorker.ready
+      .then((reg) => reg.pushManager.getSubscription())
+      .then((sub) => setSubState(sub ? 'subscribed' : 'unsubscribed'))
+      .catch(() => setSubState('unsubscribed'))
+  }, [])
 
   // Cerrar drawer al cambiar de ruta
   useEffect(() => { setOpen(false) }, [location.pathname])
@@ -83,14 +97,15 @@ export default function Layout() {
   }, [navigate])
 
   const [activandoPush, setActivandoPush] = useState(false)
+  const [dismissedNotif, setDismissedNotif] = useState(false)
   const pedirPermisoNotif = async () => {
     setActivandoPush(true)
     try {
       await subscribeToPush(orgId)
-      setNotifStatus('granted')
+      setSubState('subscribed')
     } catch (err) {
       console.error('[push]', err)
-      setNotifStatus(typeof Notification !== 'undefined' ? Notification.permission : 'denied')
+      setSubState(typeof Notification !== 'undefined' && Notification.permission === 'denied' ? 'denied' : 'unsubscribed')
       alert('No se pudo activar la notificación: ' + err.message)
     }
     setActivandoPush(false)
@@ -98,10 +113,10 @@ export default function Layout() {
 
   const descartarBannerNotif = () => {
     try { localStorage.setItem(NOTIF_DISMISSED_KEY, '1') } catch { /* noop */ }
-    setNotifStatus('dismissed')
+    setDismissedNotif(true)
   }
 
-  const mostrarBannerNotif = pushSupported() && notifStatus === 'default' && (() => {
+  const mostrarBannerNotif = subState === 'unsubscribed' && !dismissedNotif && (() => {
     try { return localStorage.getItem(NOTIF_DISMISSED_KEY) !== '1' } catch { return true }
   })()
 
