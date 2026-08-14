@@ -289,6 +289,11 @@ h1, h2, h3, h4 {
   to { transform: rotate(360deg); }
 }
 
+@keyframes slideIn {
+  from { transform: translateX(24px); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+
 /* ── Responsive ─────────────────────────────────────────── */
 @media (max-width: 768px) {
   /* Layout */
@@ -328,7 +333,16 @@ h1, h2, h3, h4 {
   }
 
   /* POS top bar: reordenar en filas claras en mobile */
-  .pos-btn-historial { display: none !important; }
+  .pos-btn-historial {
+    order: 7;
+    flex: 1 1 auto !important;
+    justify-content: center !important;
+  }
+  .pos-btn-web {
+    order: 6;
+    flex: 1 1 auto !important;
+    justify-content: center !important;
+  }
 
   .pos-fecha {
     order: 1;
@@ -357,7 +371,8 @@ h1, h2, h3, h4 {
   }
   .pos-btn-hoy {
     order: 5;
-    flex: 0 0 auto !important;
+    flex: 1 1 auto !important;
+    justify-content: center !important;
   }
 
   /* ── Presupuesto: flujo vertical continuo (sin tabs) ───────────── */

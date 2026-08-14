@@ -7,6 +7,7 @@
 
 import { supabase }                                from './supabase'
 import { precioVenta, calcInsumo, calcTarifaCost } from './pricing'
+import { syncManyToWoo }                           from './wooSync'
 
 /**
  * Recalcula los precios de todas las ventas pendientes en cuenta corriente
@@ -135,7 +136,7 @@ export async function recalcularProductosPorMaterial(_materialId) {
   // 3. Todos los productos
   const { data: productos, error: errProd } = await supabase
     .from('productos')
-    .select('id, sku, piezas, tarifas_producto, material_id, ancho_pieza, alto_pieza, cantidad_piezas, tarifa_id, fab_minutos, fab_segundos, costo_base')
+    .select('id, sku, nombre, piezas, tarifas_producto, material_id, ancho_pieza, alto_pieza, cantidad_piezas, tarifa_id, fab_minutos, fab_segundos, costo_base, tiendas_ids, activo, imagen_url, imagen_web_url, imagenes_web, seo_titulo, seo_descripcion, peso_kg, paquete_largo, paquete_ancho, paquete_alto')
 
   if (errProd) {
     console.warn(TAG + ' error al leer productos:', errProd)
@@ -169,6 +170,7 @@ export async function recalcularProductosPorMaterial(_materialId) {
 
   // 4. Recalcular costo_base para cada producto que tiene datos de calculo
   const productosActualizadosIds = []
+  const productosParaSync = []  // productos con tienda asignada — se re-sincronizan al final
 
   for (const prod of productos) {
     let nuevoCosto = null  // null = no se puede calcular, se omite
@@ -232,7 +234,12 @@ export async function recalcularProductosPorMaterial(_materialId) {
       console.log(TAG + ' ' + (prod.sku ?? prod.id) + ': ' + prod.costo_base + ' -> ' + nuevoCosto.toFixed(2))
       const { error } = await supabase
         .from('productos').update({ costo_base: nuevoCosto }).eq('id', prod.id)
-      if (!error) productosActualizadosIds.push(prod.id)
+      if (!error) {
+        productosActualizadosIds.push(prod.id)
+        if (prod.tiendas_ids?.length) {
+          productosParaSync.push({ ...prod, costo_base: nuevoCosto })
+        }
+      }
     }
   }
 
@@ -247,12 +254,51 @@ export async function recalcularProductosPorMaterial(_materialId) {
   const { ventasActualizadas, clientesAfectados } =
     await recalcularCCPorProductos(productosActualizadosIds)
 
+  // 6. Re-sincronizar con las tiendas web los productos cuyo costo cambió
+  let sincronizados = 0
+  if (productosParaSync.length) {
+    const [{ data: tiendas }, { data: listasWeb }] = await Promise.all([
+      supabase.from('tiendas').select('id, nombre, tipo, activa, url, webhook_secret, lista_id').eq('activa', true),
+      supabase.from('listas_precios').select('*'),
+    ])
+    const res = await syncManyToWoo(productosParaSync, { tiendas: tiendas || [], listas: listasWeb || [] })
+    sincronizados = res.sincronizados
+    console.log(TAG + ` sync web: ${res.sincronizados}/${res.total} OK`)
+  }
+
   console.log(TAG + ' fin: ' + productosActualizadosIds.length + ' productos, ' +
-    ventasActualizadas + ' ventas, ' + clientesAfectados + ' clientes')
+    ventasActualizadas + ' ventas, ' + clientesAfectados + ' clientes, ' + sincronizados + ' sincronizados a la web')
 
   return {
     productosActualizados: productosActualizadosIds.length,
     ventasActualizadas,
     clientesAfectados,
+    sincronizados,
   }
+}
+
+/**
+ * Cuando cambia una lista de precios (margen, redondeo, costos extra), el
+ * costo_base de los productos no cambia pero sí el precio de venta calculado
+ * para cualquier tienda que use esa lista. Re-sincroniza todos los productos
+ * con tienda asignada — igual que con materiales, no filtra por lista
+ * específica porque es más robusto y el resync es idempotente para los
+ * productos cuyo precio no cambió.
+ */
+export async function resyncProductosPorLista(_listaId) {
+  const TAG = '[CC Auto]'
+
+  const [{ data: productos }, { data: tiendas }, { data: listas }] = await Promise.all([
+    supabase
+      .from('productos')
+      .select('id, sku, nombre, costo_base, imagen_url, imagen_web_url, imagenes_web, activo, seo_titulo, seo_descripcion, peso_kg, paquete_largo, paquete_ancho, paquete_alto, tiendas_ids'),
+    supabase.from('tiendas').select('id, nombre, tipo, activa, url, webhook_secret, lista_id').eq('activa', true),
+    supabase.from('listas_precios').select('*'),
+  ])
+
+  if (!productos?.length) return { sincronizados: 0, total: 0 }
+
+  const res = await syncManyToWoo(productos, { tiendas: tiendas || [], listas: listas || [] })
+  console.log(TAG + ` lista de precios actualizada — sync web: ${res.sincronizados}/${res.total} OK`)
+  return res
 }

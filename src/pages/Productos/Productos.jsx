@@ -7,7 +7,7 @@ import BarcodeModal from './BarcodeModal'
 import ImageThumb from '../../components/ImageThumb'
 import { exportCatalogoPDF } from '../../lib/pdf'
 import { exportCatalogoCSV } from '../../lib/csv'
-import { syncToWoo } from '../../lib/wooSync'
+import { syncToWoo, syncManyToWoo } from '../../lib/wooSync'
 import { useAuth } from '../../lib/AuthContext'
 
 export default function Productos() {
@@ -33,6 +33,7 @@ export default function Productos() {
   const [tiendas, setTiendas] = useState([])
   const [exportingPDF, setExportingPDF] = useState(false)
   const [exportingCSV, setExportingCSV] = useState(false)
+  const [syncingAll, setSyncingAll] = useState(false)
 
   const load = async () => {
     setLoading(true)
@@ -175,6 +176,20 @@ export default function Productos() {
     exportCatalogoCSV(filtrados, lista, categorias, precioVenta, opts)
   }
 
+  const handleSyncAll = async () => {
+    const candidatos = items.filter(p => p.tiendas_ids?.length)
+    if (!candidatos.length) {
+      alert('Ningún producto tiene una tienda web asignada todavía.')
+      return
+    }
+    if (!confirm(`Se van a re-sincronizar ${candidatos.length} producto(s) con sus tiendas web. ¿Continuar?`)) return
+
+    setSyncingAll(true)
+    const { total, sincronizados, errores } = await syncManyToWoo(candidatos, { tiendas, listas })
+    setSyncingAll(false)
+    alert(`Sincronización terminada: ${sincronizados}/${total} OK${errores ? `, ${errores} con error (ver consola)` : ''}.`)
+  }
+
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
@@ -197,6 +212,14 @@ export default function Productos() {
             disabled={filtrados.length === 0}
           >
             📊 Exportar CSV
+          </button>
+          <button
+            className="btn"
+            onClick={handleSyncAll}
+            disabled={syncingAll}
+            title="Reenvía a WooCommerce el precio actual de todos los productos con tienda asignada"
+          >
+            {syncingAll ? '🔄 Sincronizando…' : '🔄 Sincronizar con la web'}
           </button>
         </div>
       </div>

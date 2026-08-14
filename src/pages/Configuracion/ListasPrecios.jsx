@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { fmtMoney } from '../../lib/format'
+import { resyncProductosPorLista } from '../../lib/recalcularCC'
 
 const blank = {
   nombre: '',
@@ -50,6 +51,17 @@ export default function ListasPrecios() {
     if (res.error) { alert('Error: ' + res.error.message); return }
     setEditing(null)
     load()
+
+    // Si es edición, re-sincronizar en background los productos afectados
+    if (form.id) {
+      resyncProductosPorLista(form.id)
+        .then(({ sincronizados, total }) => {
+          if (total > 0) {
+            console.log(`[CC Auto] Lista de precios actualizada: ${sincronizados}/${total} producto(s) re-sincronizados a la web.`)
+          }
+        })
+        .catch(err => console.error('[CC Auto] Error al re-sincronizar por lista:', err))
+    }
   }
 
   const handleDelete = async (id) => {

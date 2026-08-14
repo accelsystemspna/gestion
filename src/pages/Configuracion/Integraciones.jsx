@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../lib/AuthContext'
+import { syncManyToWoo } from '../../lib/wooSync'
 
 // ─── Helpers de UI ───────────────────────────────────────────────────────────
 
@@ -57,12 +58,14 @@ export default function Integraciones() {
   const [categorias, setCategorias] = useState([])
   const [editing, setEditing]     = useState(null)
   const [loading, setLoading]     = useState(true)
+  const [syncingId, setSyncingId] = useState(null)
+  const [syncMsg, setSyncMsg]     = useState({})
 
   const load = async () => {
     setLoading(true)
     const [t, l, c] = await Promise.all([
       supabase.from('tiendas').select('*').eq('user_id', orgId).order('created_at'),
-      supabase.from('listas_precios').select('id, nombre').order('created_at'),
+      supabase.from('listas_precios').select('*').order('created_at'),
       supabase.from('categorias').select('id, nombre').order('nombre'),
     ])
     setTiendas(t.data || [])
@@ -98,6 +101,26 @@ export default function Integraciones() {
   const toggleActiva = async (tienda) => {
     await supabase.from('tiendas').update({ activa: !tienda.activa }).eq('id', tienda.id)
     load()
+  }
+
+  const handleSync = async (tienda) => {
+    setSyncingId(tienda.id)
+    setSyncMsg((m) => ({ ...m, [tienda.id]: null }))
+    try {
+      const { data: productos } = await supabase
+        .from('productos')
+        .select('id, sku, nombre, costo_base, imagen_url, imagen_web_url, imagenes_web, activo, seo_titulo, seo_descripcion, peso_kg, paquete_largo, paquete_ancho, paquete_alto, tiendas_ids')
+      const propios = (productos || []).filter((p) =>
+        (p.tiendas_ids || []).map(String).includes(String(tienda.id))
+      )
+      const res = await syncManyToWoo(propios, { tiendas: [tienda], listas })
+      setSyncMsg((m) => ({ ...m, [tienda.id]: `${res.sincronizados}/${res.total} producto(s) sincronizados` }))
+    } catch (err) {
+      setSyncMsg((m) => ({ ...m, [tienda.id]: 'Error al sincronizar: ' + err.message }))
+    } finally {
+      setSyncingId(null)
+      setTimeout(() => setSyncMsg((m) => ({ ...m, [tienda.id]: null })), 6000)
+    }
   }
 
   const handleDelete = async (id) => {
@@ -175,9 +198,24 @@ export default function Integraciones() {
                       <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Todas las categorías</span>
                     )}
                   </div>
+                  {syncMsg[t.id] && (
+                    <div style={{ fontSize: 11, color: syncMsg[t.id].startsWith('Error') ? 'var(--danger)' : 'var(--success)', marginTop: 4 }}>
+                      {syncMsg[t.id]}
+                    </div>
+                  )}
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+                  {t.tipo === 'woocommerce' && t.url && t.webhook_secret && (
+                    <button
+                      className="btn btn-sm btn-ghost"
+                      onClick={() => handleSync(t)}
+                      disabled={syncingId === t.id}
+                      title="Re-sincroniza todos los productos asignados a esta tienda"
+                    >
+                      {syncingId === t.id ? 'Sincronizando…' : '🔄 Sincronizar ahora'}
+                    </button>
+                  )}
                   <Toggle value={!!t.activa} onChange={() => toggleActiva(t)} />
                   <button className="btn btn-sm btn-ghost" onClick={() => setEditing(t)}>Editar</button>
                   <button className="btn btn-sm btn-ghost" style={{ color: 'var(--danger)' }} onClick={() => handleDelete(t.id)}>Eliminar</button>
@@ -191,8 +229,10 @@ export default function Integraciones() {
       {/* Info de próximas funciones */}
       <div style={{ marginTop: 24, padding: '14px 16px', borderRadius: 8, background: 'var(--bg-muted)', border: '1px solid var(--border)' }}>
         <p style={{ margin: 0, fontSize: 13, color: 'var(--text-muted)' }}>
-          <strong style={{ color: 'var(--text)' }}>Próximamente:</strong> sincronización automática de productos, actualización masiva de precios y stock, y OAuth para Mercado Libre.
-          Por ahora usá el <strong>Exportar CSV</strong> en Productos para importar manualmente en cada plataforma.
+          Los productos se sincronizan automáticamente a WooCommerce al guardarlos, y también cuando cambia el precio de un insumo, una tarifa o una lista de precios.
+          Usá <strong>Sincronizar ahora</strong> en cada tienda para forzar una resincronización completa cuando quieras.
+          <br />
+          <strong style={{ color: 'var(--text)' }}>Próximamente:</strong> integración con Mercado Libre vía OAuth.
         </p>
       </div>
 

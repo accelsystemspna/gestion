@@ -50,10 +50,16 @@ const FORMAS_PAGO = [
 ]
 
 const ESTADO_S = {
-  pagado:    { color: '#16a34a', bg: '#dcfce7', label: 'Pagado' },
-  pendiente: { color: '#d97706', bg: '#fef9c3', label: 'Pendiente' },
-  parcial:   { color: '#7c3aed', bg: '#f5f3ff', label: 'Parcial' },
-  anulado:   { color: '#64748b', bg: '#f1f5f9', label: 'Anulado' },
+  pagado:              { color: '#16a34a', bg: '#dcfce7', label: 'Pagado' },
+  pendiente:           { color: '#d97706', bg: '#fef9c3', label: 'Pendiente' },
+  parcial:             { color: '#7c3aed', bg: '#f5f3ff', label: 'Parcial' },
+  anulado:             { color: '#64748b', bg: '#f1f5f9', label: 'Anulado' },
+  pendiente_revision:  { color: '#0891b2', bg: '#cffafe', label: 'Revisar' },
+}
+
+const CANAL_S = {
+  web_minorista: { label: '🛒 Web minorista', color: '#0891b2', bg: '#cffafe' },
+  web_mayorista: { label: '🏢 Web mayorista', color: '#7c3aed', bg: '#f5f3ff' },
 }
 
 // ── Estilos inline reutilizables ──────────────────────────────────────────────
@@ -114,6 +120,8 @@ export default function Ventas() {
   const [nuevoCliSaving,   setNuevoCliSaving]   = useState(false)
   const [detalleVentaId, setDetalleVentaId] = useState(null)
   const [ventasHoy,      setVentasHoy]      = useState([])
+  const [showWebPendientes, setShowWebPendientes] = useState(searchParams.get('web') === '1')
+  const [webPendientes,     setWebPendientes]     = useState([])
   const [savedVenta,     setSavedVenta]     = useState(null)
   const [saving,         setSaving]         = useState(false)
   const [arcaConfig,     setArcaConfig]     = useState(null)
@@ -237,6 +245,27 @@ export default function Ventas() {
 
   useEffect(() => { loadVentasHoy() }, [loadVentasHoy])
 
+  // ── Ventas web pendientes de revisión ────────────────────────────────────
+  const loadWebPendientes = useCallback(async () => {
+    const { data, error } = await supabase
+      .from('ventas')
+      .select('id, numero, comprobante, cliente_nombre, forma_pago, hora, total, estado, fecha, canal, notas')
+      .eq('estado', 'pendiente_revision')
+      .order('numero', { ascending: false })
+    if (error) console.error('[loadWebPendientes]', error)
+    setWebPendientes(data ?? [])
+  }, [])
+
+  useEffect(() => { loadWebPendientes() }, [loadWebPendientes])
+
+  useEffect(() => {
+    const channel = supabase
+      .channel('ventas-pos-web-pendientes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'ventas' }, loadWebPendientes)
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [loadWebPendientes])
+
   // ── Cargar desde presupuesto (param ?from_presupuesto=id) ─────────────────
   useEffect(() => {
     const presId = searchParams.get('from_presupuesto')
@@ -285,7 +314,7 @@ export default function Ventas() {
     setHcLoading(true)
     let query = supabase
       .from('ventas')
-      .select('id, numero, comprobante, cliente_nombre, forma_pago, hora, total, estado, fecha, factura_emitida')
+      .select('id, numero, comprobante, cliente_nombre, forma_pago, hora, total, estado, fecha, factura_emitida, canal')
       .order('numero', { ascending: false })
       .limit(500)
     if (hcDesde) query = query.gte('fecha', hcDesde)
@@ -831,6 +860,16 @@ export default function Ventas() {
           style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 13px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--surface)', cursor: 'pointer', fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', flexShrink: 0 }}>
           📋 Historial
         </button>
+
+        {/* Pendientes de la web */}
+        {webPendientes.length > 0 && (
+          <button onClick={() => setShowWebPendientes(true)}
+            className="pos-btn-web"
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 13px', borderRadius: 6, border: '1px solid #0891b2', background: '#cffafe', cursor: 'pointer', fontSize: 13, fontWeight: 700, color: '#0e7490', whiteSpace: 'nowrap', flexShrink: 0 }}>
+            🌐 Pendientes web
+            <span style={{ background: '#0891b2', color: 'white', borderRadius: 10, fontSize: 11, padding: '1px 7px', fontWeight: 700 }}>{webPendientes.length}</span>
+          </button>
+        )}
       </div>
 
       {/* ══════════════════════════════════════════════════════════
@@ -1445,6 +1484,73 @@ export default function Ventas() {
       )}
 
       {/* ══════════════════════════════════════════════════════════
+          PANEL LATERAL — Pendientes de la web
+      ══════════════════════════════════════════════════════════ */}
+      {showWebPendientes && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex' }}>
+          <div style={{ flex: 1, background: 'rgba(0,0,0,0.4)' }} onClick={() => setShowWebPendientes(false)} />
+          <div style={{ width: 500, background: 'var(--bg)', display: 'flex', flexDirection: 'column', boxShadow: '-6px 0 24px rgba(0,0,0,0.18)', overflow: 'hidden' }}>
+
+            {/* Header del panel */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 18px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: 16 }}>🌐 Pendientes de la web</div>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
+                  Pedidos que llegaron de la web y todavía no se revisaron.
+                </div>
+              </div>
+              <button onClick={() => setShowWebPendientes(false)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 20, color: 'var(--text-muted)', padding: '2px 6px' }}>✕</button>
+            </div>
+
+            {/* Lista */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {webPendientes.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)', fontSize: 13 }}>
+                  <div style={{ fontSize: 32, marginBottom: 10 }}>✅</div>
+                  No hay pedidos web pendientes de revisión.
+                </div>
+              ) : (
+                webPendientes.map(v => {
+                  const comp  = COMPROBANTES.find(c => c.value === v.comprobante)
+                  const canal = CANAL_S[v.canal]
+                  return (
+                    <div key={v.id}
+                      onClick={() => { setDetalleVentaId(v.id); setShowDetalle(true); setShowWebPendientes(false) }}
+                      style={{ padding: '10px 12px', border: '1px solid #67e8f9', borderRadius: 8, cursor: 'pointer', background: 'var(--surface)', display: 'flex', gap: 10, alignItems: 'flex-start', transition: 'border-color 0.12s' }}
+                      onMouseEnter={e => e.currentTarget.style.borderColor = '#0891b2'}
+                      onMouseLeave={e => e.currentTarget.style.borderColor = '#67e8f9'}
+                    >
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3, flexWrap: 'wrap' }}>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: comp?.color ?? '#64748b' }}>
+                            {comp?.label ?? 'Ticket'} #{padNum(v.numero)}
+                          </span>
+                          {canal && (
+                            <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 7px', borderRadius: 10, background: canal.bg, color: canal.color }}>{canal.label}</span>
+                          )}
+                          <span style={{ fontSize: 11, color: 'var(--text-muted)', marginLeft: 'auto', flexShrink: 0 }}>{fmtDate(v.fecha)}</span>
+                        </div>
+                        <div style={{ fontSize: 13, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {v.cliente_nombre ?? 'Consumidor Final'}
+                        </div>
+                        {v.notas && (
+                          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {v.notas}
+                          </div>
+                        )}
+                      </div>
+                      <div style={{ fontSize: 17, fontWeight: 800, color: 'var(--primary)', whiteSpace: 'nowrap' }}>{fmtMoney(v.total)}</div>
+                    </div>
+                  )
+                })
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ══════════════════════════════════════════════════════════
           PANEL LATERAL — Historial completo
       ══════════════════════════════════════════════════════════ */}
       {showHistorialCompleto && (
@@ -1481,6 +1587,7 @@ export default function Ventas() {
                 <option value="pagado">Pagado</option>
                 <option value="pendiente">Pendiente</option>
                 <option value="parcial">Parcial</option>
+                <option value="pendiente_revision">Revisar (web)</option>
                 <option value="anulado">Anulado</option>
               </select>
               {(hcDesde || hcHasta || hcEstado || hcBusqueda) && (
@@ -1504,9 +1611,10 @@ export default function Ventas() {
                   Sin ventas que coincidan.
                 </div>
               ) : hcFiltradas.map(v => {
-                const est  = ESTADO_S[v.estado] ?? ESTADO_S.pendiente
-                const comp = COMPROBANTES.find(c => c.value === v.comprobante)
-                const fp   = FORMAS_PAGO.find(f => f.value === v.forma_pago)
+                const est   = ESTADO_S[v.estado] ?? ESTADO_S.pendiente
+                const comp  = COMPROBANTES.find(c => c.value === v.comprobante)
+                const fp    = FORMAS_PAGO.find(f => f.value === v.forma_pago)
+                const canal = CANAL_S[v.canal]
                 return (
                   <div key={v.id}
                     onClick={() => { setDetalleVentaId(v.id); setShowDetalle(true); setShowHistorialCompleto(false) }}
@@ -1515,11 +1623,14 @@ export default function Ventas() {
                     onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}
                   >
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3, flexWrap: 'wrap' }}>
                         <span style={{ fontSize: 12, fontWeight: 700, color: comp?.color ?? '#64748b' }}>
                           {comp?.label ?? 'Ticket'} #{padNum(v.numero)}
                         </span>
                         <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 7px', borderRadius: 10, background: est.bg, color: est.color }}>{est.label}</span>
+                        {canal && (
+                          <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 7px', borderRadius: 10, background: canal.bg, color: canal.color }}>{canal.label}</span>
+                        )}
                         {v.factura_emitida && (
                           <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 7px', borderRadius: 10, background: '#dbeafe', color: '#1d4ed8' }}>🏛️ Facturado</span>
                         )}
@@ -1617,7 +1728,7 @@ export default function Ventas() {
         <VentaDetalle
           ventaId={detalleVentaId}
           onClose={() => { setShowDetalle(false); setDetalleVentaId(null) }}
-          onUpdated={loadVentasHoy}
+          onUpdated={() => { loadVentasHoy(); loadWebPendientes() }}
         />
       )}
     </div>

@@ -1,6 +1,11 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../lib/AuthContext'
+import { supabase } from '../lib/supabase'
+import { fmtMoney } from '../lib/format'
+import { playCashRegisterSound } from '../lib/sound'
+
+const NOTIF_DISMISSED_KEY = 'notif_banner_dismissed'
 
 const navItems = [
   { to: '/ventas',        label: 'Ventas',        icon: '🛒' },
@@ -18,9 +23,73 @@ export default function Layout() {
   const navigate  = useNavigate()
   const location  = useLocation()
   const [open, setOpen] = useState(false)
+  const [ventasWebPendientes, setVentasWebPendientes] = useState(0)
+  const [toast, setToast] = useState(null)
+  const [notifStatus, setNotifStatus] = useState(
+    typeof Notification !== 'undefined' ? Notification.permission : 'unsupported'
+  )
+  const toastTimer = useRef(null)
 
   // Cerrar drawer al cambiar de ruta
   useEffect(() => { setOpen(false) }, [location.pathname])
+
+  // ── Aviso de ventas web pendientes de revisión ───────────────────────────
+  useEffect(() => {
+    const cargar = () => {
+      supabase.from('ventas').select('id', { count: 'exact', head: true })
+        .eq('estado', 'pendiente_revision')
+        .then(({ count }) => setVentasWebPendientes(count ?? 0))
+    }
+    cargar()
+
+    const channel = supabase
+      .channel('ventas-web-pendientes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'ventas' }, cargar)
+      .subscribe()
+
+    return () => { supabase.removeChannel(channel) }
+  }, [])
+
+  // ── Sonido + toast + notificación de escritorio cuando entra una venta nueva ──
+  useEffect(() => {
+    const channel = supabase
+      .channel('ventas-nuevas-alerta')
+      .on('postgres_changes', {
+        event: 'INSERT', schema: 'public', table: 'ventas',
+        filter: 'estado=eq.pendiente_revision',
+      }, ({ new: v }) => {
+        playCashRegisterSound()
+
+        clearTimeout(toastTimer.current)
+        setToast(v)
+        toastTimer.current = setTimeout(() => setToast(null), 8000)
+
+        if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+          const n = new Notification('💰 Nueva venta desde la web', {
+            body: `${v.cliente_nombre || 'Consumidor Final'} · ${fmtMoney(v.total)}`,
+            tag: 'venta-web-' + v.id,
+          })
+          n.onclick = () => { window.focus(); navigate('/ventas?web=1'); n.close() }
+        }
+      })
+      .subscribe()
+
+    return () => { supabase.removeChannel(channel); clearTimeout(toastTimer.current) }
+  }, [navigate])
+
+  const pedirPermisoNotif = () => {
+    if (typeof Notification === 'undefined') return
+    Notification.requestPermission().then(setNotifStatus)
+  }
+
+  const descartarBannerNotif = () => {
+    try { localStorage.setItem(NOTIF_DISMISSED_KEY, '1') } catch { /* noop */ }
+    setNotifStatus('dismissed')
+  }
+
+  const mostrarBannerNotif = notifStatus === 'default' && (() => {
+    try { return localStorage.getItem(NOTIF_DISMISSED_KEY) !== '1' } catch { return true }
+  })()
 
   const handleLogout = async () => {
     await signOut()
@@ -52,6 +121,14 @@ export default function Layout() {
           >
             <span style={{ fontSize: 16 }}>{item.icon}</span>
             {item.label}
+            {item.to === '/ventas' && ventasWebPendientes > 0 && (
+              <span style={{
+                marginLeft: 'auto', background: '#f59e0b', color: '#1e1b0d',
+                borderRadius: 10, fontSize: 11, fontWeight: 800, padding: '1px 7px',
+              }}>
+                {ventasWebPendientes}
+              </span>
+            )}
           </NavLink>
         ))}
       </nav>
@@ -93,6 +170,57 @@ export default function Layout() {
 
   return (
     <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
+
+      {/* ── Toast: nueva venta web ── */}
+      {toast && (
+        <div
+          onClick={() => { setToast(null); navigate('/ventas?web=1') }}
+          style={{
+            position: 'fixed', top: 16, right: 16, zIndex: 1000, cursor: 'pointer',
+            background: '#0891b2', color: 'white', borderRadius: 10, padding: '14px 18px',
+            boxShadow: '0 8px 28px rgba(0,0,0,0.3)', maxWidth: 320,
+            display: 'flex', alignItems: 'flex-start', gap: 10,
+            animation: 'slideIn 0.25s ease-out',
+          }}
+        >
+          <span style={{ fontSize: 24, flexShrink: 0 }}>💰</span>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontWeight: 800, fontSize: 14 }}>Nueva venta desde la web</div>
+            <div style={{ fontSize: 13, opacity: 0.95, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {toast.cliente_nombre || 'Consumidor Final'} · {fmtMoney(toast.total)}
+            </div>
+            <div style={{ fontSize: 11, opacity: 0.8, marginTop: 4 }}>Tocá para revisarla →</div>
+          </div>
+          <button
+            onClick={(e) => { e.stopPropagation(); setToast(null) }}
+            style={{ background: 'none', border: 'none', color: 'white', opacity: 0.8, cursor: 'pointer', fontSize: 15, padding: 0, flexShrink: 0 }}
+          >✕</button>
+        </div>
+      )}
+
+      {/* ── Banner: activar notificaciones de escritorio ── */}
+      {mostrarBannerNotif && (
+        <div style={{
+          position: 'fixed', bottom: 16, right: 16, zIndex: 999, maxWidth: 300,
+          background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10,
+          padding: '12px 14px', boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
+        }}>
+          <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>🔔 Avisos de escritorio</div>
+          <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 10 }}>
+            Activalos para enterarte de una venta nueva aunque no tengas esta pestaña activa.
+          </div>
+          <div style={{ display: 'flex', gap: 6 }}>
+            <button onClick={descartarBannerNotif}
+              style={{ flex: 1, padding: '6px 8px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--surface)', cursor: 'pointer', fontSize: 12 }}>
+              Ahora no
+            </button>
+            <button onClick={pedirPermisoNotif}
+              style={{ flex: 1, padding: '6px 8px', borderRadius: 6, border: 'none', background: '#0891b2', color: 'white', cursor: 'pointer', fontSize: 12, fontWeight: 700 }}>
+              Activar
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ── Sidebar desktop ── */}
       <aside className="layout-sidebar" style={{

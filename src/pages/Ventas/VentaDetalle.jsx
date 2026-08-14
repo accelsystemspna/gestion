@@ -23,10 +23,16 @@ const FORMAS_PAGO = [
 ]
 
 const ESTADO_S = {
-  pagado:    { color: '#16a34a', bg: '#dcfce7', label: 'Pagado' },
-  pendiente: { color: '#d97706', bg: '#fef9c3', label: 'Pendiente' },
-  parcial:   { color: '#7c3aed', bg: '#f5f3ff', label: 'Parcial' },
-  anulado:   { color: '#64748b', bg: '#f1f5f9', label: 'Anulado' },
+  pagado:              { color: '#16a34a', bg: '#dcfce7', label: 'Pagado' },
+  pendiente:           { color: '#d97706', bg: '#fef9c3', label: 'Pendiente' },
+  parcial:             { color: '#7c3aed', bg: '#f5f3ff', label: 'Parcial' },
+  anulado:             { color: '#64748b', bg: '#f1f5f9', label: 'Anulado' },
+  pendiente_revision:  { color: '#0891b2', bg: '#cffafe', label: 'Revisar' },
+}
+
+const CANAL_S = {
+  web_minorista: { label: '🛒 Web minorista', color: '#0891b2', bg: '#cffafe' },
+  web_mayorista: { label: '🏢 Web mayorista', color: '#7c3aed', bg: '#f5f3ff' },
 }
 
 async function urlToDataUrl(url) {
@@ -408,7 +414,8 @@ export default function VentaDetalle({ ventaId, onClose, onUpdated }) {
   const est        = ESTADO_S[venta.estado] ?? ESTADO_S.pendiente
   const fpLbl      = FORMAS_PAGO.find(f => f.value === venta.forma_pago)?.label ?? venta.forma_pago
   const esAnulado  = venta.estado === 'anulado'
-  const esPendiente = venta.estado === 'pendiente' || venta.estado === 'parcial'
+  const esPendiente = venta.estado === 'pendiente' || venta.estado === 'parcial' || venta.estado === 'pendiente_revision'
+  const canal = CANAL_S[venta.canal]
 
   return (<>
     <div style={{ position: 'fixed', inset: 0, zIndex: 500, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
@@ -424,10 +431,20 @@ export default function VentaDetalle({ ventaId, onClose, onUpdated }) {
               <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 10, background: est.bg, color: est.color }}>
                 {est.label}
               </span>
+              {canal && (
+                <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 10, background: canal.bg, color: canal.color }}>
+                  {canal.label}
+                </span>
+              )}
             </div>
             <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
               {fmtDate(venta.fecha)}{venta.hora ? ' · ' + venta.hora : ''}
             </div>
+            {canal && venta.notas && (
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 3, fontStyle: 'italic' }}>
+                {venta.notas}
+              </div>
+            )}
           </div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 20, color: 'var(--text-muted)', padding: '2px 6px' }}>✕</button>
         </div>

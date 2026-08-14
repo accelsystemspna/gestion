@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { fmtMoney, padId } from '../../lib/format'
+import { recalcularProductosPorMaterial } from '../../lib/recalcularCC'
 
 const TIPOS = ['Láser', 'Impresión 3D', 'Otro']
 const blank = { nombre: '', tipo: 'Láser', costo_hora: 0, notas: '' }
@@ -31,6 +32,21 @@ export default function Tarifas() {
     if (res.error) return alert('Error: ' + res.error.message)
     setEditing(null)
     load()
+
+    // Si es edición, recalcular en background productos y ventas CC afectadas
+    if (form.id) {
+      recalcularProductosPorMaterial(form.id)
+        .then(({ productosActualizados, ventasActualizadas, clientesAfectados, sincronizados }) => {
+          if (productosActualizados > 0) {
+            console.log(
+              `[CC Auto] Tarifa actualizada: ${productosActualizados} producto(s) recalculados, ` +
+              `${ventasActualizadas} venta(s) de ${clientesAfectados} cliente(s) actualizadas en CC, ` +
+              `${sincronizados} producto(s) re-sincronizados a la web.`
+            )
+          }
+        })
+        .catch(err => console.error('[CC Auto] Error al recalcular por tarifa:', err))
+    }
   }
 
   const handleDelete = async (id) => {

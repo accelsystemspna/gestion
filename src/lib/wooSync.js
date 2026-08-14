@@ -7,6 +7,7 @@ import { precioVenta } from './pricing'
  * @param {object[]} tiendas  - Tiendas con: id, tipo, activa, url, webhook_secret, lista_id
  * @param {object[]} listas   - Listas de precios completas (para calcular precio por tienda)
  * @param {object}   producto - { sku, nombre, costo_base, imagen_web_url, imagen_url, activo, tiendas_ids }
+ * @returns {Promise<boolean>} true si se sincronizó al menos una tienda sin error
  */
 export async function syncToWoo({ tiendas, listas, producto }) {
   const ids = (producto.tiendas_ids || []).map(String)
@@ -19,6 +20,8 @@ export async function syncToWoo({ tiendas, listas, producto }) {
       t.webhook_secret &&
       ids.includes(String(t.id))
   )
+
+  let ok = true
 
   for (const tienda of wooTiendas) {
     const lista  = listas.find(l => String(l.id) === String(tienda.lista_id))
@@ -55,15 +58,46 @@ export async function syncToWoo({ tiendas, listas, producto }) {
           'x-webhook-secret':  tienda.webhook_secret,
         },
         body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(15000),
       })
       if (!res.ok) {
         const text = await res.text().catch(() => '')
         console.warn(`[wooSync] ${tienda.nombre} → HTTP ${res.status}`, text)
+        ok = false
       } else {
         console.log(`[wooSync] ${tienda.nombre} → OK (SKU: ${producto.sku})`)
       }
     } catch (err) {
       console.warn(`[wooSync] No se pudo conectar con "${tienda.nombre}":`, err.message)
+      ok = false
     }
   }
+
+  return ok
+}
+
+/**
+ * Sincroniza en lote una lista de productos (los que tengan tiendas_ids asignadas).
+ * Pensado para re-sincronizaciones masivas: cambio de lista de precios, cambio de
+ * precio de un material que afecta a muchos productos, botón "Sincronizar todo", etc.
+ * Ejecuta los envíos de a poco (en tandas) para no saturar el servidor de WordPress.
+ *
+ * @returns {Promise<{ total: number, sincronizados: number, errores: number }>}
+ */
+export async function syncManyToWoo(productos, { tiendas, listas }, { batchSize = 5 } = {}) {
+  const candidatos = (productos || []).filter(p => p.tiendas_ids?.length)
+  let sincronizados = 0
+  let errores = 0
+
+  for (let i = 0; i < candidatos.length; i += batchSize) {
+    const tanda = candidatos.slice(i, i + batchSize)
+    const resultados = await Promise.all(
+      tanda.map(producto =>
+        syncToWoo({ tiendas, listas, producto }).catch(() => false)
+      )
+    )
+    for (const r of resultados) r ? sincronizados++ : errores++
+  }
+
+  return { total: candidatos.length, sincronizados, errores }
 }

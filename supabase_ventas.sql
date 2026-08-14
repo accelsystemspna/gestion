@@ -67,3 +67,13 @@ $$;
 create trigger ventas_set_user_id
   before insert on public.ventas
   for each row execute procedure public.set_venta_user_id();
+
+-- ══════════════════════════════════════════════════════════════════
+-- Migración: permitir 'parcial' y 'pendiente_revision' en estado
+-- (necesario para cuenta corriente y para el webhook de WooCommerce
+--  woo-order-webhook, que crea la venta como 'pendiente_revision'
+--  hasta que se la revisa y factura desde Ventas)
+-- ══════════════════════════════════════════════════════════════════
+alter table public.ventas drop constraint if exists ventas_estado_check;
+alter table public.ventas add constraint ventas_estado_check
+  check (estado in ('pendiente', 'parcial', 'pagado', 'cancelado', 'anulado', 'pendiente_revision'));

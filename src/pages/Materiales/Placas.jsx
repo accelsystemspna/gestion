@@ -65,11 +65,12 @@ export default function Insumos() {
     // Si es edición, recalcular en background productos y ventas CC afectadas
     if (form.id) {
       recalcularProductosPorMaterial(form.id)
-        .then(({ productosActualizados, ventasActualizadas, clientesAfectados }) => {
+        .then(({ productosActualizados, ventasActualizadas, clientesAfectados, sincronizados }) => {
           if (productosActualizados > 0) {
             console.log(
               `[CC Auto] Material actualizado: ${productosActualizados} producto(s) recalculados, ` +
-              `${ventasActualizadas} venta(s) de ${clientesAfectados} cliente(s) actualizadas en CC.`
+              `${ventasActualizadas} venta(s) de ${clientesAfectados} cliente(s) actualizadas en CC, ` +
+              `${sincronizados} producto(s) re-sincronizados a la web.`
             )
           }
         })
