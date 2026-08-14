@@ -28,11 +28,20 @@ export async function syncToWoo({ tiendas, listas, producto }) {
     const payload = {
       type: 'UPDATE',
       record: {
-        sku:       producto.sku,
-        name:      producto.nombre,
-        price:     String(Math.round(precio * 100) / 100),
-        image_url: producto.imagen_web_url || producto.imagen_url || '',
-        activo:    producto.activo !== false,
+        sku:              producto.sku,
+        name:             producto.nombre,
+        price:            String(Math.round(precio * 100) / 100),
+        image_url:        producto.imagen_web_url || producto.imagen_url || '',
+        gallery_urls:     producto.imagenes_web || [],
+        activo:           producto.activo !== false,
+        seo_title:        producto.seo_titulo || '',
+        seo_description:  producto.seo_descripcion || '',
+        weight:           producto.peso_kg ?? '',
+        dimensions: {
+          length: producto.paquete_largo ?? '',
+          width:  producto.paquete_ancho ?? '',
+          height: producto.paquete_alto  ?? '',
+        },
       },
     }
 

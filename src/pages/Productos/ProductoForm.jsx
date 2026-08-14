@@ -42,6 +42,12 @@ const blank = {
   imagen_url: '',
   imagen_web_url: '',
   imagenes_web: [],
+  seo_titulo: '',
+  seo_descripcion: '',
+  peso_kg: '',
+  paquete_largo: '',
+  paquete_ancho: '',
+  paquete_alto: '',
   tiendas_ids: [],
   piezas: [{ ...blankPieza }],
   tarifas_sel: [{ ...blankTarifaSel }],
@@ -82,6 +88,12 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
         imagen_url: initial.imagen_url || '',
         imagen_web_url: initial.imagen_web_url || '',
         imagenes_web: initial.imagenes_web || [],
+        seo_titulo: initial.seo_titulo || '',
+        seo_descripcion: initial.seo_descripcion || '',
+        peso_kg: initial.peso_kg ?? '',
+        paquete_largo: initial.paquete_largo ?? '',
+        paquete_ancho: initial.paquete_ancho ?? '',
+        paquete_alto: initial.paquete_alto ?? '',
         incremento: initial.incremento || 0,
         tiendas_ids: initial.tiendas_ids || [],
         tarifas_sel: initial.tarifas_producto || [{ ...blankTarifaSel }],
@@ -323,6 +335,12 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
       imagen_url: form.imagen_url || null,
       imagen_web_url: form.imagen_web_url || null,
       imagenes_web: form.imagenes_web || [],
+      seo_titulo: form.seo_titulo || null,
+      seo_descripcion: form.seo_descripcion || null,
+      peso_kg: form.peso_kg !== '' ? Number(form.peso_kg) : null,
+      paquete_largo: form.paquete_largo !== '' ? Number(form.paquete_largo) : null,
+      paquete_ancho: form.paquete_ancho !== '' ? Number(form.paquete_ancho) : null,
+      paquete_alto: form.paquete_alto !== '' ? Number(form.paquete_alto) : null,
       tiendas_ids: form.tiendas_ids || [],
       incremento: Number(form.incremento) || 0,
       piezas: tipoFab === 'Melamina' ? form.piezas : null,
@@ -352,6 +370,13 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
         costo_base:    costoBase,
         imagen_web_url: form.imagen_web_url || '',
         imagen_url:    form.imagen_url || '',
+        imagenes_web:  form.imagenes_web || [],
+        seo_titulo:      payload.seo_titulo,
+        seo_descripcion: payload.seo_descripcion,
+        peso_kg:         payload.peso_kg,
+        paquete_largo:   payload.paquete_largo,
+        paquete_ancho:   payload.paquete_ancho,
+        paquete_alto:    payload.paquete_alto,
         activo:        payload.activo,
         tiendas_ids:   payload.tiendas_ids,
       },
@@ -427,10 +452,16 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
         imagenes_web:     [],
         incremento:       form.incremento ?? 0,
         tiendas_ids:      form.tiendas_ids ?? [],
-        // Dimensiones del producto y materiales se resetean
-        // para que el usuario ingrese los valores de la variante
+        // Dimensiones, embalaje, SEO y materiales se resetean para que el
+        // usuario ingrese los valores propios de la variante
         alto_producto:    '',
         ancho_producto:   '',
+        peso_kg:          '',
+        paquete_largo:    '',
+        paquete_ancho:    '',
+        paquete_alto:     '',
+        seo_titulo:       '',
+        seo_descripcion:  '',
         piezas:           [{ ...blankPieza }],
         tarifas_producto: [{ ...blankTarifaSel }],
         gramos_filamento: 0,
@@ -794,6 +825,38 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
                 <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginTop:10, maxWidth:280 }}>
                   <F label="Alto (cm)"><input className="input" style={si()} type="number" step="0.1" value={form.alto_producto} onChange={e=>set('alto_producto',e.target.value)} placeholder="0" /></F>
                   <F label="Ancho (cm)"><input className="input" style={si()} type="number" step="0.1" value={form.ancho_producto} onChange={e=>set('ancho_producto',e.target.value)} placeholder="0" /></F>
+                </div>
+              </div>
+
+              {/* Envío / Embalaje */}
+              <div>
+                {secLabel('Envío y embalaje')}
+                <div style={{ fontSize:11, color:'var(--text-muted)', marginTop:2, marginBottom:8 }}>
+                  Medidas de la caja/paquete en el que se envía, no del cuadro en sí — WooCommerce las usa para calcular el costo de envío.
+                </div>
+                <div style={{ display:'grid', gridTemplateColumns:'repeat(4, 1fr)', gap:8, maxWidth:460 }}>
+                  <F label="Peso (kg)"><input className="input" style={si()} type="number" step="0.01" value={form.peso_kg} onChange={e=>set('peso_kg',e.target.value)} placeholder="0" /></F>
+                  <F label="Largo (cm)"><input className="input" style={si()} type="number" step="0.1" value={form.paquete_largo} onChange={e=>set('paquete_largo',e.target.value)} placeholder="0" /></F>
+                  <F label="Ancho (cm)"><input className="input" style={si()} type="number" step="0.1" value={form.paquete_ancho} onChange={e=>set('paquete_ancho',e.target.value)} placeholder="0" /></F>
+                  <F label="Alto (cm)"><input className="input" style={si()} type="number" step="0.1" value={form.paquete_alto} onChange={e=>set('paquete_alto',e.target.value)} placeholder="0" /></F>
+                </div>
+              </div>
+
+              {/* SEO */}
+              <div>
+                {secLabel('SEO — buscadores (Google)')}
+                <div style={{ display:'flex', flexDirection:'column', gap:10, marginTop:10, maxWidth:560 }}>
+                  <F label={`Título SEO ${form.seo_titulo ? `(${form.seo_titulo.length}/60)` : '(0/60)'}`}>
+                    <input className="input" style={si()} value={form.seo_titulo} onChange={e=>set('seo_titulo',e.target.value)}
+                      placeholder={form.nombre || 'Ej: Cuadro decorativo Homero Simpson 45x30cm'} maxLength={70} />
+                  </F>
+                  <F label={`Descripción SEO ${form.seo_descripcion ? `(${form.seo_descripcion.length}/155)` : '(0/155)'}`}>
+                    <textarea className="input" style={{ ...si(), resize:'vertical', minHeight:60 }} value={form.seo_descripcion} onChange={e=>set('seo_descripcion',e.target.value)}
+                      placeholder="Descripción corta pensada para aparecer en los resultados de Google. Si la dejás vacía, se usa la descripción normal del producto." maxLength={180} />
+                  </F>
+                  <div style={{ fontSize:11, color:'var(--text-muted)' }}>
+                    Si dejás estos campos vacíos, se usan el nombre y la descripción normales del producto.
+                  </div>
                 </div>
               </div>
 
