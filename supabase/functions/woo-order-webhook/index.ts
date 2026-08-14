@@ -9,6 +9,11 @@
 //   Secret: el mismo "Webhook Secret" configurado en Integraciones para esa tienda
 import { serve }        from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { sendPushToOrg } from '../_shared/webpush.ts'
+
+function fmtMoneyAR(n: number): string {
+  return '$ ' + Math.round(n).toLocaleString('es-AR')
+}
 
 const cors = {
   'Access-Control-Allow-Origin':  '*',
@@ -138,6 +143,17 @@ serve(async (req) => {
 
   if (itemsPayload.length) {
     await Promise.all(itemsPayload.map((ip) => admin.from('venta_items').insert(ip)))
+  }
+
+  try {
+    await sendPushToOrg(admin, tienda.user_id, {
+      title: '💰 Nueva venta desde la web',
+      body:  `${nombreCliente} · ${fmtMoneyAR(total)}`,
+      url:   '/ventas?web=1',
+      tag:   'venta-web-' + venta.id,
+    })
+  } catch (err) {
+    console.warn('[woo-order-webhook] error al enviar push:', err)
   }
 
   return json({ ok: true, venta_id: venta.id, numero })

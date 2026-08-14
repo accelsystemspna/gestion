@@ -14,15 +14,11 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       injectRegister: null,
-      workbox: {
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.js',
+      injectManifest: {
         globPatterns: ['**/*.{js,css,html,svg,png,ico,woff,woff2}'],
-        navigateFallbackDenylist: [/^\/icon-gen\.html$/],
-        runtimeCaching: [
-          {
-            urlPattern: ({ url }) => url.origin.includes('supabase.co'),
-            handler: 'NetworkOnly',
-          },
-        ],
       },
       manifest: {
         name: 'Gestión — Carpintería · Melamina · Impresión 3D',

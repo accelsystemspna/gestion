@@ -3,7 +3,8 @@ import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../lib/AuthContext'
 import { supabase } from '../lib/supabase'
 import { fmtMoney } from '../lib/format'
-import { playCashRegisterSound } from '../lib/sound'
+import { playCashRegisterSound, unlockAudio } from '../lib/sound'
+import { subscribeToPush, pushSupported } from '../lib/push'
 
 const NOTIF_DISMISSED_KEY = 'notif_banner_dismissed'
 
@@ -19,7 +20,7 @@ const navItems = [
 ]
 
 export default function Layout() {
-  const { user, profile, signOut, isAdmin } = useAuth()
+  const { user, profile, signOut, isAdmin, orgId } = useAuth()
   const navigate  = useNavigate()
   const location  = useLocation()
   const [open, setOpen] = useState(false)
@@ -32,6 +33,15 @@ export default function Layout() {
 
   // Cerrar drawer al cambiar de ruta
   useEffect(() => { setOpen(false) }, [location.pathname])
+
+  // Desbloquear el audio del aviso de venta con el primer toque en la app
+  // (los navegadores, sobre todo en celular, no dejan sonar nada disparado
+  // por el servidor si antes no hubo una interacción directa del usuario)
+  useEffect(() => {
+    const handler = () => unlockAudio()
+    window.addEventListener('pointerdown', handler, { once: true })
+    return () => window.removeEventListener('pointerdown', handler)
+  }, [])
 
   // ── Aviso de ventas web pendientes de revisión ───────────────────────────
   useEffect(() => {
@@ -63,23 +73,27 @@ export default function Layout() {
         clearTimeout(toastTimer.current)
         setToast(v)
         toastTimer.current = setTimeout(() => setToast(null), 8000)
-
-        if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
-          const n = new Notification('💰 Nueva venta desde la web', {
-            body: `${v.cliente_nombre || 'Consumidor Final'} · ${fmtMoney(v.total)}`,
-            tag: 'venta-web-' + v.id,
-          })
-          n.onclick = () => { window.focus(); navigate('/ventas?web=1'); n.close() }
-        }
+        // La notificación del sistema (aunque la app esté cerrada) la manda
+        // el backend por Web Push — acá solo el toast/sonido en primer plano,
+        // para no duplicar el aviso cuando la app está abierta.
       })
       .subscribe()
 
     return () => { supabase.removeChannel(channel); clearTimeout(toastTimer.current) }
   }, [navigate])
 
-  const pedirPermisoNotif = () => {
-    if (typeof Notification === 'undefined') return
-    Notification.requestPermission().then(setNotifStatus)
+  const [activandoPush, setActivandoPush] = useState(false)
+  const pedirPermisoNotif = async () => {
+    setActivandoPush(true)
+    try {
+      await subscribeToPush(orgId)
+      setNotifStatus('granted')
+    } catch (err) {
+      console.error('[push]', err)
+      setNotifStatus(typeof Notification !== 'undefined' ? Notification.permission : 'denied')
+      alert('No se pudo activar la notificación: ' + err.message)
+    }
+    setActivandoPush(false)
   }
 
   const descartarBannerNotif = () => {
@@ -87,7 +101,7 @@ export default function Layout() {
     setNotifStatus('dismissed')
   }
 
-  const mostrarBannerNotif = notifStatus === 'default' && (() => {
+  const mostrarBannerNotif = pushSupported() && notifStatus === 'default' && (() => {
     try { return localStorage.getItem(NOTIF_DISMISSED_KEY) !== '1' } catch { return true }
   })()
 
@@ -205,18 +219,18 @@ export default function Layout() {
           background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10,
           padding: '12px 14px', boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
         }}>
-          <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>🔔 Avisos de escritorio</div>
+          <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>🔔 Notificaciones de ventas</div>
           <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 10 }}>
-            Activalos para enterarte de una venta nueva aunque no tengas esta pestaña activa.
+            Activalas para enterarte de una venta nueva aunque tengas el celular bloqueado o la app cerrada.
           </div>
           <div style={{ display: 'flex', gap: 6 }}>
-            <button onClick={descartarBannerNotif}
+            <button onClick={descartarBannerNotif} disabled={activandoPush}
               style={{ flex: 1, padding: '6px 8px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--surface)', cursor: 'pointer', fontSize: 12 }}>
               Ahora no
             </button>
-            <button onClick={pedirPermisoNotif}
-              style={{ flex: 1, padding: '6px 8px', borderRadius: 6, border: 'none', background: '#0891b2', color: 'white', cursor: 'pointer', fontSize: 12, fontWeight: 700 }}>
-              Activar
+            <button onClick={pedirPermisoNotif} disabled={activandoPush}
+              style={{ flex: 1, padding: '6px 8px', borderRadius: 6, border: 'none', background: '#0891b2', color: 'white', cursor: activandoPush ? 'default' : 'pointer', fontSize: 12, fontWeight: 700, opacity: activandoPush ? 0.7 : 1 }}>
+              {activandoPush ? 'Activando…' : 'Activar'}
             </button>
           </div>
         </div>
