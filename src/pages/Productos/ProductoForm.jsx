@@ -3,6 +3,7 @@ import { supabase } from '../../lib/supabase'
 import { fmtMoney, padId } from '../../lib/format'
 import { calcCosto3D, calcInsumo, precioVenta } from '../../lib/pricing'
 import { recalcularCCPorProductos } from '../../lib/recalcularCC'
+import { syncToWoo } from '../../lib/wooSync'
 import { useAuth } from '../../lib/AuthContext'
 
 const SKU_RE = /^[A-Z]{3}[0-9]{6}(-V\d+)?$/
@@ -147,7 +148,7 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
       supabase.from('materiales').select('*').order('id'),
       supabase.from('tarifas').select('*').order('id'),
       supabase.from('listas_precios').select('*').order('created_at'),
-      supabase.from('tiendas').select('id, nombre, tipo, activa').eq('activa', true).order('created_at'),
+      supabase.from('tiendas').select('id, nombre, tipo, activa, url, webhook_secret, lista_id').eq('activa', true).order('created_at'),
       supabase.from('rubros').select('*').order('created_at'),
     ]).then(([c, m, t, l, ti, r]) => {
       setCategorias(c.data || [])
@@ -340,6 +341,21 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
     setSaving(false)
     if (res.error) return alert('Error: ' + res.error.message)
     limpiarDraft()
+
+    // Sincronizar en background con tiendas WooCommerce asignadas
+    syncToWoo({
+      tiendas,
+      listas,
+      producto: {
+        sku:           payload.sku,
+        nombre:        payload.nombre,
+        costo_base:    costoBase,
+        imagen_web_url: form.imagen_web_url || '',
+        imagen_url:    form.imagen_url || '',
+        activo:        payload.activo,
+        tiendas_ids:   payload.tiendas_ids,
+      },
+    }).catch(err => console.error('[wooSync]', err))
 
     // Si es una edición, recalcular en background todas las CC pendientes
     // que contengan este producto, sin bloquear el flujo de guardado.

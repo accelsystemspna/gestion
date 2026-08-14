@@ -7,6 +7,7 @@ import BarcodeModal from './BarcodeModal'
 import ImageThumb from '../../components/ImageThumb'
 import { exportCatalogoPDF } from '../../lib/pdf'
 import { exportCatalogoCSV } from '../../lib/csv'
+import { syncToWoo } from '../../lib/wooSync'
 import { useAuth } from '../../lib/AuthContext'
 
 export default function Productos() {
@@ -29,18 +30,20 @@ export default function Productos() {
   const [sortDir, setSortDir]   = useState('asc')       // 'asc' | 'desc'
   const [mostrarInactivos, setMostrarInactivos] = useState(false)
   const [barcodeProduct, setBarcodeProduct] = useState(null)
+  const [tiendas, setTiendas] = useState([])
   const [exportingPDF, setExportingPDF] = useState(false)
   const [exportingCSV, setExportingCSV] = useState(false)
 
   const load = async () => {
     setLoading(true)
-    const [p, l, c, br, r, sc] = await Promise.all([
+    const [p, l, c, br, r, sc, ti] = await Promise.all([
       supabase.from('productos').select('*').order('created_at', { ascending: false }),
       supabase.from('listas_precios').select('*').order('created_at'),
       supabase.from('categorias').select('*').order('nombre'),
       supabase.from('branding').select('*').eq('id', 1).maybeSingle(),
       supabase.from('rubros').select('*').order('created_at'),
       supabase.from('subcategorias').select('*').order('nombre'),
+      supabase.from('tiendas').select('id, nombre, tipo, activa, url, webhook_secret, lista_id').eq('activa', true).order('created_at'),
     ])
     setItems(p.data || [])
     setListas(l.data || [])
@@ -48,6 +51,7 @@ export default function Productos() {
     setBranding(br.data || {})
     setRubros(r.data || [])
     setSubcategorias(sc.data || [])
+    setTiendas(ti.data || [])
     // no auto-select: user must choose a list explicitly
     setLoading(false)
   }
@@ -132,10 +136,18 @@ export default function Productos() {
   }
 
   const handleToggleActivo = async (id, currentActivo) => {
-    const nuevoEstado = currentActivo === false ? true : false
-    const { error } = await supabase.from('productos').update({ activo: nuevoEstado }).eq('id', id)
-    if (error) alert('Error: ' + error.message)
-    else setItems((prev) => prev.map((p) => p.id === id ? { ...p, activo: nuevoEstado } : p))
+    const activoNuevo = currentActivo === false  // estaba inactivo → se reactiva
+    const { error } = await supabase.from('productos').update({ activo: activoNuevo }).eq('id', id)
+    if (error) {
+      alert('Error: ' + error.message)
+    } else {
+      const producto = items.find(p => p.id === id)
+      setItems((prev) => prev.map((p) => p.id === id ? { ...p, activo: activoNuevo } : p))
+      if (producto) {
+        syncToWoo({ tiendas, listas, producto: { ...producto, activo: activoNuevo } })
+          .catch(err => console.error('[wooSync]', err))
+      }
+    }
   }
 
   const handleDelete = async (id) => {

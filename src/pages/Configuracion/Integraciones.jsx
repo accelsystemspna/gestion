@@ -45,7 +45,7 @@ function Toggle({ value, onChange }) {
 
 const blank = {
   nombre: '', tipo: 'woocommerce', url: '',
-  consumer_key: '', consumer_secret: '',
+  consumer_key: '', consumer_secret: '', webhook_secret: '',
   app_id: '', access_token: '',
   lista_id: '', categorias_ids: [], activa: true, notas: '',
 }
@@ -79,6 +79,7 @@ export default function Integraciones() {
       url:             form.url || null,
       consumer_key:    form.consumer_key || null,
       consumer_secret: form.consumer_secret || null,
+      webhook_secret:  form.webhook_secret || null,
       app_id:          form.app_id || null,
       access_token:    form.access_token || null,
       lista_id:        form.lista_id ? Number(form.lista_id) : null,
@@ -308,6 +309,20 @@ function TiendaForm({ initial, listas, categorias, onCancel, onSave }) {
               <p style={{ fontSize: 11, color: '#7c3aed', margin: '8px 0 0' }}>
                 Generá las claves en WordPress → WooCommerce → Ajustes → API → Añadir clave (permisos: Lectura/Escritura)
               </p>
+              <div className="field" style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid #7c3aed22' }}>
+                <label>Webhook Secret</label>
+                <input
+                  className="input"
+                  type={showSecret ? 'text' : 'password'}
+                  value={form.webhook_secret}
+                  onChange={(e) => set('webhook_secret', e.target.value)}
+                  placeholder="Copiá el secret desde Accel Systems → Sync en WordPress"
+                  style={{ fontFamily: 'monospace', fontSize: 13 }}
+                />
+                <span style={{ fontSize: 11, color: '#7c3aed', display: 'block', marginTop: 4 }}>
+                  Encontralo en WP Admin → Accel Systems → Sync (campo "Secret x-webhook-secret").
+                </span>
+              </div>
             </div>
           )}
 
