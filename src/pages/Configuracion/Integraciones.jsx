@@ -82,7 +82,7 @@ export default function Integraciones() {
       webhook_secret:  form.webhook_secret || null,
       app_id:          form.app_id || null,
       access_token:    form.access_token || null,
-      lista_id:        form.lista_id ? Number(form.lista_id) : null,
+      lista_id:        form.lista_id || null,
       categorias_ids:  form.categorias_ids || [],
       activa:          !!form.activa,
       notas:           form.notas || null,
