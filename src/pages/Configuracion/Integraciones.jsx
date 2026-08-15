@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../lib/AuthContext'
-import { syncManyToWoo } from '../../lib/wooSync'
+import { syncManyToWoo, conCategoriasWeb } from '../../lib/wooSync'
 
 // ─── Helpers de UI ───────────────────────────────────────────────────────────
 
@@ -107,12 +107,15 @@ export default function Integraciones() {
     setSyncingId(tienda.id)
     setSyncMsg((m) => ({ ...m, [tienda.id]: null }))
     try {
-      const { data: productos } = await supabase
-        .from('productos')
-        .select('id, categoria_id, sku, nombre, costo_base, imagen_url, imagen_web_url, imagenes_web, activo, seo_titulo, seo_descripcion, peso_kg, paquete_largo, paquete_ancho, paquete_alto, tiendas_ids, promo_activa, promo_tipo, promo_valor, promo_lleva, promo_paga, promo_canal, promo_fecha_desde, promo_fecha_hasta')
-      const propios = (productos || []).filter((p) =>
-        (p.tiendas_ids || []).map(String).includes(String(tienda.id))
-      )
+      const [{ data: productos }, { data: subcategorias }] = await Promise.all([
+        supabase
+          .from('productos')
+          .select('id, categoria_id, sku, nombre, costo_base, imagen_url, imagen_web_url, imagenes_web, activo, seo_titulo, seo_descripcion, peso_kg, paquete_largo, paquete_ancho, paquete_alto, tiendas_ids, categorias_web_ids, promo_activa, promo_tipo, promo_valor, promo_lleva, promo_paga, promo_canal, promo_fecha_desde, promo_fecha_hasta'),
+        supabase.from('subcategorias').select('id, nombre'),
+      ])
+      const propios = (productos || [])
+        .filter((p) => (p.tiendas_ids || []).map(String).includes(String(tienda.id)))
+        .map((p) => conCategoriasWeb(p, subcategorias || []))
       const res = await syncManyToWoo(propios, { tiendas: [tienda], listas })
       setSyncMsg((m) => ({ ...m, [tienda.id]: `${res.sincronizados}/${res.total} producto(s) sincronizados` }))
     } catch (err) {

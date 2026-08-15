@@ -41,6 +41,13 @@ export function AuthProvider({ children }) {
       .then(({ data }) => {
         setProfile(data)
         setProfileLoading(false)
+        // Modo oscuro guardado en el perfil (no en este dispositivo) tiene
+        // prioridad — así la preferencia viaja con el usuario a cualquier
+        // dispositivo donde inicie sesión.
+        if (data && data.dark_mode !== null && data.dark_mode !== undefined) {
+          localStorage.setItem('darkMode', String(data.dark_mode))
+          document.documentElement.classList.toggle('dark', data.dark_mode)
+        }
       })
   }, [userId])
 

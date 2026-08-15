@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { supabase } from '../../lib/supabase'
+import { useAuth } from '../../lib/AuthContext'
 
 function Toggle({ checked, onChange }) {
   return (
@@ -34,12 +36,17 @@ function Toggle({ checked, onChange }) {
 }
 
 export default function Apariencia() {
+  const { user } = useAuth()
   const [dark, setDark] = useState(() => localStorage.getItem('darkMode') === 'true')
 
   const handleDark = (val) => {
     setDark(val)
     localStorage.setItem('darkMode', val)
     document.documentElement.classList.toggle('dark', val)
+    if (user?.id) {
+      supabase.from('profiles').update({ dark_mode: val }).eq('id', user.id)
+        .then(({ error }) => { if (error) console.error('[Apariencia] no se pudo guardar en el perfil:', error) })
+    }
   }
 
   return (
@@ -67,7 +74,7 @@ export default function Apariencia() {
         {/* Info */}
         <div style={{ padding: '12px 20px', background: 'var(--bg)', borderRadius: '0 0 var(--radius) var(--radius)' }}>
           <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-            La preferencia se guarda automáticamente en este dispositivo.
+            La preferencia queda guardada en tu usuario — se aplica sola en cualquier dispositivo donde inicies sesión.
           </div>
         </div>
       </div>

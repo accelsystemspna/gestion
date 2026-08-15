@@ -294,8 +294,42 @@ h1, h2, h3, h4 {
   to   { transform: translateX(0);    opacity: 1; }
 }
 
+/* ── Productos: tarjetas mobile (ocultas en desktop) ───────── */
+.productos-cards-mobile { display: none; }
+.producto-card-mobile {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: var(--bg-card);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.producto-card-mobile-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.producto-card-mobile-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+.producto-card-mobile-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+}
+
 /* ── Responsive ─────────────────────────────────────────── */
 @media (max-width: 768px) {
+  /* Productos: tabla apretada -> tarjetas apiladas */
+  .productos-table-wrap  { display: none !important; }
+  .productos-cards-mobile { display: flex; flex-direction: column; gap: 10px; }
+
   /* Layout */
   .mobile-topbar  { display: flex !important; }
   .layout-sidebar { display: none !important; }

@@ -9,7 +9,7 @@ import BarcodeModal from './BarcodeModal'
 import ImageThumb from '../../components/ImageThumb'
 import { exportCatalogoPDF } from '../../lib/pdf'
 import { exportCatalogoCSV } from '../../lib/csv'
-import { syncToWoo, syncManyToWoo } from '../../lib/wooSync'
+import { syncToWoo, syncManyToWoo, conCategoriasWeb } from '../../lib/wooSync'
 import { useAuth } from '../../lib/AuthContext'
 
 export default function Productos() {
@@ -148,7 +148,7 @@ export default function Productos() {
       const producto = items.find(p => p.id === id)
       setItems((prev) => prev.map((p) => p.id === id ? { ...p, activo: activoNuevo } : p))
       if (producto) {
-        syncToWoo({ tiendas, listas, producto: { ...producto, activo: activoNuevo } })
+        syncToWoo({ tiendas, listas, producto: conCategoriasWeb({ ...producto, activo: activoNuevo }, subcategorias) })
           .catch(err => console.error('[wooSync]', err))
       }
     }
@@ -188,7 +188,8 @@ export default function Productos() {
     if (!confirm(`Se van a re-sincronizar ${candidatos.length} producto(s) con sus tiendas web. ¿Continuar?`)) return
 
     setSyncingAll(true)
-    const { total, sincronizados, errores } = await syncManyToWoo(candidatos, { tiendas, listas })
+    const conCats = candidatos.map(p => conCategoriasWeb(p, subcategorias))
+    const { total, sincronizados, errores } = await syncManyToWoo(conCats, { tiendas, listas })
     setSyncingAll(false)
     alert(`Sincronización terminada: ${sincronizados}/${total} OK${errores ? `, ${errores} con error (ver consola)` : ''}.`)
   }
@@ -344,7 +345,7 @@ export default function Productos() {
           {items.length === 0 ? 'No hay productos. Creá el primero.' : 'No hay productos que coincidan con los filtros.'}
         </div>
       ) : (
-        <div style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: 8 }}>
+        <div className="productos-table-wrap" style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: 8 }}>
           <table className="table">
             <thead>
               <tr>
@@ -487,6 +488,77 @@ export default function Productos() {
               })}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {!loading && filtrados.length > 0 && (
+        <div className="productos-cards-mobile">
+          {ordenados.map((p) => {
+            const venta  = precioVenta(Number(p.costo_base), lista)
+            const cat    = categorias.find((c) => c.id === p.categoria_id)
+            const rubro  = cat?.rubro_id ? rubros.find((r) => r.id === cat.rubro_id) : null
+            const activo = p.activo !== false
+            const stock  = Number(p.stock_actual) || 0
+            return (
+              <div key={p.id} className="producto-card-mobile" style={activo ? undefined : { opacity: 0.55 }}>
+                <div className="producto-card-mobile-top">
+                  <ImageThumb src={p.imagen_url} size={48} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 600, fontSize: 14 }}>
+                      {(promoDeProducto(p, 'local') || promoDeProducto(p, 'web')) ? '🏷️ ' : ''}{p.nombre}
+                    </div>
+                    <code style={{ fontSize: 11, color: 'var(--text-muted)' }}>{p.sku}</code>
+                  </div>
+                  <div style={{ textAlign: 'right', fontWeight: 700, fontSize: 15, color: lista ? 'var(--success)' : 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+                    {lista ? fmtMoney(venta) : '—'}
+                  </div>
+                </div>
+
+                <div className="producto-card-mobile-meta">
+                  {rubro && (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, padding: '2px 7px', borderRadius: 999, background: `${rubro.color}18`, color: rubro.color, border: `1px solid ${rubro.color}44`, fontWeight: 600 }}>
+                      {rubro.emoji} {rubro.nombre}
+                    </span>
+                  )}
+                  {cat && <span className="badge" style={{ fontSize: 11 }}>{cat.nombre}</span>}
+                  {(p.alto_producto || p.ancho_producto) && (
+                    <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                      📐 {p.alto_producto || '—'} × {p.ancho_producto || '—'} cm
+                    </span>
+                  )}
+                  <span style={{ fontSize: 11, color: stock < 0 ? '#d97706' : 'var(--text-muted)', fontWeight: stock < 0 ? 700 : 400 }}>
+                    {stock > 0 ? `📦 Stock: ${stock}` : stock === 0 ? '📦 Stock: 0' : `⚠️ A fabricar (${Math.abs(stock)})`}
+                  </span>
+                </div>
+
+                <div className="producto-card-mobile-actions">
+                  <button
+                    className="btn btn-sm"
+                    onClick={() => handleToggleActivo(p.id, p.activo)}
+                    style={{
+                      fontSize: 11, padding: '3px 9px',
+                      background: activo ? '#f0fdf4' : '#fff1f2',
+                      color: activo ? '#16a34a' : '#dc2626',
+                      border: `1px solid ${activo ? '#86efac' : '#fca5a5'}`,
+                      fontWeight: 700,
+                    }}
+                  >
+                    {activo ? '● Activo' : '● Inactivo'}
+                  </button>
+                  <button className="btn btn-sm btn-ghost" onClick={() => setBarcodeProduct(p)}>🏷️</button>
+                  <button
+                    className="btn btn-sm btn-ghost"
+                    onClick={() => setPromoProduct(p)}
+                    style={promoDeProducto(p, 'local') || promoDeProducto(p, 'web') ? { color: '#16a34a', fontWeight: 700 } : undefined}
+                  >
+                    🎁 Promo
+                  </button>
+                  <button className="btn btn-sm btn-ghost" onClick={() => { setFormKey(k => k + 1); setEditing(p) }}>Editar</button>
+                  <button className="btn btn-sm btn-ghost" onClick={() => handleDelete(p.id)} style={{ color: 'var(--danger)' }}>Eliminar</button>
+                </div>
+              </div>
+            )
+          })}
         </div>
       )}
 

@@ -2,6 +2,21 @@ import { precioVenta } from './pricing'
 import { promoDeProducto, calcularLineaConPromo } from './promos'
 
 /**
+ * Resuelve categorias_web_ids (ids de subcategorías) a sus nombres, para
+ * mandarlos como texto en el payload de sync. Usar antes de syncToWoo /
+ * syncManyToWoo en cualquier lugar que dispare un re-sync masivo, para no
+ * perder las categorías asignadas de cada producto.
+ */
+export function conCategoriasWeb(producto, subcategorias) {
+  return {
+    ...producto,
+    categorias_web: (producto.categorias_web_ids || [])
+      .map(id => subcategorias.find(s => String(s.id) === String(id))?.nombre)
+      .filter(Boolean),
+  }
+}
+
+/**
  * Envía un producto a todas las tiendas WooCommerce activas que tiene asignadas.
  * Se llama en background después de guardar — los errores no interrumpen el flujo.
  *
@@ -54,6 +69,7 @@ export async function syncToWoo({ tiendas, listas, producto }) {
         discount_percent: pctOff,
         image_url:        producto.imagen_web_url || producto.imagen_url || '',
         gallery_urls:     producto.imagenes_web || [],
+        categories:       producto.categorias_web || [],
         activo:           producto.activo !== false,
         seo_title:        producto.seo_titulo || '',
         seo_description:  producto.seo_descripcion || '',

@@ -7,7 +7,7 @@
 
 import { supabase }                                from './supabase'
 import { precioVenta, calcInsumo, calcTarifaCost } from './pricing'
-import { syncManyToWoo }                           from './wooSync'
+import { syncManyToWoo, conCategoriasWeb }         from './wooSync'
 
 /**
  * Recalcula los precios de todas las ventas pendientes en cuenta corriente
@@ -136,7 +136,7 @@ export async function recalcularProductosPorMaterial(_materialId) {
   // 3. Todos los productos
   const { data: productos, error: errProd } = await supabase
     .from('productos')
-    .select('id, categoria_id, sku, nombre, descripcion, piezas, tarifas_producto, material_id, ancho_pieza, alto_pieza, cantidad_piezas, tarifa_id, fab_minutos, fab_segundos, costo_base, tiendas_ids, activo, imagen_url, imagen_web_url, imagenes_web, seo_titulo, seo_descripcion, peso_kg, paquete_largo, paquete_ancho, paquete_alto, promo_activa, promo_tipo, promo_valor, promo_lleva, promo_paga, promo_canal, promo_fecha_desde, promo_fecha_hasta')
+    .select('id, categoria_id, sku, nombre, descripcion, piezas, tarifas_producto, material_id, ancho_pieza, alto_pieza, cantidad_piezas, tarifa_id, fab_minutos, fab_segundos, costo_base, tiendas_ids, categorias_web_ids, activo, imagen_url, imagen_web_url, imagenes_web, seo_titulo, seo_descripcion, peso_kg, paquete_largo, paquete_ancho, paquete_alto, promo_activa, promo_tipo, promo_valor, promo_lleva, promo_paga, promo_canal, promo_fecha_desde, promo_fecha_hasta')
 
   if (errProd) {
     console.warn(TAG + ' error al leer productos:', errProd)
@@ -257,11 +257,13 @@ export async function recalcularProductosPorMaterial(_materialId) {
   // 6. Re-sincronizar con las tiendas web los productos cuyo costo cambió
   let sincronizados = 0
   if (productosParaSync.length) {
-    const [{ data: tiendas }, { data: listasWeb }] = await Promise.all([
+    const [{ data: tiendas }, { data: listasWeb }, { data: subcategorias }] = await Promise.all([
       supabase.from('tiendas').select('id, nombre, tipo, activa, url, webhook_secret, lista_id').eq('activa', true),
       supabase.from('listas_precios').select('*'),
+      supabase.from('subcategorias').select('id, nombre'),
     ])
-    const res = await syncManyToWoo(productosParaSync, { tiendas: tiendas || [], listas: listasWeb || [] })
+    const conCats = productosParaSync.map(p => conCategoriasWeb(p, subcategorias || []))
+    const res = await syncManyToWoo(conCats, { tiendas: tiendas || [], listas: listasWeb || [] })
     sincronizados = res.sincronizados
     console.log(TAG + ` sync web: ${res.sincronizados}/${res.total} OK`)
   }
@@ -288,17 +290,19 @@ export async function recalcularProductosPorMaterial(_materialId) {
 export async function resyncProductosPorLista(_listaId) {
   const TAG = '[CC Auto]'
 
-  const [{ data: productos }, { data: tiendas }, { data: listas }] = await Promise.all([
+  const [{ data: productos }, { data: tiendas }, { data: listas }, { data: subcategorias }] = await Promise.all([
     supabase
       .from('productos')
-      .select('id, categoria_id, sku, nombre, descripcion, costo_base, imagen_url, imagen_web_url, imagenes_web, activo, seo_titulo, seo_descripcion, peso_kg, paquete_largo, paquete_ancho, paquete_alto, tiendas_ids, promo_activa, promo_tipo, promo_valor, promo_lleva, promo_paga, promo_canal, promo_fecha_desde, promo_fecha_hasta'),
+      .select('id, categoria_id, sku, nombre, descripcion, costo_base, imagen_url, imagen_web_url, imagenes_web, activo, seo_titulo, seo_descripcion, peso_kg, paquete_largo, paquete_ancho, paquete_alto, tiendas_ids, categorias_web_ids, promo_activa, promo_tipo, promo_valor, promo_lleva, promo_paga, promo_canal, promo_fecha_desde, promo_fecha_hasta'),
     supabase.from('tiendas').select('id, nombre, tipo, activa, url, webhook_secret, lista_id').eq('activa', true),
     supabase.from('listas_precios').select('*'),
+    supabase.from('subcategorias').select('id, nombre'),
   ])
 
   if (!productos?.length) return { sincronizados: 0, total: 0 }
 
-  const res = await syncManyToWoo(productos, { tiendas: tiendas || [], listas: listas || [] })
+  const conCats = productos.map(p => conCategoriasWeb(p, subcategorias || []))
+  const res = await syncManyToWoo(conCats, { tiendas: tiendas || [], listas: listas || [] })
   console.log(TAG + ` lista de precios actualizada — sync web: ${res.sincronizados}/${res.total} OK`)
   return res
 }

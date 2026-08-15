@@ -54,6 +54,7 @@ const blank = {
   imagen_url: '',
   imagen_web_url: '',
   imagenes_web: [],
+  categorias_web_ids: [],
   seo_titulo: '',
   seo_descripcion: '',
   peso_kg: '',
@@ -109,6 +110,7 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
         imagen_url: initial.imagen_url || '',
         imagen_web_url: initial.imagen_web_url || '',
         imagenes_web: initial.imagenes_web || [],
+        categorias_web_ids: initial.categorias_web_ids || [],
         seo_titulo: initial.seo_titulo || '',
         seo_descripcion: initial.seo_descripcion || '',
         peso_kg: initial.peso_kg ?? '',
@@ -140,6 +142,7 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
   })
   const [categorias, setCategorias] = useState([])
   const [subcategorias, setSubcategorias] = useState([])
+  const [subcategoriasTodas, setSubcategoriasTodas] = useState([])
   const [materiales, setMateriales] = useState([])
   const [tarifas, setTarifas] = useState([])
   const [listas, setListas] = useState([])
@@ -192,13 +195,15 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
       supabase.from('listas_precios').select('*').order('created_at'),
       supabase.from('tiendas').select('id, nombre, tipo, activa, url, webhook_secret, lista_id').eq('activa', true).order('created_at'),
       supabase.from('rubros').select('*').order('created_at'),
-    ]).then(([c, m, t, l, ti, r]) => {
+      supabase.from('subcategorias').select('*').order('nombre'),
+    ]).then(([c, m, t, l, ti, r, sTodas]) => {
       setCategorias(c.data || [])
       setMateriales(m.data || [])
       setTarifas(t.data || [])
       setListas(l.data || [])
       setTiendas(ti.data || [])
       setRubros(r.data || [])
+      setSubcategoriasTodas(sTodas.data || [])
       // rubroFiltro arranca vacío (Todos) para no ocultar la categoría actual
     })
   }, [])
@@ -365,6 +370,7 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
       imagen_url: form.imagen_url || null,
       imagen_web_url: form.imagen_web_url || null,
       imagenes_web: form.imagenes_web || [],
+      categorias_web_ids: form.categorias_web_ids || [],
       seo_titulo: form.seo_titulo || null,
       seo_descripcion: form.seo_descripcion || null,
       peso_kg: form.peso_kg !== '' ? Number(form.peso_kg) : null,
@@ -413,6 +419,9 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
         imagen_web_url: form.imagen_web_url || '',
         imagen_url:    form.imagen_url || '',
         imagenes_web:  form.imagenes_web || [],
+        categorias_web: (form.categorias_web_ids || [])
+          .map(id => subcategoriasTodas.find(s => String(s.id) === String(id))?.nombre)
+          .filter(Boolean),
         seo_titulo:      payload.seo_titulo,
         seo_descripcion: payload.seo_descripcion,
         peso_kg:         payload.peso_kg,
@@ -502,6 +511,7 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
         imagenes_web:     [],
         incremento:       form.incremento ?? 0,
         tiendas_ids:      form.tiendas_ids ?? [],
+        categorias_web_ids: form.categorias_web_ids ?? [],
         // Dimensiones, embalaje, SEO y materiales se resetean para que el
         // usuario ingrese los valores propios de la variante
         alto_producto:    '',
@@ -708,11 +718,10 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
                 </F>
               </div>
 
-              {/* Alto + Ancho + Descripción */}
+              {/* Alto + Ancho + Stock */}
               <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
                 <F label="Alto (cm)"><input className="input" style={si()} type="number" step="0.1" value={form.alto_producto} onChange={e=>set('alto_producto',e.target.value)} placeholder="0" /></F>
                 <F label="Ancho (cm)"><input className="input" style={si()} type="number" step="0.1" value={form.ancho_producto} onChange={e=>set('ancho_producto',e.target.value)} placeholder="0" /></F>
-                <F label="Descripción" col={2}><input className="input" style={si()} value={form.descripcion||''} onChange={e=>set('descripcion',e.target.value)} /></F>
                 <F label="Stock actual">
                   <input className="input" style={si()} type="number" step="1" value={form.stock_actual} onChange={e=>set('stock_actual',e.target.value)} placeholder="0" />
                   <span style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>Se descuenta solo con cada venta. Corregilo a mano cuando quieras (ej. después de fabricar).</span>
@@ -873,6 +882,17 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
                 </div>
               </div>
 
+              {/* Descripción */}
+              <div>
+                {secLabel('Descripción del producto')}
+                <div style={{ fontSize:11, color:'var(--text-muted)', marginTop:2, marginBottom:8 }}>
+                  Se muestra en la página del producto y Google la indexa — es la que más pesa para el SEO real (a diferencia del título/descripción de abajo, que solo son metadatos).
+                </div>
+                <textarea className="input" style={{ ...si(), resize:'vertical', minHeight:90, maxWidth:560, display:'block', width:'100%' }}
+                  value={form.descripcion||''} onChange={e=>set('descripcion',e.target.value)}
+                  placeholder="Contale al cliente de qué se trata el producto: materiales, tamaño, para qué ocasión sirve, etc." />
+              </div>
+
               {/* Tamaño */}
               <div>
                 {secLabel('Tamaño del producto')}
@@ -904,14 +924,39 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
                     <input className="input" style={si()} value={form.seo_titulo} onChange={e=>set('seo_titulo',e.target.value)}
                       placeholder={form.nombre || 'Ej: Cuadro decorativo Homero Simpson 45x30cm'} maxLength={70} />
                   </F>
-                  <F label={`Descripción SEO ${form.seo_descripcion ? `(${form.seo_descripcion.length}/155)` : '(0/155)'}`}>
+                  <F label={`Descripción para Google — NO se ve en la página ${form.seo_descripcion ? `(${form.seo_descripcion.length}/155)` : '(0/155)'}`}>
                     <textarea className="input" style={{ ...si(), resize:'vertical', minHeight:60 }} value={form.seo_descripcion} onChange={e=>set('seo_descripcion',e.target.value)}
-                      placeholder="Descripción corta pensada para aparecer en los resultados de Google. Si la dejás vacía, se usa la descripción normal del producto." maxLength={180} />
+                      placeholder="Solo aparece en los resultados de búsqueda de Google, es invisible en la página del producto. Si la dejás vacía, Google usa la descripción normal." maxLength={180} />
                   </F>
                   <div style={{ fontSize:11, color:'var(--text-muted)' }}>
                     Si dejás estos campos vacíos, se usan el nombre y la descripción normales del producto.
                   </div>
                 </div>
+              </div>
+
+              {/* Categorías (web) */}
+              <div>
+                {secLabel('Categorías (sitio web)')}
+                <div style={{ fontSize:11, color:'var(--text-muted)', marginTop:2, marginBottom:8 }}>
+                  Un producto puede estar en varias — se sincronizan como categorías de WooCommerce. Es independiente de la categoría/subcategoría interna de arriba.
+                </div>
+                {subcategoriasTodas.length === 0 ? (
+                  <div style={{ fontSize:12, color:'var(--text-muted)' }}>
+                    No hay subcategorías creadas. Se agregan desde Configuración → Categorías.
+                  </div>
+                ) : (
+                  <div style={{ display:'flex', flexWrap:'wrap', gap:8 }}>
+                    {subcategoriasTodas.map(s=>{
+                      const sel=(form.categorias_web_ids||[]).map(String).includes(String(s.id))
+                      const toggle=()=>{ const ids=(form.categorias_web_ids||[]).map(String); const sid=String(s.id); set('categorias_web_ids',sel?ids.filter(i=>i!==sid):[...ids,sid]) }
+                      return (
+                        <label key={s.id} onClick={toggle} style={{ display:'flex', alignItems:'center', gap:6, cursor:'pointer', padding:'6px 11px', borderRadius:6, userSelect:'none', border:`1px solid ${sel?'var(--primary)':'var(--border)'}`, background:sel?'var(--primary-faint)':'var(--bg-cell)', transition:'all 0.15s' }}>
+                          <span style={{ fontSize:13, fontWeight:sel?600:400, color:sel?'var(--primary)':'var(--text)' }}>{sel?'✓ ':''}{s.nombre}</span>
+                        </label>
+                      )
+                    })}
+                  </div>
+                )}
               </div>
 
               {/* Canales de venta */}
