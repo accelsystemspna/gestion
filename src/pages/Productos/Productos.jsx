@@ -4,6 +4,7 @@ import { fmtMoney } from '../../lib/format'
 import { precioVenta } from '../../lib/pricing'
 import { promoDeProducto } from '../../lib/promos'
 import ProductoForm, { nuevoProductoDraftKey } from './ProductoForm'
+import PromoModal from './PromoModal'
 import BarcodeModal from './BarcodeModal'
 import ImageThumb from '../../components/ImageThumb'
 import { exportCatalogoPDF } from '../../lib/pdf'
@@ -31,6 +32,7 @@ export default function Productos() {
   const [sortDir, setSortDir]   = useState('asc')       // 'asc' | 'desc'
   const [mostrarInactivos, setMostrarInactivos] = useState(false)
   const [barcodeProduct, setBarcodeProduct] = useState(null)
+  const [promoProduct, setPromoProduct] = useState(null)
   const [tiendas, setTiendas] = useState([])
   const [exportingPDF, setExportingPDF] = useState(false)
   const [exportingCSV, setExportingCSV] = useState(false)
@@ -469,6 +471,14 @@ export default function Productos() {
                         {activo ? '● Activo' : '● Inactivo'}
                       </button>
                       <button className="btn btn-sm btn-ghost" title="Generar etiqueta con código de barras" onClick={() => setBarcodeProduct(p)}>🏷️</button>
+                      <button
+                        className="btn btn-sm btn-ghost"
+                        title="Configurar promoción"
+                        onClick={() => setPromoProduct(p)}
+                        style={promoDeProducto(p, 'local') || promoDeProducto(p, 'web') ? { color: '#16a34a', fontWeight: 700 } : undefined}
+                      >
+                        🎁 Promo
+                      </button>
                       <button className="btn btn-sm btn-ghost" onClick={() => { setFormKey(k => k + 1); setEditing(p) }}>Editar</button>
                       <button className="btn btn-sm btn-ghost" onClick={() => handleDelete(p.id)} style={{ color: 'var(--danger)' }}>Eliminar</button>
                     </td>
@@ -486,6 +496,16 @@ export default function Productos() {
           lista={lista}
           branding={branding}
           onClose={() => setBarcodeProduct(null)}
+        />
+      )}
+
+      {promoProduct && (
+        <PromoModal
+          producto={promoProduct}
+          tiendas={tiendas}
+          listas={listas}
+          onClose={() => setPromoProduct(null)}
+          onSaved={load}
         />
       )}
 
