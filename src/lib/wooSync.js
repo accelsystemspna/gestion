@@ -28,13 +28,14 @@ export async function syncToWoo({ tiendas, listas, producto }) {
     const lista  = listas.find(l => String(l.id) === String(tienda.lista_id))
     const costo  = Number(producto.costo_base) || 0
     const base   = lista ? precioVenta(costo, lista) : costo
-    // Solo los tipos de promo "por unidad" (%, $) se reflejan en el precio
-    // que ve la web — 2x1/3x2/2da unidad todavía necesitan lógica de
-    // carrito del lado de WordPress, así que por ahora quedan afuera.
+    // Solo los tipos de promo "por unidad" (%, $) se reflejan como oferta en
+    // la web — 2x1/3x2/2da unidad todavía necesitan lógica de carrito del
+    // lado de WordPress, así que por ahora quedan afuera.
     const promo = promoDeProducto(producto, 'web')
-    const precio = promo && (promo.tipo === 'descuento_pct' || promo.tipo === 'descuento_monto')
-      ? calcularLineaConPromo(base, 1, promo).subtotal
-      : base
+    const esOferta = promo && (promo.tipo === 'descuento_pct' || promo.tipo === 'descuento_monto')
+    const precioOferta = esOferta ? calcularLineaConPromo(base, 1, promo).subtotal : null
+    const round2 = (n) => Math.round(n * 100) / 100
+    const pctOff = esOferta && base > 0 ? Math.round((1 - precioOferta / base) * 100) : null
 
     const payload = {
       type: 'UPDATE',
@@ -42,7 +43,15 @@ export async function syncToWoo({ tiendas, listas, producto }) {
         sku:              producto.sku,
         name:             producto.nombre,
         description:      producto.descripcion || '',
-        price:            String(Math.round(precio * 100) / 100),
+        // Compatibilidad: precio final (con oferta aplicada, si la hay)
+        price:            String(round2(esOferta ? precioOferta : base)),
+        // Para que WooCommerce muestre precio tachado + nuevo precio + "Sale!":
+        // regular_price = precio de lista, sale_price = precio con oferta
+        // (vacío = sin oferta, no tocar el precio regular).
+        regular_price:    String(round2(base)),
+        sale_price:       esOferta ? String(round2(precioOferta)) : '',
+        on_sale:          !!esOferta,
+        discount_percent: pctOff,
         image_url:        producto.imagen_web_url || producto.imagen_url || '',
         gallery_urls:     producto.imagenes_web || [],
         activo:           producto.activo !== false,
