@@ -31,13 +31,14 @@ export default function Productos() {
   const [mostrarInactivos, setMostrarInactivos] = useState(false)
   const [barcodeProduct, setBarcodeProduct] = useState(null)
   const [tiendas, setTiendas] = useState([])
+  const [promos, setPromos] = useState([])
   const [exportingPDF, setExportingPDF] = useState(false)
   const [exportingCSV, setExportingCSV] = useState(false)
   const [syncingAll, setSyncingAll] = useState(false)
 
   const load = async () => {
     setLoading(true)
-    const [p, l, c, br, r, sc, ti] = await Promise.all([
+    const [p, l, c, br, r, sc, ti, pm] = await Promise.all([
       supabase.from('productos').select('*').order('created_at', { ascending: false }),
       supabase.from('listas_precios').select('*').order('created_at'),
       supabase.from('categorias').select('*').order('nombre'),
@@ -45,6 +46,7 @@ export default function Productos() {
       supabase.from('rubros').select('*').order('created_at'),
       supabase.from('subcategorias').select('*').order('nombre'),
       supabase.from('tiendas').select('id, nombre, tipo, activa, url, webhook_secret, lista_id').eq('activa', true).order('created_at'),
+      supabase.from('promociones').select('*'),
     ])
     setItems(p.data || [])
     setListas(l.data || [])
@@ -53,6 +55,7 @@ export default function Productos() {
     setRubros(r.data || [])
     setSubcategorias(sc.data || [])
     setTiendas(ti.data || [])
+    setPromos(pm.data || [])
     // no auto-select: user must choose a list explicitly
     setLoading(false)
   }
@@ -145,7 +148,7 @@ export default function Productos() {
       const producto = items.find(p => p.id === id)
       setItems((prev) => prev.map((p) => p.id === id ? { ...p, activo: activoNuevo } : p))
       if (producto) {
-        syncToWoo({ tiendas, listas, producto: { ...producto, activo: activoNuevo } })
+        syncToWoo({ tiendas, listas, promos, producto: { ...producto, activo: activoNuevo } })
           .catch(err => console.error('[wooSync]', err))
       }
     }
@@ -185,7 +188,7 @@ export default function Productos() {
     if (!confirm(`Se van a re-sincronizar ${candidatos.length} producto(s) con sus tiendas web. ¿Continuar?`)) return
 
     setSyncingAll(true)
-    const { total, sincronizados, errores } = await syncManyToWoo(candidatos, { tiendas, listas })
+    const { total, sincronizados, errores } = await syncManyToWoo(candidatos, { tiendas, listas, promos })
     setSyncingAll(false)
     alert(`Sincronización terminada: ${sincronizados}/${total} OK${errores ? `, ${errores} con error (ver consola)` : ''}.`)
   }

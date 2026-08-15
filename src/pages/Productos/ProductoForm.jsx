@@ -116,6 +116,7 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
   const [tarifas, setTarifas] = useState([])
   const [listas, setListas] = useState([])
   const [tiendas, setTiendas] = useState([])
+  const [promos, setPromos] = useState([])
   const [rubros, setRubros] = useState([])
   const [rubroFiltro, setRubroFiltro] = useState('')
   const [saving, setSaving] = useState(false)
@@ -164,13 +165,15 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
       supabase.from('listas_precios').select('*').order('created_at'),
       supabase.from('tiendas').select('id, nombre, tipo, activa, url, webhook_secret, lista_id').eq('activa', true).order('created_at'),
       supabase.from('rubros').select('*').order('created_at'),
-    ]).then(([c, m, t, l, ti, r]) => {
+      supabase.from('promociones').select('*'),
+    ]).then(([c, m, t, l, ti, r, pm]) => {
       setCategorias(c.data || [])
       setMateriales(m.data || [])
       setTarifas(t.data || [])
       setListas(l.data || [])
       setTiendas(ti.data || [])
       setRubros(r.data || [])
+      setPromos(pm.data || [])
       // rubroFiltro arranca vacío (Todos) para no ocultar la categoría actual
     })
   }, [])
@@ -367,7 +370,10 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
     syncToWoo({
       tiendas,
       listas,
+      promos,
       producto: {
+        id:            form.id,
+        categoria_id:  payload.categoria_id,
         sku:           payload.sku,
         nombre:        payload.nombre,
         descripcion:   payload.descripcion || '',

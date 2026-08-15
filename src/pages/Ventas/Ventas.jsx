@@ -5,6 +5,7 @@ import { useAuth } from '../../lib/AuthContext'
 import { fmtMoney } from '../../lib/format'
 import { calcInsumo, precioVenta } from '../../lib/pricing'
 import { ajustarStock } from '../../lib/stock'
+import { mejorLineaConPromo, promosParaProducto } from '../../lib/promos'
 
 function snapSegs(segs) {
   const s = Number(segs) || 0
@@ -84,6 +85,7 @@ export default function Ventas() {
 
   // ── Datos maestros ───────────────────────────────────────────────────────
   const [productos,  setProductos]  = useState([])
+  const [promos,     setPromos]     = useState([])
   const [categorias, setCategorias] = useState([])
   const [listas,     setListas]     = useState([])
   const [clientes,   setClientes]   = useState([])
@@ -160,8 +162,10 @@ export default function Ventas() {
       supabase.from('materiales').select('*').order('nombre'),
       supabase.from('tarifas').select('*').order('id'),
       supabase.from('arca_config').select('*').eq('id', 1).maybeSingle(),
-    ]).then(([pr, ca, li, cl, ma, ta, ar]) => {
+      supabase.from('promociones').select('*'),
+    ]).then(([pr, ca, li, cl, ma, ta, ar, pm]) => {
       setProductos(pr.data ?? [])
+      setPromos(pm.data ?? [])
       setCategorias(ca.data ?? [])
       setListas(li.data ?? [])
       setClientes(cl.data ?? [])
@@ -467,30 +471,50 @@ export default function Ventas() {
   }
 
   // ── Agregar producto al carrito ──────────────────────────────────────────
+  // Precio unitario promedio para `cantidad` unidades de `p`, aplicando la
+  // mejor promo vigente (local) que le corresponda. `precio` ya viene listo
+  // para multiplicar por cantidad (precio × cantidad = subtotal con promo).
+  const precioConPromo = (p, cantidad) => {
+    const base = precioVenta(Number(p.costo_base) || 0, lista)
+    const { subtotal, etiqueta } = mejorLineaConPromo(promos, p, 'local', base, cantidad)
+    return { precio: cantidad > 0 ? subtotal / cantidad : base, promoEtiqueta: etiqueta }
+  }
+
   const addProducto = (p) => {
     if (!listaSel) return   // bloquear si no hay lista elegida
-    const precio = precioVenta(Number(p.costo_base) || 0, lista)
     setItems(prev => {
       const idx = prev.findIndex(i => i.productoId === p.id && !i.esLibre)
       if (idx >= 0) {
         const next = [...prev]
-        next[idx] = { ...next[idx], cantidad: next[idx].cantidad + 1 }
+        const cantidad = next[idx].cantidad + 1
+        if (next[idx].precioManual) {
+          next[idx] = { ...next[idx], cantidad }
+        } else {
+          next[idx] = { ...next[idx], cantidad, ...precioConPromo(p, cantidad) }
+        }
         return next
       }
-      return [...prev, { _key: nk(), productoId: p.id, nombre: p.nombre, sku: p.sku ?? '', imagen_url: p.imagen_url ?? null, precio, cantidad: 1, esLibre: false }]
+      const { precio, promoEtiqueta } = precioConPromo(p, 1)
+      return [...prev, { _key: nk(), productoId: p.id, nombre: p.nombre, sku: p.sku ?? '', imagen_url: p.imagen_url ?? null, precio, promoEtiqueta, cantidad: 1, esLibre: false }]
     })
   }
 
   // ── Controles de cantidad ────────────────────────────────────────────────
+  const recalcularCantidad = (i, cantidad) => {
+    if (i.esLibre || i.precioManual) return { ...i, cantidad }
+    const p = productos.find(p => p.id === i.productoId)
+    if (!p) return { ...i, cantidad }
+    return { ...i, cantidad, ...precioConPromo(p, cantidad) }
+  }
   const updateQty  = (key, delta) =>
-    setItems(prev => prev.map(i => i._key === key ? { ...i, cantidad: Math.max(1, i.cantidad + delta) } : i))
+    setItems(prev => prev.map(i => i._key === key ? recalcularCantidad(i, Math.max(1, i.cantidad + delta)) : i))
   const setQty     = (key, val) =>
-    setItems(prev => prev.map(i => i._key === key ? { ...i, cantidad: Math.max(1, Number(val) || 1) } : i))
+    setItems(prev => prev.map(i => i._key === key ? recalcularCantidad(i, Math.max(1, Number(val) || 1)) : i))
   const removeItem = (key) => setItems(prev => prev.filter(i => i._key !== key))
   const toggleDescItem = (key) =>
     setItems(prev => prev.map(i => i._key === key ? { ...i, aplicaDescuento: i.aplicaDescuento === false ? true : false } : i))
   const setPrecio  = (key, val) =>
-    setItems(prev => prev.map(i => i._key === key ? { ...i, precio: Math.max(0, Number(val) || 0), precioManual: true } : i))
+    setItems(prev => prev.map(i => i._key === key ? { ...i, precio: Math.max(0, Number(val) || 0), precioManual: true, promoEtiqueta: null } : i))
 
   // ── Recalcular precios al cambiar lista ───────────────────────────────────
   useEffect(() => {
@@ -506,7 +530,7 @@ export default function Ventas() {
       // Productos normales
       const p = productos.find(p => p.id === i.productoId)
       if (!p) return i
-      return { ...i, precio: precioVenta(Number(p.costo_base) || 0, lista) }
+      return { ...i, ...precioConPromo(p, i.cantidad) }
     }))
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lista])
@@ -945,6 +969,7 @@ export default function Ventas() {
                     const precio  = precioVenta(Number(p.costo_base) || 0, lista)
                     const inCart  = items.some(i => i.productoId === p.id)
                     const cartQty = items.find(i => i.productoId === p.id)?.cantidad
+                    const tienePromo = promosParaProducto(promos, p, 'local').length > 0
                     return (
                       <div key={p.id} onClick={() => addProducto(p)}
                         title={!listaSel ? 'Elegí una lista de precios primero' : undefined}
@@ -955,7 +980,7 @@ export default function Ventas() {
                         <ImageThumb src={p.imagen_url} size={34} />
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ fontSize: 13, fontWeight: inCart ? 700 : 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: inCart ? 'var(--primary)' : 'var(--text)' }}>
-                            {p.nombre}
+                            {tienePromo && <span title="Tiene promoción activa">🏷️ </span>}{p.nombre}
                           </div>
                           {p.sku && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>{p.sku}</div>}
                           {(Number(p.stock_actual) || 0) <= 0 && (
@@ -1058,6 +1083,9 @@ export default function Ventas() {
                       <span style={{ fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.nombre}</span>
                     </div>
                     {item.sku && <div style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'monospace', marginBottom: 1 }}>SKU: {item.sku}</div>}
+                    {item.promoEtiqueta && (
+                      <div style={{ fontSize: 11, color: '#16a34a', fontWeight: 700, marginBottom: 1 }}>{item.promoEtiqueta}</div>
+                    )}
                     <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                       <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>$</span>
                       <input type="number" min={0} step="0.01" value={item.precio}
