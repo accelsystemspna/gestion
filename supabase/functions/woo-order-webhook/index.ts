@@ -145,6 +145,22 @@ serve(async (req) => {
     await Promise.all(itemsPayload.map((ip) => admin.from('venta_items').insert(ip)))
   }
 
+  // Descontar stock de los productos matcheados (informativo, no bloquea nada)
+  const porProducto: Record<string, number> = {}
+  for (const ip of itemsPayload) {
+    if (!ip.producto_id) continue
+    porProducto[ip.producto_id] = (porProducto[ip.producto_id] || 0) + ip.cantidad
+  }
+  const prodIdsConStock = Object.keys(porProducto)
+  if (prodIdsConStock.length) {
+    const { data: prodsStock } = await admin.from('productos').select('id, stock_actual').in('id', prodIdsConStock)
+    await Promise.all((prodsStock ?? []).map((p: any) =>
+      admin.from('productos')
+        .update({ stock_actual: (Number(p.stock_actual) || 0) - porProducto[p.id] })
+        .eq('id', p.id)
+    ))
+  }
+
   try {
     await sendPushToOrg(admin, tienda.user_id, {
       title: '💰 Nueva venta desde la web',

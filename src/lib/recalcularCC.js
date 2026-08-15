@@ -136,7 +136,7 @@ export async function recalcularProductosPorMaterial(_materialId) {
   // 3. Todos los productos
   const { data: productos, error: errProd } = await supabase
     .from('productos')
-    .select('id, sku, nombre, piezas, tarifas_producto, material_id, ancho_pieza, alto_pieza, cantidad_piezas, tarifa_id, fab_minutos, fab_segundos, costo_base, tiendas_ids, activo, imagen_url, imagen_web_url, imagenes_web, seo_titulo, seo_descripcion, peso_kg, paquete_largo, paquete_ancho, paquete_alto')
+    .select('id, sku, nombre, descripcion, piezas, tarifas_producto, material_id, ancho_pieza, alto_pieza, cantidad_piezas, tarifa_id, fab_minutos, fab_segundos, costo_base, tiendas_ids, activo, imagen_url, imagen_web_url, imagenes_web, seo_titulo, seo_descripcion, peso_kg, paquete_largo, paquete_ancho, paquete_alto')
 
   if (errProd) {
     console.warn(TAG + ' error al leer productos:', errProd)
@@ -291,7 +291,7 @@ export async function resyncProductosPorLista(_listaId) {
   const [{ data: productos }, { data: tiendas }, { data: listas }] = await Promise.all([
     supabase
       .from('productos')
-      .select('id, sku, nombre, costo_base, imagen_url, imagen_web_url, imagenes_web, activo, seo_titulo, seo_descripcion, peso_kg, paquete_largo, paquete_ancho, paquete_alto, tiendas_ids'),
+      .select('id, sku, nombre, descripcion, costo_base, imagen_url, imagen_web_url, imagenes_web, activo, seo_titulo, seo_descripcion, peso_kg, paquete_largo, paquete_ancho, paquete_alto, tiendas_ids'),
     supabase.from('tiendas').select('id, nombre, tipo, activa, url, webhook_secret, lista_id').eq('activa', true),
     supabase.from('listas_precios').select('*'),
   ])

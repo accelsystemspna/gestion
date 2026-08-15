@@ -384,6 +384,7 @@ export default function Productos() {
                     </span>
                   </th>
                 ))}
+                <th style={{ textAlign: 'center' }}>Stock</th>
                 <th style={{ textAlign: 'right' }}>Precio</th>
                 <th></th>
               </tr>
@@ -438,6 +439,14 @@ export default function Productos() {
                         ? <span className="badge">{cat.nombre}</span>
                         : <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>—</span>
                       }
+                    </td>
+                    <td style={{ textAlign: 'center' }}>
+                      {(() => {
+                        const stock = Number(p.stock_actual) || 0
+                        if (stock > 0) return <span style={{ fontWeight: 700, color: 'var(--text)' }}>{stock}</span>
+                        if (stock === 0) return <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>0</span>
+                        return <span style={{ fontSize: 11, fontWeight: 700, color: '#d97706' }} title="Stock negativo — hay que fabricar la diferencia">A fabricar ({Math.abs(stock)})</span>
+                      })()}
                     </td>
                     <td style={{ textAlign: 'right', fontWeight: 600, fontSize: 15, color: lista ? 'var(--success)' : 'var(--text-muted)' }}>
                       {lista ? fmtMoney(venta) : '—'}

@@ -3,6 +3,7 @@ import { supabase } from '../../lib/supabase'
 import { fmtMoney } from '../../lib/format'
 import jsPDF from 'jspdf'
 import { generarFacturaC, buildWhatsAppText } from '../../lib/facturaC'
+import { ajustarStock } from '../../lib/stock'
 import FacturaCPreview from './FacturaCPreview'
 
 const fmtDate = (d) =>
@@ -163,6 +164,8 @@ export default function VentaDetalle({ ventaId, onClose, onUpdated }) {
           .eq('id', venta.cliente_id)
       }
     }
+    ajustarStock(items.map(i => ({ producto_id: i.producto_id, cantidad: -i.cantidad })))
+      .catch(err => console.error('[stock]', err))
     setVenta(v => ({ ...v, estado: 'anulado' }))
     setAccion(null)
     onUpdated?.()
@@ -203,6 +206,11 @@ export default function VentaDetalle({ ventaId, onClose, onUpdated }) {
           .update({ saldo: (Number(cli.saldo) || 0) + (venta.total || 0) })
           .eq('id', venta.cliente_id)
       }
+    }
+    // Si no estaba anulada, el stock nunca se devolvió — devolverlo antes de borrar
+    if (venta.estado !== 'anulado') {
+      await ajustarStock(items.map(i => ({ producto_id: i.producto_id, cantidad: -i.cantidad })))
+        .catch(err => console.error('[stock]', err))
     }
     await supabase.from('venta_items').delete().eq('venta_id', ventaId)
     await supabase.from('ventas').delete().eq('id', ventaId)

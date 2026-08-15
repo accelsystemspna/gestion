@@ -56,6 +56,7 @@ const blank = {
   imp_minutos: '',
   tarifa_id: '',
   activo: true,
+  stock_actual: 0,
 }
 
 const calcMaterialCost = calcInsumo
@@ -95,6 +96,7 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
         paquete_ancho: initial.paquete_ancho ?? '',
         paquete_alto: initial.paquete_alto ?? '',
         incremento: initial.incremento || 0,
+        stock_actual: initial.stock_actual ?? 0,
         tiendas_ids: initial.tiendas_ids || [],
         tarifas_sel: initial.tarifas_producto || [{ ...blankTarifaSel }],
         piezas: initial.piezas || [{
@@ -351,6 +353,7 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
       imp_horas: tipoFab === 'Impresión 3D' ? Number(form.imp_horas) || null : null,
       imp_minutos: tipoFab === 'Impresión 3D' ? Number(form.imp_minutos) || null : null,
       costo_base: costoBase,
+      stock_actual: form.stock_actual !== '' ? Number(form.stock_actual) : 0,
       activo: form.activo !== false,
     }
     const res = form.id
@@ -367,6 +370,7 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
       producto: {
         sku:           payload.sku,
         nombre:        payload.nombre,
+        descripcion:   payload.descripcion || '',
         costo_base:    costoBase,
         imagen_web_url: form.imagen_web_url || '',
         imagen_url:    form.imagen_url || '',
@@ -663,6 +667,10 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
                 <F label="Alto (cm)"><input className="input" style={si()} type="number" step="0.1" value={form.alto_producto} onChange={e=>set('alto_producto',e.target.value)} placeholder="0" /></F>
                 <F label="Ancho (cm)"><input className="input" style={si()} type="number" step="0.1" value={form.ancho_producto} onChange={e=>set('ancho_producto',e.target.value)} placeholder="0" /></F>
                 <F label="Descripción" col={2}><input className="input" style={si()} value={form.descripcion||''} onChange={e=>set('descripcion',e.target.value)} /></F>
+                <F label="Stock actual">
+                  <input className="input" style={si()} type="number" step="1" value={form.stock_actual} onChange={e=>set('stock_actual',e.target.value)} placeholder="0" />
+                  <span style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>Se descuenta solo con cada venta. Corregilo a mano cuando quieras (ej. después de fabricar).</span>
+                </F>
               </div>
 
               {/* Imagen — versión ultra compacta */}

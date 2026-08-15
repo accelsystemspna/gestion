@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../lib/AuthContext'
 import { fmtMoney } from '../../lib/format'
 import { calcInsumo, precioVenta } from '../../lib/pricing'
+import { ajustarStock } from '../../lib/stock'
 
 function snapSegs(segs) {
   const s = Number(segs) || 0
@@ -152,7 +153,7 @@ export default function Ventas() {
   // ── Carga inicial ────────────────────────────────────────────────────────
   useEffect(() => {
     Promise.all([
-      supabase.from('productos').select('id, nombre, sku, costo_base, imagen_url, categoria_id').eq('activo', true).order('nombre'),
+      supabase.from('productos').select('id, nombre, sku, costo_base, imagen_url, categoria_id, stock_actual').eq('activo', true).order('nombre'),
       supabase.from('categorias').select('id, nombre').order('nombre'),
       supabase.from('listas_precios').select('*').order('created_at'),
       supabase.from('clientes').select('*').order('nombre'),
@@ -607,6 +608,10 @@ export default function Ventas() {
       return
     }
 
+    // Descontar stock de los productos vendidos (informativo, no bloquea nada)
+    ajustarStock(items.filter(i => !i.esLibre).map(i => ({ producto_id: i.productoId, cantidad: i.cantidad })))
+      .catch(err => console.error('[stock]', err))
+
     // Cuenta corriente → actualizar saldo del cliente
     if (formaPago === 'cuenta_corriente' && cliente?.id) {
       const saldoActual = Number(cliente.saldo) || 0
@@ -953,6 +958,11 @@ export default function Ventas() {
                             {p.nombre}
                           </div>
                           {p.sku && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>{p.sku}</div>}
+                          {(Number(p.stock_actual) || 0) <= 0 && (
+                            <div style={{ fontSize: 10, color: '#d97706', fontWeight: 700, marginTop: 1 }} title="Sin stock — se fabrica al vender">
+                              ⚠ a fabricar
+                            </div>
+                          )}
                         </div>
                         <div style={{ fontSize: 14, fontWeight: 800, whiteSpace: 'nowrap', flexShrink: 0, color: listaSel ? 'var(--primary)' : '#94a3b8' }}>
                           {listaSel ? fmtMoney(precio) : '—'}

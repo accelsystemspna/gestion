@@ -33,6 +33,7 @@ export async function syncToWoo({ tiendas, listas, producto }) {
       record: {
         sku:              producto.sku,
         name:             producto.nombre,
+        description:      producto.descripcion || '',
         price:            String(Math.round(precio * 100) / 100),
         image_url:        producto.imagen_web_url || producto.imagen_url || '',
         gallery_urls:     producto.imagenes_web || [],
