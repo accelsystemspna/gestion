@@ -60,19 +60,16 @@ export default function Integraciones() {
   const [loading, setLoading]     = useState(true)
   const [syncingId, setSyncingId] = useState(null)
   const [syncMsg, setSyncMsg]     = useState({})
-  const [promos, setPromos]       = useState([])
 
   const load = async () => {
     setLoading(true)
-    const [t, l, c, pm] = await Promise.all([
+    const [t, l, c] = await Promise.all([
       supabase.from('tiendas').select('*').eq('user_id', orgId).order('created_at'),
       supabase.from('listas_precios').select('*').order('created_at'),
       supabase.from('categorias').select('id, nombre').order('nombre'),
-      supabase.from('promociones').select('*'),
     ])
     setTiendas(t.data || [])
     setListas(l.data || [])
-    setPromos(pm.data || [])
     setCategorias(c.data || [])
     setLoading(false)
   }
@@ -112,11 +109,11 @@ export default function Integraciones() {
     try {
       const { data: productos } = await supabase
         .from('productos')
-        .select('id, categoria_id, sku, nombre, costo_base, imagen_url, imagen_web_url, imagenes_web, activo, seo_titulo, seo_descripcion, peso_kg, paquete_largo, paquete_ancho, paquete_alto, tiendas_ids')
+        .select('id, categoria_id, sku, nombre, costo_base, imagen_url, imagen_web_url, imagenes_web, activo, seo_titulo, seo_descripcion, peso_kg, paquete_largo, paquete_ancho, paquete_alto, tiendas_ids, promo_activa, promo_tipo, promo_valor, promo_lleva, promo_paga, promo_canal, promo_fecha_desde, promo_fecha_hasta')
       const propios = (productos || []).filter((p) =>
         (p.tiendas_ids || []).map(String).includes(String(tienda.id))
       )
-      const res = await syncManyToWoo(propios, { tiendas: [tienda], listas, promos })
+      const res = await syncManyToWoo(propios, { tiendas: [tienda], listas })
       setSyncMsg((m) => ({ ...m, [tienda.id]: `${res.sincronizados}/${res.total} producto(s) sincronizados` }))
     } catch (err) {
       setSyncMsg((m) => ({ ...m, [tienda.id]: 'Error al sincronizar: ' + err.message }))

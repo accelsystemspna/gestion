@@ -1,5 +1,5 @@
 import { precioVenta } from './pricing'
-import { mejorLineaConPromo } from './promos'
+import { promoDeProducto, calcularLineaConPromo } from './promos'
 
 /**
  * Envía un producto a todas las tiendas WooCommerce activas que tiene asignadas.
@@ -10,7 +10,7 @@ import { mejorLineaConPromo } from './promos'
  * @param {object}   producto - { sku, nombre, costo_base, imagen_web_url, imagen_url, activo, tiendas_ids }
  * @returns {Promise<boolean>} true si se sincronizó al menos una tienda sin error
  */
-export async function syncToWoo({ tiendas, listas, producto, promos = [] }) {
+export async function syncToWoo({ tiendas, listas, producto }) {
   const ids = (producto.tiendas_ids || []).map(String)
 
   const wooTiendas = tiendas.filter(
@@ -31,8 +31,10 @@ export async function syncToWoo({ tiendas, listas, producto, promos = [] }) {
     // Solo los tipos de promo "por unidad" (%, $) se reflejan en el precio
     // que ve la web — 2x1/3x2/2da unidad todavía necesitan lógica de
     // carrito del lado de WordPress, así que por ahora quedan afuera.
-    const { promo, subtotal } = mejorLineaConPromo(promos, producto, 'web', base, 1)
-    const precio = promo && (promo.tipo === 'descuento_pct' || promo.tipo === 'descuento_monto') ? subtotal : base
+    const promo = promoDeProducto(producto, 'web')
+    const precio = promo && (promo.tipo === 'descuento_pct' || promo.tipo === 'descuento_monto')
+      ? calcularLineaConPromo(base, 1, promo).subtotal
+      : base
 
     const payload = {
       type: 'UPDATE',
@@ -91,7 +93,7 @@ export async function syncToWoo({ tiendas, listas, producto, promos = [] }) {
  *
  * @returns {Promise<{ total: number, sincronizados: number, errores: number }>}
  */
-export async function syncManyToWoo(productos, { tiendas, listas, promos = [] }, { batchSize = 5 } = {}) {
+export async function syncManyToWoo(productos, { tiendas, listas }, { batchSize = 5 } = {}) {
   const candidatos = (productos || []).filter(p => p.tiendas_ids?.length)
   let sincronizados = 0
   let errores = 0
@@ -100,7 +102,7 @@ export async function syncManyToWoo(productos, { tiendas, listas, promos = [] },
     const tanda = candidatos.slice(i, i + batchSize)
     const resultados = await Promise.all(
       tanda.map(producto =>
-        syncToWoo({ tiendas, listas, producto, promos }).catch(() => false)
+        syncToWoo({ tiendas, listas, producto }).catch(() => false)
       )
     )
     for (const r of resultados) r ? sincronizados++ : errores++

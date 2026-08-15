@@ -8,6 +8,18 @@ import { useAuth } from '../../lib/AuthContext'
 
 const SKU_RE = /^[A-Z]{3}[0-9]{6}(-V\d+)?$/
 
+const PROMO_TIPOS = {
+  descuento_pct:      { label: 'Descuento %' },
+  descuento_monto:    { label: 'Descuento $ fijo' },
+  nxm:                { label: 'Lleva N, paga M (2x1/3x2)' },
+  segunda_unidad_pct: { label: '2da unidad a % del precio' },
+}
+const PROMO_CANALES = {
+  local: '🏪 Solo local',
+  web:   '🌐 Solo web',
+  ambos: '🏪🌐 Ambos',
+}
+
 // Definidos FUERA del componente para que React no los desmonte en cada render
 // F: field compacto — label pequeño + control apilado
 function F({ label, col, children }) {
@@ -57,6 +69,14 @@ const blank = {
   tarifa_id: '',
   activo: true,
   stock_actual: 0,
+  promo_activa: false,
+  promo_tipo: 'descuento_pct',
+  promo_valor: '',
+  promo_lleva: 2,
+  promo_paga: 1,
+  promo_canal: 'ambos',
+  promo_fecha_desde: '',
+  promo_fecha_hasta: '',
 }
 
 const calcMaterialCost = calcInsumo
@@ -97,6 +117,14 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
         paquete_alto: initial.paquete_alto ?? '',
         incremento: initial.incremento || 0,
         stock_actual: initial.stock_actual ?? 0,
+        promo_activa: initial.promo_activa ?? false,
+        promo_tipo: initial.promo_tipo || 'descuento_pct',
+        promo_valor: initial.promo_valor ?? '',
+        promo_lleva: initial.promo_lleva ?? 2,
+        promo_paga: initial.promo_paga ?? 1,
+        promo_canal: initial.promo_canal || 'ambos',
+        promo_fecha_desde: initial.promo_fecha_desde || '',
+        promo_fecha_hasta: initial.promo_fecha_hasta || '',
         tiendas_ids: initial.tiendas_ids || [],
         tarifas_sel: initial.tarifas_producto || [{ ...blankTarifaSel }],
         piezas: initial.piezas || [{
@@ -116,7 +144,6 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
   const [tarifas, setTarifas] = useState([])
   const [listas, setListas] = useState([])
   const [tiendas, setTiendas] = useState([])
-  const [promos, setPromos] = useState([])
   const [rubros, setRubros] = useState([])
   const [rubroFiltro, setRubroFiltro] = useState('')
   const [saving, setSaving] = useState(false)
@@ -165,15 +192,13 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
       supabase.from('listas_precios').select('*').order('created_at'),
       supabase.from('tiendas').select('id, nombre, tipo, activa, url, webhook_secret, lista_id').eq('activa', true).order('created_at'),
       supabase.from('rubros').select('*').order('created_at'),
-      supabase.from('promociones').select('*'),
-    ]).then(([c, m, t, l, ti, r, pm]) => {
+    ]).then(([c, m, t, l, ti, r]) => {
       setCategorias(c.data || [])
       setMateriales(m.data || [])
       setTarifas(t.data || [])
       setListas(l.data || [])
       setTiendas(ti.data || [])
       setRubros(r.data || [])
-      setPromos(pm.data || [])
       // rubroFiltro arranca vacío (Todos) para no ocultar la categoría actual
     })
   }, [])
@@ -357,6 +382,14 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
       imp_minutos: tipoFab === 'Impresión 3D' ? Number(form.imp_minutos) || null : null,
       costo_base: costoBase,
       stock_actual: form.stock_actual !== '' ? Number(form.stock_actual) : 0,
+      promo_activa: !!form.promo_activa,
+      promo_tipo: form.promo_activa ? form.promo_tipo : null,
+      promo_valor: form.promo_activa && form.promo_valor !== '' ? Number(form.promo_valor) : null,
+      promo_lleva: form.promo_activa && form.promo_tipo === 'nxm' ? Number(form.promo_lleva) || 1 : null,
+      promo_paga: form.promo_activa && form.promo_tipo === 'nxm' ? Number(form.promo_paga) || 1 : null,
+      promo_canal: form.promo_activa ? form.promo_canal : null,
+      promo_fecha_desde: form.promo_fecha_desde || null,
+      promo_fecha_hasta: form.promo_fecha_hasta || null,
       activo: form.activo !== false,
     }
     const res = form.id
@@ -370,7 +403,6 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
     syncToWoo({
       tiendas,
       listas,
-      promos,
       producto: {
         id:            form.id,
         categoria_id:  payload.categoria_id,
@@ -389,6 +421,14 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
         paquete_alto:    payload.paquete_alto,
         activo:        payload.activo,
         tiendas_ids:   payload.tiendas_ids,
+        promo_activa:      payload.promo_activa,
+        promo_tipo:        payload.promo_tipo,
+        promo_valor:       payload.promo_valor,
+        promo_lleva:       payload.promo_lleva,
+        promo_paga:        payload.promo_paga,
+        promo_canal:       payload.promo_canal,
+        promo_fecha_desde: payload.promo_fecha_desde,
+        promo_fecha_hasta: payload.promo_fecha_hasta,
       },
     }).catch(err => console.error('[wooSync]', err))
 
@@ -896,6 +936,62 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
                         </label>
                       )
                     })}
+                  </div>
+                )}
+              </div>
+
+              {/* Promoción */}
+              <div>
+                {secLabel('🏷️ Promoción')}
+                <label style={{ display:'flex', alignItems:'center', gap:8, cursor:'pointer', userSelect:'none', marginTop:10 }}>
+                  <input type="checkbox" checked={form.promo_activa} onChange={e=>set('promo_activa', e.target.checked)} />
+                  <span style={{ fontSize:13, fontWeight:600 }}>Este producto tiene una promoción activa</span>
+                </label>
+
+                {form.promo_activa && (
+                  <div style={{ marginTop:12, display:'flex', flexDirection:'column', gap:12, maxWidth:480 }}>
+                    <F label="Tipo de promoción">
+                      <select className="select" style={si()} value={form.promo_tipo} onChange={e=>set('promo_tipo', e.target.value)}>
+                        {Object.entries(PROMO_TIPOS).map(([k,v])=><option key={k} value={k}>{v.label}</option>)}
+                      </select>
+                    </F>
+
+                    {form.promo_tipo === 'nxm' ? (
+                      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
+                        <F label="Lleva"><input className="input" style={si()} type="number" min="1" value={form.promo_lleva} onChange={e=>set('promo_lleva', e.target.value)} /></F>
+                        <F label="Paga"><input className="input" style={si()} type="number" min="1" value={form.promo_paga} onChange={e=>set('promo_paga', e.target.value)} /></F>
+                        <span style={{ gridColumn:'span 2', fontSize:11, color:'var(--text-muted)' }}>2x1 → lleva 2, paga 1. 3x2 → lleva 3, paga 2.</span>
+                      </div>
+                    ) : (
+                      <F label={form.promo_tipo === 'descuento_monto' ? 'Monto de descuento ($)' : form.promo_tipo === 'segunda_unidad_pct' ? '2da unidad al… (%)' : 'Porcentaje de descuento (%)'}>
+                        <input className="input" style={si()} type="number" step="0.01" value={form.promo_valor} onChange={e=>set('promo_valor', e.target.value)}
+                          placeholder={form.promo_tipo === 'segunda_unidad_pct' ? 'Ej: 50 = mitad de precio' : '0'} />
+                      </F>
+                    )}
+
+                    <F label="¿Dónde aplica?">
+                      <div style={{ display:'flex', gap:6 }}>
+                        {Object.entries(PROMO_CANALES).map(([k,label])=>(
+                          <button key={k} type="button" onClick={()=>set('promo_canal', k)}
+                            style={{ flex:1, padding:'7px 8px', borderRadius:6, fontSize:12, fontWeight:700, cursor:'pointer',
+                              border:`1px solid ${form.promo_canal===k?'var(--primary)':'var(--border)'}`,
+                              background:form.promo_canal===k?'var(--primary-faint)':'var(--surface)',
+                              color:form.promo_canal===k?'var(--primary)':'var(--text)' }}>
+                            {label}
+                          </button>
+                        ))}
+                      </div>
+                      {form.promo_canal !== 'local' && form.promo_tipo !== 'descuento_pct' && form.promo_tipo !== 'descuento_monto' && (
+                        <span style={{ fontSize:10, color:'var(--warning)', marginTop:4 }}>
+                          ⚠️ 2x1/3x2/2da unidad todavía solo se reflejan en el POS — el lado web necesita lógica de carrito aparte.
+                        </span>
+                      )}
+                    </F>
+
+                    <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
+                      <F label="Desde (opcional)"><input className="input" style={si()} type="date" value={form.promo_fecha_desde} onChange={e=>set('promo_fecha_desde', e.target.value)} /></F>
+                      <F label="Hasta (opcional)"><input className="input" style={si()} type="date" value={form.promo_fecha_hasta} onChange={e=>set('promo_fecha_hasta', e.target.value)} /></F>
+                    </div>
                   </div>
                 )}
               </div>

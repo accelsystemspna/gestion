@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { useAuth } from '../../lib/AuthContext'
 import Branding from './Branding'
 import ListasPrecios from './ListasPrecios'
-import Promociones from './Promociones'
 import Usuarios from './Usuarios'
 import Categorias from './Categorias'
 import Integraciones from './Integraciones'
@@ -14,7 +13,6 @@ import Apariencia from './Apariencia'
 const TABS = [
   { id: 'branding',      label: 'Branding' },
   { id: 'listas',        label: 'Listas de precios' },
-  { id: 'promociones',   label: '🏷️ Promociones' },
   { id: 'rubros',        label: '🗂 Rubros' },
   { id: 'categorias',    label: 'Categorías' },
   { id: 'integraciones', label: '🔗 Integraciones' },
@@ -63,7 +61,6 @@ export default function Configuracion() {
 
       {tab === 'branding' && <Branding />}
       {tab === 'listas' && <ListasPrecios />}
-      {tab === 'promociones' && <Promociones />}
       {tab === 'usuarios' && <Usuarios />}
       {tab === 'categorias' && <Categorias />}
       {tab === 'rubros' && <Rubros />}

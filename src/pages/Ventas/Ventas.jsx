@@ -5,7 +5,7 @@ import { useAuth } from '../../lib/AuthContext'
 import { fmtMoney } from '../../lib/format'
 import { calcInsumo, precioVenta } from '../../lib/pricing'
 import { ajustarStock } from '../../lib/stock'
-import { mejorLineaConPromo, promosParaProducto } from '../../lib/promos'
+import { precioConPromoProducto, promoDeProducto } from '../../lib/promos'
 
 function snapSegs(segs) {
   const s = Number(segs) || 0
@@ -85,7 +85,6 @@ export default function Ventas() {
 
   // ── Datos maestros ───────────────────────────────────────────────────────
   const [productos,  setProductos]  = useState([])
-  const [promos,     setPromos]     = useState([])
   const [categorias, setCategorias] = useState([])
   const [listas,     setListas]     = useState([])
   const [clientes,   setClientes]   = useState([])
@@ -155,17 +154,15 @@ export default function Ventas() {
   // ── Carga inicial ────────────────────────────────────────────────────────
   useEffect(() => {
     Promise.all([
-      supabase.from('productos').select('id, nombre, sku, costo_base, imagen_url, categoria_id, stock_actual').eq('activo', true).order('nombre'),
+      supabase.from('productos').select('id, nombre, sku, costo_base, imagen_url, categoria_id, stock_actual, promo_activa, promo_tipo, promo_valor, promo_lleva, promo_paga, promo_canal, promo_fecha_desde, promo_fecha_hasta').eq('activo', true).order('nombre'),
       supabase.from('categorias').select('id, nombre').order('nombre'),
       supabase.from('listas_precios').select('*').order('created_at'),
       supabase.from('clientes').select('*').order('nombre'),
       supabase.from('materiales').select('*').order('nombre'),
       supabase.from('tarifas').select('*').order('id'),
       supabase.from('arca_config').select('*').eq('id', 1).maybeSingle(),
-      supabase.from('promociones').select('*'),
-    ]).then(([pr, ca, li, cl, ma, ta, ar, pm]) => {
+    ]).then(([pr, ca, li, cl, ma, ta, ar]) => {
       setProductos(pr.data ?? [])
-      setPromos(pm.data ?? [])
       setCategorias(ca.data ?? [])
       setListas(li.data ?? [])
       setClientes(cl.data ?? [])
@@ -476,8 +473,7 @@ export default function Ventas() {
   // para multiplicar por cantidad (precio × cantidad = subtotal con promo).
   const precioConPromo = (p, cantidad) => {
     const base = precioVenta(Number(p.costo_base) || 0, lista)
-    const { subtotal, etiqueta } = mejorLineaConPromo(promos, p, 'local', base, cantidad)
-    return { precio: cantidad > 0 ? subtotal / cantidad : base, promoEtiqueta: etiqueta }
+    return precioConPromoProducto(p, 'local', base, cantidad)
   }
 
   const addProducto = (p) => {
@@ -969,7 +965,7 @@ export default function Ventas() {
                     const precio  = precioVenta(Number(p.costo_base) || 0, lista)
                     const inCart  = items.some(i => i.productoId === p.id)
                     const cartQty = items.find(i => i.productoId === p.id)?.cantidad
-                    const tienePromo = promosParaProducto(promos, p, 'local').length > 0
+                    const tienePromo = !!promoDeProducto(p, 'local')
                     return (
                       <div key={p.id} onClick={() => addProducto(p)}
                         title={!listaSel ? 'Elegí una lista de precios primero' : undefined}

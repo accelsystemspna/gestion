@@ -2,32 +2,25 @@ import { fmtMoney } from './format'
 
 const hoyStr = () => new Date().toISOString().slice(0, 10)
 
-function vigente(promo) {
-  if (!promo.activa) return false
+// La promo vive directo en el producto (promo_*). Devuelve null si no
+// corresponde aplicarla (pausada, vencida, o no es para este canal).
+export function promoDeProducto(producto, canal) {
+  if (!producto?.promo_activa || !producto.promo_tipo) return null
   const hoy = hoyStr()
-  if (promo.fecha_desde && hoy < promo.fecha_desde) return false
-  if (promo.fecha_hasta && hoy > promo.fecha_hasta) return false
-  return true
+  if (producto.promo_fecha_desde && hoy < producto.promo_fecha_desde) return null
+  if (producto.promo_fecha_hasta && hoy > producto.promo_fecha_hasta) return null
+  const promoCanal = producto.promo_canal || 'ambos'
+  if (promoCanal !== 'ambos' && promoCanal !== canal) return null
+  return {
+    tipo:  producto.promo_tipo,
+    valor: producto.promo_valor,
+    lleva: producto.promo_lleva,
+    paga:  producto.promo_paga,
+  }
 }
 
-function aplicaAProducto(promo, producto) {
-  if (!producto) return false
-  if (promo.alcance_tipo === 'todos') return true
-  const ids = (promo.alcance_ids || []).map(String)
-  if (promo.alcance_tipo === 'categoria') return ids.includes(String(producto.categoria_id))
-  if (promo.alcance_tipo === 'producto') return ids.includes(String(producto.id))
-  return false
-}
-
-// Promos vigentes que aplican a este producto en este canal ('local' | 'web')
-export function promosParaProducto(promos, producto, canal) {
-  return (promos || []).filter((p) =>
-    vigente(p) && (p.canal === 'ambos' || p.canal === canal) && aplicaAProducto(p, producto)
-  )
-}
-
-// Calcula el subtotal de una línea (precio unitario base × cantidad) aplicando
-// una promo puntual. Devuelve { subtotal, etiqueta, ahorro }.
+// Calcula el subtotal de una línea (precio unitario base × cantidad)
+// aplicando la promo. Devuelve { subtotal, etiqueta, ahorro }.
 export function calcularLineaConPromo(precioBase, cantidad, promo) {
   const full = precioBase * cantidad
   if (!promo || cantidad <= 0) return { subtotal: full, etiqueta: null, ahorro: 0 }
@@ -65,17 +58,10 @@ export function calcularLineaConPromo(precioBase, cantidad, promo) {
   return { subtotal: full, etiqueta: null, ahorro: 0 }
 }
 
-// Entre todas las promos candidatas, aplica la que le da mejor precio al
-// cliente para la cantidad actual del carrito.
-export function mejorLineaConPromo(promos, producto, canal, precioBase, cantidad) {
-  const candidatas = promosParaProducto(promos, producto, canal)
-  const sinPromo = calcularLineaConPromo(precioBase, cantidad, null)
-  if (!candidatas.length) return { ...sinPromo, promo: null }
-
-  let mejor = { ...sinPromo, promo: null }
-  for (const promo of candidatas) {
-    const r = calcularLineaConPromo(precioBase, cantidad, promo)
-    if (r.subtotal < mejor.subtotal) mejor = { ...r, promo }
-  }
-  return mejor
+// Atajo: precio unitario promedio para `cantidad` unidades de este
+// producto, ya con la promo aplicada (precio × cantidad = subtotal correcto).
+export function precioConPromoProducto(producto, canal, precioBase, cantidad) {
+  const promo = promoDeProducto(producto, canal)
+  const { subtotal, etiqueta } = calcularLineaConPromo(precioBase, cantidad, promo)
+  return { precio: cantidad > 0 ? subtotal / cantidad : precioBase, promoEtiqueta: etiqueta }
 }
