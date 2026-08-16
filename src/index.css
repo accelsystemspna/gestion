@@ -344,6 +344,21 @@ h1, h2, h3, h4 {
   .pf-grid2 { grid-template-columns: 1fr !important; max-width: none !important; }
   .pf-grid4 { grid-template-columns: 1fr 1fr !important; max-width: none !important; }
 
+  /* Footer del form de producto: 4 botones + toggle no entran en una
+     sola línea en mobile — se apila y los botones se envuelven. */
+  .producto-form-footer {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 10px !important;
+  }
+  .producto-form-footer > div {
+    flex-wrap: wrap !important;
+    width: 100%;
+  }
+  .producto-form-footer > div:last-child button {
+    flex: 1 1 auto;
+  }
+
   /* Layout */
   .mobile-topbar  { display: flex !important; }
   .layout-sidebar { display: none !important; }

@@ -1041,7 +1041,7 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
         </div>
 
         {/* Footer fijo — siempre visible */}
-        <div className="modal-footer" style={{ justifyContent:'space-between', alignItems:'center', flexShrink:0 }}>
+        <div className="modal-footer producto-form-footer" style={{ justifyContent:'space-between', alignItems:'center', flexShrink:0 }}>
           <div style={{ display:'flex', alignItems:'center', gap:16 }}>
             <div style={{ display:'flex', alignItems:'center', gap:6, fontSize:13, fontWeight:600, color:'#16a34a', opacity:savedFlash?1:0, transition:'opacity 0.3s', minWidth:140 }}>
               <span style={{ fontSize:16 }}>✅</span> Producto guardado
