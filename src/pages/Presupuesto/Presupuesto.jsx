@@ -678,7 +678,7 @@ export default function Presupuesto() {
                                 <strong style={{ fontSize:14 }}>{p.nombre}</strong>
                                 {oferta && (
                                   <span style={{ fontSize:10, fontWeight:700, padding:'1px 6px', borderRadius:999, background:'#fff7ed', color:'#c2410c', border:'1px solid #fdba7444', marginLeft:5 }}>
-                                    🏷️ {oferta}
+                                    {oferta}
                                   </span>
                                 )}
                               </div>

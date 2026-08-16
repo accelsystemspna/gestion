@@ -55,7 +55,7 @@ export default function PromoModal({ producto, tiendas, listas, onClose, onSaved
     <div className="modal-overlay">
       <div className="modal" style={{ maxWidth: 460 }}>
         <div className="modal-header">
-          <h3 style={{ fontSize: 16 }}>🏷️ Oferta — {producto.nombre}</h3>
+          <h3 style={{ fontSize: 16 }}>Oferta — {producto.nombre}</h3>
           <button className="btn btn-ghost btn-sm" onClick={onClose}>✕</button>
         </div>
         <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>

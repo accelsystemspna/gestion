@@ -21,7 +21,7 @@ function OfertaBadge({ producto }) {
       padding: '1px 7px', borderRadius: 999, background: '#fff7ed', color: '#c2410c',
       border: '1px solid #fdba7444', marginLeft: 5, whiteSpace: 'nowrap',
     }}>
-      🏷️ {texto}
+      {texto}
     </span>
   )
 }
@@ -492,7 +492,7 @@ export default function Productos() {
                         onClick={() => setPromoProduct(p)}
                         style={promoDeProducto(p, 'local') || promoDeProducto(p, 'web') ? { color: '#16a34a', fontWeight: 700 } : undefined}
                       >
-                        🏷️ Oferta
+                        Oferta
                       </button>
                       <button className="btn btn-sm btn-ghost" onClick={() => { setFormKey(k => k + 1); setEditing(p) }}>Editar</button>
                       <button className="btn btn-sm btn-ghost" onClick={() => handleDelete(p.id)} style={{ color: 'var(--danger)' }}>Eliminar</button>

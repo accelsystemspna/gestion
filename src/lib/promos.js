@@ -39,13 +39,13 @@ export function calcularLineaConPromo(precioBase, cantidad, promo) {
   if (promo.tipo === 'descuento_pct') {
     const pct = Number(promo.valor) || 0
     const subtotal = full * (1 - pct / 100)
-    return { subtotal, etiqueta: `🏷️ -${pct}%`, ahorro: full - subtotal }
+    return { subtotal, etiqueta: `-${pct}%`, ahorro: full - subtotal }
   }
 
   if (promo.tipo === 'descuento_monto') {
     const precioUnit = Math.max(0, precioBase - (Number(promo.valor) || 0))
     const subtotal = precioUnit * cantidad
-    return { subtotal, etiqueta: `🏷️ -${fmtMoney(promo.valor)}`, ahorro: full - subtotal }
+    return { subtotal, etiqueta: `-${fmtMoney(promo.valor)}`, ahorro: full - subtotal }
   }
 
   if (promo.tipo === 'nxm') {
@@ -55,7 +55,7 @@ export function calcularLineaConPromo(precioBase, cantidad, promo) {
     const resto = cantidad % lleva
     const cantidadPagada = grupos * paga + resto
     const subtotal = cantidadPagada * precioBase
-    return { subtotal, etiqueta: `🏷️ ${lleva}x${paga}`, ahorro: full - subtotal }
+    return { subtotal, etiqueta: `${lleva}x${paga}`, ahorro: full - subtotal }
   }
 
   if (promo.tipo === 'segunda_unidad_pct') {
@@ -63,7 +63,7 @@ export function calcularLineaConPromo(precioBase, cantidad, promo) {
     const pares = Math.floor(cantidad / 2)
     const resto = cantidad % 2
     const subtotal = pares * (precioBase + precioBase * (1 - pct / 100)) + resto * precioBase
-    return { subtotal, etiqueta: `🏷️ 2da unidad -${pct}%`, ahorro: full - subtotal }
+    return { subtotal, etiqueta: `2da unidad -${pct}%`, ahorro: full - subtotal }
   }
 
   return { subtotal: full, etiqueta: null, ahorro: 0 }

@@ -978,7 +978,7 @@ export default function Ventas() {
                           <div style={{ fontSize: 13, fontWeight: inCart ? 700 : 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: inCart ? 'var(--primary)' : 'var(--text)' }}>
                             {p.nombre}{ofertaTexto && (
                               <span title="Oferta activa" style={{ fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 999, background: '#fff7ed', color: '#c2410c', border: '1px solid #fdba7444', marginLeft: 5 }}>
-                                🏷️ {ofertaTexto}
+                                {ofertaTexto}
                               </span>
                             )}
                           </div>
