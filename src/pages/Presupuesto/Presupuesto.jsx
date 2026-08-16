@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { fmtMoney } from '../../lib/format'
 import { calcInsumo, precioVenta } from '../../lib/pricing'
+import { promoDeProducto, etiquetaOferta, precioConPromoProducto } from '../../lib/promos'
 import ImageThumb from '../../components/ImageThumb'
 import { exportPresupuestoPDF } from '../../lib/pdf'
 import { useAuth } from '../../lib/AuthContext'
@@ -162,8 +163,9 @@ export default function Presupuesto() {
 
   const extrasConPrecio = useMemo(() => {
     return extras.map((it) => {
-      const precio = precioVenta(Number(it.producto.costo_base), lista)
-      return { ...it, precio, subtotal: precio * it.cantidad }
+      const base = precioVenta(Number(it.producto.costo_base), lista)
+      const { precio, promoEtiqueta } = precioConPromoProducto(it.producto, 'local', base, it.cantidad)
+      return { ...it, precio, subtotal: precio * it.cantidad, promoEtiqueta }
     })
   }, [extras, lista])
 
@@ -658,7 +660,9 @@ export default function Presupuesto() {
                   {productosFiltrados.length > 0 && (
                     <div style={{ position:'absolute', top:'100%', left:0, right:0, zIndex:20, background:'var(--bg-card)', border:'1px solid var(--border)', borderRadius:6, maxHeight:220, overflowY:'auto', boxShadow:'0 4px 12px rgba(0,0,0,0.08)', marginTop:2 }}>
                       {productosFiltrados.map(p => {
-                        const venta = precioVenta(Number(p.costo_base), lista)
+                        const base = precioVenta(Number(p.costo_base), lista)
+                        const oferta = etiquetaOferta(promoDeProducto(p, 'local'))
+                        const { precio: ventaConOferta } = precioConPromoProducto(p, 'local', base, 1)
                         return (
                           <div key={p.id} onClick={() => agregarProducto(p)}
                             style={{ padding:'8px 12px', borderBottom:'1px solid var(--border)', cursor:'pointer', display:'flex', alignItems:'center', gap:10 }}
@@ -670,10 +674,20 @@ export default function Presupuesto() {
                               : <div style={{ width:36, height:36, borderRadius:4, background:'var(--bg-muted)', flexShrink:0 }} />
                             }
                             <div style={{ flex:1, minWidth:0 }}>
-                              <strong style={{ fontSize:14 }}>{p.nombre}</strong>
-                              <code style={{ marginLeft:8, fontSize:11, color:'var(--text-muted)' }}>{p.sku}</code>
+                              <div>
+                                {oferta && (
+                                  <span style={{ fontSize:10, fontWeight:700, padding:'1px 6px', borderRadius:999, background:'#fff7ed', color:'#c2410c', border:'1px solid #fdba7444', marginRight:5 }}>
+                                    🏷️ {oferta}
+                                  </span>
+                                )}
+                                <strong style={{ fontSize:14 }}>{p.nombre}</strong>
+                              </div>
+                              <code style={{ fontSize:11, color:'var(--text-muted)' }}>{p.sku}</code>
                             </div>
-                            <span style={{ fontWeight:600, color:'var(--success)', flexShrink:0 }}>{fmtMoney(venta)}</span>
+                            <span style={{ textAlign:'right', flexShrink:0 }}>
+                              {oferta && <div style={{ fontSize:11, color:'var(--text-muted)', textDecoration:'line-through' }}>{fmtMoney(base)}</div>}
+                              <span style={{ fontWeight:600, color:'var(--success)' }}>{fmtMoney(ventaConOferta)}</span>
+                            </span>
                           </div>
                         )
                       })}
@@ -702,6 +716,9 @@ export default function Presupuesto() {
                           <td>
                             <strong style={{ fontSize:13 }}>{it.producto.nombre}</strong>
                             <div style={{ fontSize:11, color:'var(--text-muted)' }}>{it.producto.sku}</div>
+                            {it.promoEtiqueta && (
+                              <div style={{ fontSize:11, color:'#16a34a', fontWeight:700 }}>{it.promoEtiqueta}</div>
+                            )}
                           </td>
                           <td style={{ textAlign:'right' }}>
                             <input type="number" min={1} value={it.cantidad}
