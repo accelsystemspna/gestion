@@ -987,15 +987,15 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
 
               {/* Promoción */}
               <div>
-                {secLabel('🏷️ Promoción')}
+                {secLabel('Oferta')}
                 <label style={{ display:'flex', alignItems:'center', gap:8, cursor:'pointer', userSelect:'none', marginTop:10 }}>
                   <input type="checkbox" checked={form.promo_activa} onChange={e=>set('promo_activa', e.target.checked)} />
-                  <span style={{ fontSize:13, fontWeight:600 }}>Este producto tiene una promoción activa</span>
+                  <span style={{ fontSize:13, fontWeight:600 }}>Este producto tiene una oferta activa</span>
                 </label>
 
                 {form.promo_activa && (
                   <div style={{ marginTop:12, display:'flex', flexDirection:'column', gap:12, maxWidth:480 }}>
-                    <F label="Tipo de promoción">
+                    <F label="Tipo de oferta">
                       <select className="select" style={si()} value={form.promo_tipo} onChange={e=>set('promo_tipo', e.target.value)}>
                         {Object.entries(PROMO_TIPOS).map(([k,v])=><option key={k} value={k}>{v.label}</option>)}
                       </select>

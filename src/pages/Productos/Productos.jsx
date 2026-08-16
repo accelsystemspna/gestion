@@ -488,7 +488,7 @@ export default function Productos() {
                       <button className="btn btn-sm btn-ghost" title="Generar etiqueta con código de barras" onClick={() => setBarcodeProduct(p)}>🏷️</button>
                       <button
                         className="btn btn-sm btn-ghost"
-                        title="Configurar promoción"
+                        title="Configurar oferta"
                         onClick={() => setPromoProduct(p)}
                         style={promoDeProducto(p, 'local') || promoDeProducto(p, 'web') ? { color: '#16a34a', fontWeight: 700 } : undefined}
                       >
