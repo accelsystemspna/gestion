@@ -1026,11 +1026,6 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
                           </button>
                         ))}
                       </div>
-                      {form.promo_canal !== 'local' && form.promo_tipo !== 'descuento_pct' && form.promo_tipo !== 'descuento_monto' && (
-                        <span style={{ fontSize:10, color:'var(--warning)', marginTop:4 }}>
-                          ⚠️ 2x1/3x2/2da unidad todavía solo se reflejan en el POS — el lado web necesita lógica de carrito aparte.
-                        </span>
-                      )}
                     </F>
 
                     <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>

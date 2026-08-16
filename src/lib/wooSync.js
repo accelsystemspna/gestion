@@ -43,14 +43,28 @@ export async function syncToWoo({ tiendas, listas, producto }) {
     const lista  = listas.find(l => String(l.id) === String(tienda.lista_id))
     const costo  = Number(producto.costo_base) || 0
     const base   = lista ? precioVenta(costo, lista) : costo
-    // Solo los tipos de promo "por unidad" (%, $) se reflejan como oferta en
-    // la web — 2x1/3x2/2da unidad todavía necesitan lógica de carrito del
-    // lado de WordPress, así que por ahora quedan afuera.
+    // Los tipos de promo "por unidad" (%, $) se reflejan como precio tachado +
+    // oferta (regular_price/sale_price). Los tipos "por cantidad" (2x1, 3x2,
+    // 2da unidad a %) no cambian el precio — se mandan aparte en `promo` para
+    // que WordPress arme una regla del plugin Ofertas con lógica de carrito.
     const promo = promoDeProducto(producto, 'web')
     const esOferta = promo && (promo.tipo === 'descuento_pct' || promo.tipo === 'descuento_monto')
     const precioOferta = esOferta ? calcularLineaConPromo(base, 1, promo).subtotal : null
     const round2 = (n) => Math.round(n * 100) / 100
     const pctOff = esOferta && base > 0 ? Math.round((1 - precioOferta / base) * 100) : null
+
+    const esPromoQty =
+      producto.promo_activa !== false &&
+      producto.promo_canal !== 'local' &&
+      (producto.promo_tipo === 'nxm' || producto.promo_tipo === 'segunda_unidad_pct')
+    const promoQty = esPromoQty ? {
+      tipo:        producto.promo_tipo,
+      valor:       producto.promo_valor,
+      lleva:       producto.promo_lleva,
+      paga:        producto.promo_paga,
+      fecha_desde: producto.promo_fecha_desde || null,
+      fecha_hasta: producto.promo_fecha_hasta || null,
+    } : null
 
     const payload = {
       type: 'UPDATE',
@@ -67,6 +81,7 @@ export async function syncToWoo({ tiendas, listas, producto }) {
         sale_price:       esOferta ? String(round2(precioOferta)) : '',
         on_sale:          !!esOferta,
         discount_percent: pctOff,
+        promo:            promoQty,
         image_url:        producto.imagen_web_url || producto.imagen_url || '',
         gallery_urls:     producto.imagenes_web || [],
         categories:       producto.categorias_web || [],
