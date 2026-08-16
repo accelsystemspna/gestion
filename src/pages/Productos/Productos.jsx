@@ -565,7 +565,7 @@ export default function Productos() {
                     onClick={() => setPromoProduct(p)}
                     style={promoDeProducto(p, 'local') || promoDeProducto(p, 'web') ? { color: '#16a34a', fontWeight: 700 } : undefined}
                   >
-                    🏷️ Oferta
+                    Oferta
                   </button>
                   <button className="btn btn-sm btn-ghost" onClick={() => { setFormKey(k => k + 1); setEditing(p) }}>Editar</button>
                   <button className="btn btn-sm btn-ghost" onClick={() => handleDelete(p.id)} style={{ color: 'var(--danger)' }}>Eliminar</button>
