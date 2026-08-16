@@ -55,20 +55,20 @@ export default function PromoModal({ producto, tiendas, listas, onClose, onSaved
     <div className="modal-overlay">
       <div className="modal" style={{ maxWidth: 460 }}>
         <div className="modal-header">
-          <h3 style={{ fontSize: 16 }}>🎁 Promoción — {producto.nombre}</h3>
+          <h3 style={{ fontSize: 16 }}>🏷️ Oferta — {producto.nombre}</h3>
           <button className="btn btn-ghost btn-sm" onClick={onClose}>✕</button>
         </div>
         <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
 
           <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', userSelect: 'none' }}>
             <input type="checkbox" checked={form.promo_activa} onChange={(e) => set('promo_activa', e.target.checked)} />
-            <span style={{ fontWeight: 600, fontSize: 14 }}>Promoción activa en este producto</span>
+            <span style={{ fontWeight: 600, fontSize: 14 }}>Oferta activa en este producto</span>
           </label>
 
           {form.promo_activa && (
             <>
               <div className="field">
-                <label>Tipo de promoción</label>
+                <label>Tipo de oferta</label>
                 <select className="select" value={form.promo_tipo} onChange={(e) => set('promo_tipo', e.target.value)}>
                   {Object.entries(PROMO_TIPOS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
                 </select>
@@ -111,11 +111,6 @@ export default function PromoModal({ producto, tiendas, listas, onClose, onSaved
                     </button>
                   ))}
                 </div>
-                {form.promo_canal !== 'local' && form.promo_tipo !== 'descuento_pct' && form.promo_tipo !== 'descuento_monto' && (
-                  <span style={{ fontSize: 10, color: 'var(--warning)', marginTop: 4, display: 'block' }}>
-                    ⚠️ 2x1/3x2/2da unidad todavía solo se reflejan en el POS.
-                  </span>
-                )}
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { fmtMoney } from '../../lib/format'
 import { precioVenta } from '../../lib/pricing'
-import { promoDeProducto } from '../../lib/promos'
+import { promoDeProducto, etiquetaOferta } from '../../lib/promos'
 import ProductoForm, { nuevoProductoDraftKey } from './ProductoForm'
 import PromoModal from './PromoModal'
 import BarcodeModal from './BarcodeModal'
@@ -11,6 +11,20 @@ import { exportCatalogoPDF } from '../../lib/pdf'
 import { exportCatalogoCSV } from '../../lib/csv'
 import { syncToWoo, syncManyToWoo, conCategoriasWeb } from '../../lib/wooSync'
 import { useAuth } from '../../lib/AuthContext'
+
+function OfertaBadge({ producto }) {
+  const texto = etiquetaOferta(promoDeProducto(producto, 'local') || promoDeProducto(producto, 'web'))
+  if (!texto) return null
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', fontSize: 11, fontWeight: 700,
+      padding: '1px 7px', borderRadius: 999, background: '#fff7ed', color: '#c2410c',
+      border: '1px solid #fdba7444', marginRight: 5, whiteSpace: 'nowrap',
+    }}>
+      🏷️ {texto}
+    </span>
+  )
+}
 
 export default function Productos() {
   const { orgId } = useAuth()
@@ -406,7 +420,7 @@ export default function Productos() {
                     </td>
                     <td><code style={{ fontSize: 12 }}>{p.sku}</code></td>
                     <td>
-                      <strong>{(promoDeProducto(p, 'local') || promoDeProducto(p, 'web')) ? '🏷️ ' : ''}{p.nombre}</strong>
+                      <OfertaBadge producto={p} /><strong>{p.nombre}</strong>
                       {p.descripcion && (
                         <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
                           {p.descripcion.length > 60 ? p.descripcion.slice(0, 60) + '…' : p.descripcion}
@@ -478,7 +492,7 @@ export default function Productos() {
                         onClick={() => setPromoProduct(p)}
                         style={promoDeProducto(p, 'local') || promoDeProducto(p, 'web') ? { color: '#16a34a', fontWeight: 700 } : undefined}
                       >
-                        🎁 Promo
+                        🏷️ Oferta
                       </button>
                       <button className="btn btn-sm btn-ghost" onClick={() => { setFormKey(k => k + 1); setEditing(p) }}>Editar</button>
                       <button className="btn btn-sm btn-ghost" onClick={() => handleDelete(p.id)} style={{ color: 'var(--danger)' }}>Eliminar</button>
@@ -505,7 +519,7 @@ export default function Productos() {
                   <ImageThumb src={p.imagen_url} size={48} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontWeight: 600, fontSize: 14 }}>
-                      {(promoDeProducto(p, 'local') || promoDeProducto(p, 'web')) ? '🏷️ ' : ''}{p.nombre}
+                      <OfertaBadge producto={p} />{p.nombre}
                     </div>
                     <code style={{ fontSize: 11, color: 'var(--text-muted)' }}>{p.sku}</code>
                   </div>
@@ -551,7 +565,7 @@ export default function Productos() {
                     onClick={() => setPromoProduct(p)}
                     style={promoDeProducto(p, 'local') || promoDeProducto(p, 'web') ? { color: '#16a34a', fontWeight: 700 } : undefined}
                   >
-                    🎁 Promo
+                    🏷️ Oferta
                   </button>
                   <button className="btn btn-sm btn-ghost" onClick={() => { setFormKey(k => k + 1); setEditing(p) }}>Editar</button>
                   <button className="btn btn-sm btn-ghost" onClick={() => handleDelete(p.id)} style={{ color: 'var(--danger)' }}>Eliminar</button>

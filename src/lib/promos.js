@@ -19,6 +19,17 @@ export function promoDeProducto(producto, canal) {
   }
 }
 
+// Texto corto del badge según el tipo de oferta — no depende del precio
+// base, así que sirve tanto para listados (Productos) como para el sync web.
+export function etiquetaOferta(promo) {
+  if (!promo) return null
+  if (promo.tipo === 'descuento_pct')      return `-${Number(promo.valor) || 0}%`
+  if (promo.tipo === 'descuento_monto')    return `-${fmtMoney(promo.valor)}`
+  if (promo.tipo === 'nxm')                return `${Number(promo.lleva) || 1}x${Number(promo.paga) || 1}`
+  if (promo.tipo === 'segunda_unidad_pct') return `2da unidad -${Number(promo.valor) || 0}%`
+  return null
+}
+
 // Calcula el subtotal de una línea (precio unitario base × cantidad)
 // aplicando la promo. Devuelve { subtotal, etiqueta, ahorro }.
 export function calcularLineaConPromo(precioBase, cantidad, promo) {

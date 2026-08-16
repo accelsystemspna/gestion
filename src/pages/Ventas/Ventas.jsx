@@ -5,7 +5,7 @@ import { useAuth } from '../../lib/AuthContext'
 import { fmtMoney } from '../../lib/format'
 import { calcInsumo, precioVenta } from '../../lib/pricing'
 import { ajustarStock } from '../../lib/stock'
-import { precioConPromoProducto, promoDeProducto } from '../../lib/promos'
+import { precioConPromoProducto, promoDeProducto, etiquetaOferta } from '../../lib/promos'
 
 function snapSegs(segs) {
   const s = Number(segs) || 0
@@ -965,7 +965,7 @@ export default function Ventas() {
                     const precio  = precioVenta(Number(p.costo_base) || 0, lista)
                     const inCart  = items.some(i => i.productoId === p.id)
                     const cartQty = items.find(i => i.productoId === p.id)?.cantidad
-                    const tienePromo = !!promoDeProducto(p, 'local')
+                    const ofertaTexto = etiquetaOferta(promoDeProducto(p, 'local'))
                     return (
                       <div key={p.id} onClick={() => addProducto(p)}
                         title={!listaSel ? 'Elegí una lista de precios primero' : undefined}
@@ -976,7 +976,11 @@ export default function Ventas() {
                         <ImageThumb src={p.imagen_url} size={34} />
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ fontSize: 13, fontWeight: inCart ? 700 : 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: inCart ? 'var(--primary)' : 'var(--text)' }}>
-                            {tienePromo && <span title="Tiene promoción activa">🏷️ </span>}{p.nombre}
+                            {ofertaTexto && (
+                              <span title="Oferta activa" style={{ fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 999, background: '#fff7ed', color: '#c2410c', border: '1px solid #fdba7444', marginRight: 5 }}>
+                                🏷️ {ofertaTexto}
+                              </span>
+                            )}{p.nombre}
                           </div>
                           {p.sku && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>{p.sku}</div>}
                           {(Number(p.stock_actual) || 0) <= 0 && (

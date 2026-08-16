@@ -1,5 +1,5 @@
 import { precioVenta } from './pricing'
-import { promoDeProducto, calcularLineaConPromo } from './promos'
+import { promoDeProducto, calcularLineaConPromo, etiquetaOferta } from './promos'
 
 /**
  * Resuelve categorias_web_ids (ids de subcategorías) a sus nombres, para
@@ -43,21 +43,19 @@ export async function syncToWoo({ tiendas, listas, producto }) {
     const lista  = listas.find(l => String(l.id) === String(tienda.lista_id))
     const costo  = Number(producto.costo_base) || 0
     const base   = lista ? precioVenta(costo, lista) : costo
-    // Los tipos de promo "por unidad" (%, $) se reflejan como precio tachado +
-    // oferta (regular_price/sale_price). Los tipos "por cantidad" (2x1, 3x2,
-    // 2da unidad a %) no cambian el precio — se mandan aparte en `promo` para
-    // que WordPress arme una regla del plugin Ofertas con lógica de carrito.
+    // Las ofertas "por unidad" (%, $) se reflejan como precio tachado + nuevo
+    // precio (regular_price/sale_price). Las "por cantidad" (2x1, 3x2, 2da
+    // unidad a %) no cambian el precio — se mandan aparte en `oferta` para
+    // que WordPress arme la regla de carrito. `oferta_badge` trae el texto
+    // ya armado (ej. "-20%", "2x1") para no tener que recalcularlo allá.
     const promo = promoDeProducto(producto, 'web')
     const esOferta = promo && (promo.tipo === 'descuento_pct' || promo.tipo === 'descuento_monto')
     const precioOferta = esOferta ? calcularLineaConPromo(base, 1, promo).subtotal : null
     const round2 = (n) => Math.round(n * 100) / 100
     const pctOff = esOferta && base > 0 ? Math.round((1 - precioOferta / base) * 100) : null
 
-    const esPromoQty =
-      producto.promo_activa !== false &&
-      producto.promo_canal !== 'local' &&
-      (producto.promo_tipo === 'nxm' || producto.promo_tipo === 'segunda_unidad_pct')
-    const promoQty = esPromoQty ? {
+    const esOfertaPorCantidad = promo && (promo.tipo === 'nxm' || promo.tipo === 'segunda_unidad_pct')
+    const ofertaCantidad = esOfertaPorCantidad ? {
       tipo:        producto.promo_tipo,
       valor:       producto.promo_valor,
       lleva:       producto.promo_lleva,
@@ -81,7 +79,8 @@ export async function syncToWoo({ tiendas, listas, producto }) {
         sale_price:       esOferta ? String(round2(precioOferta)) : '',
         on_sale:          !!esOferta,
         discount_percent: pctOff,
-        promo:            promoQty,
+        oferta:           ofertaCantidad,
+        oferta_badge:     etiquetaOferta(promo),
         image_url:        producto.imagen_web_url || producto.imagen_url || '',
         gallery_urls:     producto.imagenes_web || [],
         categories:       producto.categorias_web || [],
