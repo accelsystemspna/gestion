@@ -671,16 +671,16 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
         </div>
 
         {/* 3 columnas sin scroll — footer siempre visible */}
-        <div className="modal-body" style={{ padding:0, flex:1, minHeight:0, display: tab==='general' ? 'grid' : 'block', gridTemplateColumns:'0.75fr 1.3fr 0.65fr', overflow: tab==='general' ? 'hidden' : 'auto' }}>
+        <div className="modal-body producto-form-body" style={{ padding:0, flex:1, minHeight:0, display: tab==='general' ? 'grid' : 'block', gridTemplateColumns:'0.75fr 1.3fr 0.65fr', overflow: tab==='general' ? 'hidden' : 'auto' }}>
           {tab !== 'general' ? null : (
           <div style={{ display:'contents' }}>
 
             {/* ══ COL 1 — Características ══════════════════ */}
-            <div style={{ ...col, borderRight:'1px solid var(--border)' }}>
+            <div className="producto-form-col" style={{ ...col, borderRight:'1px solid var(--border)' }}>
               {secLabel('Características')}
 
               {/* Nombre + SKU */}
-              <div style={{ display:'grid', gridTemplateColumns:'2fr 1fr', gap:8 }}>
+              <div className="pf-grid2" style={{ display:'grid', gridTemplateColumns:'2fr 1fr', gap:8 }}>
                 <F label="Nombre"><input className="input" style={si()} value={form.nombre} onChange={e=>set('nombre',e.target.value)} /></F>
                 <F label="SKU">
                   <input className="input" style={si(skuError?{borderColor:'var(--danger)'}:{})} value={form.sku} onChange={e=>handleSku(e.target.value)} placeholder="Auto" maxLength={9} />
@@ -702,7 +702,7 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
               )}
 
               {/* Categoría + Subcategoría */}
-              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+              <div className="pf-grid2" style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
                 <F label="Categoría">
                   <select className="select" style={si()} value={form.categoria_id} onChange={e=>handleCategoriaChange(e.target.value)}>
                     <option value="">— Seleccionar —</option>
@@ -719,7 +719,7 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
               </div>
 
               {/* Alto + Ancho + Stock */}
-              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+              <div className="pf-grid2" style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
                 <F label="Alto (cm)"><input className="input" style={si()} type="number" step="0.1" value={form.alto_producto} onChange={e=>set('alto_producto',e.target.value)} placeholder="0" /></F>
                 <F label="Ancho (cm)"><input className="input" style={si()} type="number" step="0.1" value={form.ancho_producto} onChange={e=>set('ancho_producto',e.target.value)} placeholder="0" /></F>
                 <F label="Stock actual">
@@ -755,7 +755,7 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
             </div>
 
             {/* ══ COL 2 — Materiales + Tarifas ═════════════ */}
-            <div style={{ ...col, borderRight:'1px solid var(--border)' }}>
+            <div className="producto-form-col" style={{ ...col, borderRight:'1px solid var(--border)' }}>
               {secLabel('Materiales y tarifas')}
 
               {!form.categoria_id
@@ -778,7 +778,7 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
             </div>
 
             {/* ══ COL 3 — Costos (angosta, sin scroll) ═════ */}
-            <div style={{ ...col, overflowY:'hidden', gap:7, padding:'12px 12px', background:'var(--bg-muted)' }}>
+            <div className="producto-form-col" style={{ ...col, overflowY:'hidden', gap:7, padding:'12px 12px', background:'var(--bg-muted)' }}>
               {secLabel('Costos y precios')}
 
               {!form.categoria_id
@@ -896,7 +896,7 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
               {/* Tamaño */}
               <div>
                 {secLabel('Tamaño del producto')}
-                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginTop:10, maxWidth:280 }}>
+                <div className="pf-grid2" style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginTop:10, maxWidth:280 }}>
                   <F label="Alto (cm)"><input className="input" style={si()} type="number" step="0.1" value={form.alto_producto} onChange={e=>set('alto_producto',e.target.value)} placeholder="0" /></F>
                   <F label="Ancho (cm)"><input className="input" style={si()} type="number" step="0.1" value={form.ancho_producto} onChange={e=>set('ancho_producto',e.target.value)} placeholder="0" /></F>
                 </div>
@@ -908,7 +908,7 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
                 <div style={{ fontSize:11, color:'var(--text-muted)', marginTop:2, marginBottom:8 }}>
                   Medidas de la caja/paquete en el que se envía, no del cuadro en sí — WooCommerce las usa para calcular el costo de envío.
                 </div>
-                <div style={{ display:'grid', gridTemplateColumns:'repeat(4, 1fr)', gap:8, maxWidth:460 }}>
+                <div className="pf-grid4" style={{ display:'grid', gridTemplateColumns:'repeat(4, 1fr)', gap:8, maxWidth:460 }}>
                   <F label="Peso (kg)"><input className="input" style={si()} type="number" step="0.01" value={form.peso_kg} onChange={e=>set('peso_kg',e.target.value)} placeholder="0" /></F>
                   <F label="Largo (cm)"><input className="input" style={si()} type="number" step="0.1" value={form.paquete_largo} onChange={e=>set('paquete_largo',e.target.value)} placeholder="0" /></F>
                   <F label="Ancho (cm)"><input className="input" style={si()} type="number" step="0.1" value={form.paquete_ancho} onChange={e=>set('paquete_ancho',e.target.value)} placeholder="0" /></F>

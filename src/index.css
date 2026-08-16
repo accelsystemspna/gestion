@@ -330,6 +330,20 @@ h1, h2, h3, h4 {
   .productos-table-wrap  { display: none !important; }
   .productos-cards-mobile { display: flex; flex-direction: column; gap: 10px; }
 
+  /* Ficha de producto (Editar/Nuevo): 3 columnas -> apiladas y scrolleables */
+  .producto-form-body {
+    grid-template-columns: 1fr !important;
+    overflow-y: auto !important;
+  }
+  .producto-form-col {
+    height: auto !important;
+    overflow-y: visible !important;
+    border-right: none !important;
+    border-bottom: 1px solid var(--border);
+  }
+  .pf-grid2 { grid-template-columns: 1fr !important; max-width: none !important; }
+  .pf-grid4 { grid-template-columns: 1fr 1fr !important; max-width: none !important; }
+
   /* Layout */
   .mobile-topbar  { display: flex !important; }
   .layout-sidebar { display: none !important; }
