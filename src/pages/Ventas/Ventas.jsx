@@ -976,11 +976,11 @@ export default function Ventas() {
                         <ImageThumb src={p.imagen_url} size={34} />
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ fontSize: 13, fontWeight: inCart ? 700 : 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: inCart ? 'var(--primary)' : 'var(--text)' }}>
-                            {ofertaTexto && (
-                              <span title="Oferta activa" style={{ fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 999, background: '#fff7ed', color: '#c2410c', border: '1px solid #fdba7444', marginRight: 5 }}>
+                            {p.nombre}{ofertaTexto && (
+                              <span title="Oferta activa" style={{ fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 999, background: '#fff7ed', color: '#c2410c', border: '1px solid #fdba7444', marginLeft: 5 }}>
                                 🏷️ {ofertaTexto}
                               </span>
-                            )}{p.nombre}
+                            )}
                           </div>
                           {p.sku && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>{p.sku}</div>}
                           {(Number(p.stock_actual) || 0) <= 0 && (

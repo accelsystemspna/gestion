@@ -19,7 +19,7 @@ function OfertaBadge({ producto }) {
     <span style={{
       display: 'inline-flex', alignItems: 'center', fontSize: 11, fontWeight: 700,
       padding: '1px 7px', borderRadius: 999, background: '#fff7ed', color: '#c2410c',
-      border: '1px solid #fdba7444', marginRight: 5, whiteSpace: 'nowrap',
+      border: '1px solid #fdba7444', marginLeft: 5, whiteSpace: 'nowrap',
     }}>
       🏷️ {texto}
     </span>
@@ -420,7 +420,7 @@ export default function Productos() {
                     </td>
                     <td><code style={{ fontSize: 12 }}>{p.sku}</code></td>
                     <td>
-                      <OfertaBadge producto={p} /><strong>{p.nombre}</strong>
+                      <strong>{p.nombre}</strong><OfertaBadge producto={p} />
                       {p.descripcion && (
                         <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
                           {p.descripcion.length > 60 ? p.descripcion.slice(0, 60) + '…' : p.descripcion}
@@ -519,7 +519,7 @@ export default function Productos() {
                   <ImageThumb src={p.imagen_url} size={48} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontWeight: 600, fontSize: 14 }}>
-                      <OfertaBadge producto={p} />{p.nombre}
+                      {p.nombre}<OfertaBadge producto={p} />
                     </div>
                     <code style={{ fontSize: 11, color: 'var(--text-muted)' }}>{p.sku}</code>
                   </div>
