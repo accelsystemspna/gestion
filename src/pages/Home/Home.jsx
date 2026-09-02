@@ -489,16 +489,21 @@ export default function Dashboard() {
           <div style={{ padding: '14px 16px 10px' }}>
             <div style={{ display: 'flex', alignItems: 'flex-end', gap: 2, height: 80 }}>
               {days30.map(d => {
+                const CHART_H  = 80
                 const pctReal  = (d.total / maxDay30) * 100
                 const excede   = pctReal > 100
                 const pct      = Math.min(pctReal, 100)
+                // Altura en píxeles calculada en JS (no %) — un % de altura
+                // dentro de una columna flex sin alto propio no resuelve de
+                // forma confiable en todos los navegadores y quedaba todo
+                // aplastado en el mínimo.
+                const alturaPx = Math.max((pct / 100) * CHART_H, d.total > 0 ? 4 : 2)
                 return (
-                  <div key={d.iso} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}
+                  <div key={d.iso} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', height: CHART_H, justifyContent: 'flex-end' }}
                     title={`${d.label}: ${fmtMoney(d.total)} (${d.count} venta${d.count !== 1 ? 's' : ''})${excede ? ' — fuera de escala' : ''}`}>
                     <div style={{
                       width: '100%',
-                      height: `${Math.max(pct, d.total > 0 ? 5 : 2)}%`,
-                      minHeight: 2,
+                      height: alturaPx,
                       borderRadius: '2px 2px 0 0',
                       background: d.esHoy ? 'var(--primary)' : excede ? '#f59e0b' : d.total > 0 ? '#93c5fd' : '#e2e8f0',
                       transition: 'height 0.4s',
@@ -552,20 +557,23 @@ export default function Dashboard() {
           <div style={{ padding: '14px 16px 10px' }}>
             <div style={{ display: 'flex', alignItems: 'flex-end', gap: 5, height: 72 }}>
               {days7.map(d => {
+                const CHART_H = 72
                 const pctReal = (d.total / maxDay7) * 100
                 const excede  = pctReal > 100
                 const pct     = Math.min(pctReal, 100)
+                const alturaPx = Math.max((pct / 100) * CHART_H, d.total > 0 ? 6 : 2)
                 return (
                   <div key={d.iso} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}
                     title={`${d.label}: ${fmtMoney(d.total)}${excede ? ' — fuera de escala' : ''}`}>
-                    <div style={{
-                      width: '100%',
-                      height: `${Math.max(pct, d.total > 0 ? 8 : 3)}%`,
-                      minHeight: 3,
-                      borderRadius: '3px 3px 0 0',
-                      background: d.esHoy ? 'var(--primary)' : excede ? '#f59e0b' : d.total > 0 ? '#bfdbfe' : '#e2e8f0',
-                      transition: 'height 0.4s',
-                    }} />
+                    <div style={{ width: '100%', height: CHART_H, display: 'flex', alignItems: 'flex-end' }}>
+                      <div style={{
+                        width: '100%',
+                        height: alturaPx,
+                        borderRadius: '3px 3px 0 0',
+                        background: d.esHoy ? 'var(--primary)' : excede ? '#f59e0b' : d.total > 0 ? '#bfdbfe' : '#e2e8f0',
+                        transition: 'height 0.4s',
+                      }} />
+                    </div>
                     <div style={{ fontSize: 10, color: d.esHoy ? 'var(--primary)' : 'var(--text-muted)', fontWeight: d.esHoy ? 700 : 400, whiteSpace: 'nowrap' }}>
                       {d.label}
                     </div>
@@ -607,15 +615,16 @@ export default function Dashboard() {
           <div style={{ padding: '14px 16px 10px' }}>
             <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: 72 }}>
               {horaArr.map(slot => {
-                const pct    = (slot.total / maxHora) * 100
-                const activo = new Date().getHours() === slot.h
+                const CHART_H = 72
+                const pct     = (slot.total / maxHora) * 100
+                const activo  = new Date().getHours() === slot.h
+                const alturaPx = Math.max((pct / 100) * CHART_H, slot.total > 0 ? 6 : 2)
                 return (
-                  <div key={slot.h} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}
+                  <div key={slot.h} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', height: CHART_H, justifyContent: 'flex-end' }}
                     title={`${slot.h}hs: ${fmtMoney(slot.total)}`}>
                     <div style={{
                       width: '100%',
-                      height: `${Math.max(pct, slot.total > 0 ? 8 : 3)}%`,
-                      minHeight: 3,
+                      height: alturaPx,
                       borderRadius: '2px 2px 0 0',
                       background: activo ? 'var(--primary)' : slot.total > 0 ? '#34d399' : '#e2e8f0',
                       transition: 'height 0.4s',
