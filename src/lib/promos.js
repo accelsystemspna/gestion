@@ -19,6 +19,25 @@ export function promoDeProducto(producto, canal) {
   }
 }
 
+// Variante de promoDeProducto que NO filtra por fecha — solo por canal.
+// Se usa para sincronizar con WooCommerce: le mandamos la fecha de inicio/fin
+// por separado (sale_price_dates_from/to, u oferta.fecha_desde/hasta) para que
+// WooCommerce programe la oferta nativamente y se active/desactive sola el día
+// que corresponde, sin depender de que gestión-app vuelva a sincronizar justo
+// ese día. Para cálculos "en el momento" (POS, vista previa) seguí usando
+// promoDeProducto, que sí filtra por fecha.
+export function promoParaSync(producto, canal) {
+  if (!producto?.promo_activa || !producto.promo_tipo) return null
+  const promoCanal = producto.promo_canal || 'ambos'
+  if (promoCanal !== 'ambos' && promoCanal !== canal) return null
+  return {
+    tipo:  producto.promo_tipo,
+    valor: producto.promo_valor,
+    lleva: producto.promo_lleva,
+    paga:  producto.promo_paga,
+  }
+}
+
 // Texto corto del badge según el tipo de oferta — no depende del precio
 // base, así que sirve tanto para listados (Productos) como para el sync web.
 export function etiquetaOferta(promo) {

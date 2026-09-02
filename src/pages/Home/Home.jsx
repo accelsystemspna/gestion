@@ -328,8 +328,17 @@ export default function Dashboard() {
     </div>
   )
 
-  const maxDay30 = Math.max(...days30.map(d => d.total), 1)
-  const maxDay7  = Math.max(...days7.map(d => d.total), 1)
+  // Techo del gráfico: percentil 90 en vez del máximo absoluto. Con el
+  // máximo puro, un par de días excepcionales (ej. un pedido grande)
+  // aplastan la escala y el resto de las barras queda invisible.
+  const percentil90 = (dias) => {
+    const vals = dias.map(d => d.total).sort((a, b) => a - b)
+    if (!vals.length) return 1
+    const p = vals[Math.floor(0.9 * (vals.length - 1))]
+    return Math.max(p, 1)
+  }
+  const maxDay30 = percentil90(days30)
+  const maxDay7  = percentil90(days7)
   const maxProd  = topProd.length  > 0 ? topProd[0].total   : 1
   const maxPago  = pagoList.length > 0 ? pagoList[0].total  : 1
   const maxHora  = Math.max(...horaArr.map(h => h.total), 1)
@@ -480,16 +489,18 @@ export default function Dashboard() {
           <div style={{ padding: '14px 16px 10px' }}>
             <div style={{ display: 'flex', alignItems: 'flex-end', gap: 2, height: 80 }}>
               {days30.map(d => {
-                const pct = (d.total / maxDay30) * 100
+                const pctReal  = (d.total / maxDay30) * 100
+                const excede   = pctReal > 100
+                const pct      = Math.min(pctReal, 100)
                 return (
                   <div key={d.iso} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}
-                    title={`${d.label}: ${fmtMoney(d.total)} (${d.count} venta${d.count !== 1 ? 's' : ''})`}>
+                    title={`${d.label}: ${fmtMoney(d.total)} (${d.count} venta${d.count !== 1 ? 's' : ''})${excede ? ' — fuera de escala' : ''}`}>
                     <div style={{
                       width: '100%',
                       height: `${Math.max(pct, d.total > 0 ? 5 : 2)}%`,
                       minHeight: 2,
                       borderRadius: '2px 2px 0 0',
-                      background: d.esHoy ? 'var(--primary)' : d.total > 0 ? '#93c5fd' : '#e2e8f0',
+                      background: d.esHoy ? 'var(--primary)' : excede ? '#f59e0b' : d.total > 0 ? '#93c5fd' : '#e2e8f0',
                       transition: 'height 0.4s',
                     }} />
                   </div>
@@ -541,16 +552,18 @@ export default function Dashboard() {
           <div style={{ padding: '14px 16px 10px' }}>
             <div style={{ display: 'flex', alignItems: 'flex-end', gap: 5, height: 72 }}>
               {days7.map(d => {
-                const pct = (d.total / maxDay7) * 100
+                const pctReal = (d.total / maxDay7) * 100
+                const excede  = pctReal > 100
+                const pct     = Math.min(pctReal, 100)
                 return (
                   <div key={d.iso} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}
-                    title={`${d.label}: ${fmtMoney(d.total)}`}>
+                    title={`${d.label}: ${fmtMoney(d.total)}${excede ? ' — fuera de escala' : ''}`}>
                     <div style={{
                       width: '100%',
                       height: `${Math.max(pct, d.total > 0 ? 8 : 3)}%`,
                       minHeight: 3,
                       borderRadius: '3px 3px 0 0',
-                      background: d.esHoy ? 'var(--primary)' : d.total > 0 ? '#bfdbfe' : '#e2e8f0',
+                      background: d.esHoy ? 'var(--primary)' : excede ? '#f59e0b' : d.total > 0 ? '#bfdbfe' : '#e2e8f0',
                       transition: 'height 0.4s',
                     }} />
                     <div style={{ fontSize: 10, color: d.esHoy ? 'var(--primary)' : 'var(--text-muted)', fontWeight: d.esHoy ? 700 : 400, whiteSpace: 'nowrap' }}>

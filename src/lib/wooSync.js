@@ -1,5 +1,5 @@
 import { precioVenta } from './pricing'
-import { promoDeProducto, calcularLineaConPromo, etiquetaOferta } from './promos'
+import { promoParaSync, calcularLineaConPromo, etiquetaOferta } from './promos'
 
 /**
  * Resuelve categorias_web_ids (ids de subcategorías) a sus nombres, para
@@ -48,7 +48,13 @@ export async function syncToWoo({ tiendas, listas, producto }) {
     // unidad a %) no cambian el precio — se mandan aparte en `oferta` para
     // que WordPress arme la regla de carrito. `oferta_badge` trae el texto
     // ya armado (ej. "-20%", "2x1") para no tener que recalcularlo allá.
-    const promo = promoDeProducto(producto, 'web')
+    //
+    // Importante: usamos promoParaSync (sin filtro de fecha) y mandamos la
+    // fecha de inicio/fin aparte, para que WooCommerce programe la oferta de
+    // forma nativa y se active/desactive sola el día que corresponde — si
+    // filtráramos acá por fecha, la oferta solo se activaría si justo hay una
+    // sincronización ese día puntual.
+    const promo = promoParaSync(producto, 'web')
     const esOferta = promo && (promo.tipo === 'descuento_pct' || promo.tipo === 'descuento_monto')
     const precioOferta = esOferta ? calcularLineaConPromo(base, 1, promo).subtotal : null
     const round2 = (n) => Math.round(n * 100) / 100
@@ -78,6 +84,10 @@ export async function syncToWoo({ tiendas, listas, producto }) {
         regular_price:    String(round2(base)),
         sale_price:       esOferta ? String(round2(precioOferta)) : '',
         on_sale:          !!esOferta,
+        // Fecha de vigencia de la oferta simple — WooCommerce la programa
+        // nativamente (se activa/desactiva sola, sin re-sincronizar).
+        sale_price_dates_from: esOferta ? (producto.promo_fecha_desde || null) : null,
+        sale_price_dates_to:   esOferta ? (producto.promo_fecha_hasta || null) : null,
         discount_percent: pctOff,
         oferta:           ofertaCantidad,
         oferta_badge:     etiquetaOferta(promo),
