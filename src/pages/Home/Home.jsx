@@ -97,6 +97,9 @@ export default function Dashboard() {
   const [topProd, setTopProd]   = useState([])
   const [pagoList,setPagoList]  = useState([])
   const [horaArr, setHoraArr]   = useState([])
+  const [sel30,   setSel30]     = useState(null)  // día tocado en el gráfico de 30 días
+  const [sel7,    setSel7]      = useState(null)  // día tocado en el gráfico de la semana
+  const [selHora, setSelHora]   = useState(null)  // franja tocada en actividad por hora
   const [ultimas, setUltimas]   = useState([])
   const [deudas,  setDeudas]    = useState([])
 
@@ -484,7 +487,15 @@ export default function Dashboard() {
         <Card>
           <CardHeader
             title="📈 Tendencia — últimos 30 días"
-            sub={`${days30.reduce((s, d) => s + d.count, 0)} ventas · ${fmtMoney(days30.reduce((s, d) => s + d.total, 0))}`}
+            sub={sel30 ? (
+              <span>
+                <strong style={{ color: 'var(--text)' }}>{sel30.label}</strong>: {fmtMoney(sel30.total)} · {sel30.count} venta{sel30.count !== 1 ? 's' : ''}
+                {' · '}
+                <span onClick={() => setSel30(null)} style={{ color: 'var(--primary)', cursor: 'pointer', textDecoration: 'underline' }}>ver todo</span>
+              </span>
+            ) : (
+              `${days30.reduce((s, d) => s + d.count, 0)} ventas · ${fmtMoney(days30.reduce((s, d) => s + d.total, 0))}`
+            )}
           />
           <div style={{ padding: '14px 16px 10px' }}>
             <div style={{ display: 'flex', alignItems: 'flex-end', gap: 2, height: 80 }}>
@@ -498,14 +509,19 @@ export default function Dashboard() {
                 // forma confiable en todos los navegadores y quedaba todo
                 // aplastado en el mínimo.
                 const alturaPx = Math.max((pct / 100) * CHART_H, d.total > 0 ? 4 : 2)
+                const seleccionado = sel30?.iso === d.iso
                 return (
-                  <div key={d.iso} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', height: CHART_H, justifyContent: 'flex-end' }}
+                  <div key={d.iso}
+                    onClick={() => setSel30(seleccionado ? null : d)}
+                    style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', height: CHART_H, justifyContent: 'flex-end', cursor: 'pointer' }}
                     title={`${d.label}: ${fmtMoney(d.total)} (${d.count} venta${d.count !== 1 ? 's' : ''})${excede ? ' — fuera de escala' : ''}`}>
                     <div style={{
                       width: '100%',
                       height: alturaPx,
                       borderRadius: '2px 2px 0 0',
                       background: d.esHoy ? 'var(--primary)' : excede ? '#f59e0b' : d.total > 0 ? '#93c5fd' : '#e2e8f0',
+                      outline: seleccionado ? '2px solid var(--text)' : 'none',
+                      outlineOffset: 1,
                       transition: 'height 0.4s',
                     }} />
                   </div>
@@ -553,7 +569,16 @@ export default function Dashboard() {
 
         {/* Semana actual */}
         <Card>
-          <CardHeader title="📊 Esta semana" sub="Últimos 7 días" />
+          <CardHeader
+            title="📊 Esta semana"
+            sub={sel7 ? (
+              <span>
+                <strong style={{ color: 'var(--text)' }}>{sel7.label}</strong>: {fmtMoney(sel7.total)} · {sel7.count} venta{sel7.count !== 1 ? 's' : ''}
+                {' · '}
+                <span onClick={() => setSel7(null)} style={{ color: 'var(--primary)', cursor: 'pointer', textDecoration: 'underline' }}>ver todo</span>
+              </span>
+            ) : 'Últimos 7 días'}
+          />
           <div style={{ padding: '14px 16px 10px' }}>
             <div style={{ display: 'flex', alignItems: 'flex-end', gap: 5, height: 72 }}>
               {days7.map(d => {
@@ -562,8 +587,11 @@ export default function Dashboard() {
                 const excede  = pctReal > 100
                 const pct     = Math.min(pctReal, 100)
                 const alturaPx = Math.max((pct / 100) * CHART_H, d.total > 0 ? 6 : 2)
+                const seleccionado = sel7?.iso === d.iso
                 return (
-                  <div key={d.iso} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}
+                  <div key={d.iso}
+                    onClick={() => setSel7(seleccionado ? null : d)}
+                    style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, cursor: 'pointer' }}
                     title={`${d.label}: ${fmtMoney(d.total)}${excede ? ' — fuera de escala' : ''}`}>
                     <div style={{ width: '100%', height: CHART_H, display: 'flex', alignItems: 'flex-end' }}>
                       <div style={{
@@ -571,6 +599,8 @@ export default function Dashboard() {
                         height: alturaPx,
                         borderRadius: '3px 3px 0 0',
                         background: d.esHoy ? 'var(--primary)' : excede ? '#f59e0b' : d.total > 0 ? '#bfdbfe' : '#e2e8f0',
+                        outline: seleccionado ? '2px solid var(--text)' : 'none',
+                        outlineOffset: 1,
                         transition: 'height 0.4s',
                       }} />
                     </div>
@@ -611,7 +641,16 @@ export default function Dashboard() {
 
         {/* Actividad por hora */}
         <Card>
-          <CardHeader title="🕐 Actividad por hora" sub="Ventas de hoy por franja" />
+          <CardHeader
+            title="🕐 Actividad por hora"
+            sub={selHora ? (
+              <span>
+                <strong style={{ color: 'var(--text)' }}>{selHora.h}hs</strong>: {fmtMoney(selHora.total)} · {selHora.count} venta{selHora.count !== 1 ? 's' : ''}
+                {' · '}
+                <span onClick={() => setSelHora(null)} style={{ color: 'var(--primary)', cursor: 'pointer', textDecoration: 'underline' }}>ver todo</span>
+              </span>
+            ) : 'Ventas de hoy por franja'}
+          />
           <div style={{ padding: '14px 16px 10px' }}>
             <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: 72 }}>
               {horaArr.map(slot => {
@@ -619,14 +658,19 @@ export default function Dashboard() {
                 const pct     = (slot.total / maxHora) * 100
                 const activo  = new Date().getHours() === slot.h
                 const alturaPx = Math.max((pct / 100) * CHART_H, slot.total > 0 ? 6 : 2)
+                const seleccionado = selHora?.h === slot.h
                 return (
-                  <div key={slot.h} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', height: CHART_H, justifyContent: 'flex-end' }}
+                  <div key={slot.h}
+                    onClick={() => setSelHora(seleccionado ? null : slot)}
+                    style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', height: CHART_H, justifyContent: 'flex-end', cursor: 'pointer' }}
                     title={`${slot.h}hs: ${fmtMoney(slot.total)}`}>
                     <div style={{
                       width: '100%',
                       height: alturaPx,
                       borderRadius: '2px 2px 0 0',
                       background: activo ? 'var(--primary)' : slot.total > 0 ? '#34d399' : '#e2e8f0',
+                      outline: seleccionado ? '2px solid var(--text)' : 'none',
+                      outlineOffset: 1,
                       transition: 'height 0.4s',
                     }} />
                   </div>
