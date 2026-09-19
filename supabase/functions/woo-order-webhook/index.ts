@@ -33,8 +33,12 @@ async function verifySignature(secret: string, rawBody: string, signatureB64: st
   return sigB64 === signatureB64
 }
 
-// Estados de WooCommerce que consideramos "venta concretada" (pagada)
-const ESTADOS_PAGADOS = new Set(['processing', 'completed'])
+// Estados de WooCommerce que nos interesa ver en Ventas:
+// - processing/completed: pago confirmado.
+// - on-hold: pago pendiente (ej. esperando que llegue una transferencia) —
+//   se notifica igual para poder estar atento, pero queda para revisar.
+const ESTADOS_ACEPTADOS = new Set(['processing', 'completed', 'on-hold'])
+const ESTADOS_PENDIENTES = new Set(['on-hold'])
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
@@ -72,9 +76,10 @@ serve(async (req) => {
   try { order = JSON.parse(rawBody) } catch { return json({ ok: true, skipped: 'ping' }) }
   if (!order?.id) return json({ ok: true, skipped: 'sin order id' })
 
-  if (!ESTADOS_PAGADOS.has(order.status)) {
+  if (!ESTADOS_ACEPTADOS.has(order.status)) {
     return json({ ok: true, skipped: `estado "${order.status}" ignorado` })
   }
+  const esPendiente = ESTADOS_PENDIENTES.has(order.status)
 
   // Idempotencia: si este pedido ya se importó (reintentos de WooCommerce), no duplicar.
   const origenRef = `WC#${order.id}`
@@ -108,7 +113,7 @@ serve(async (req) => {
     estado:               'pendiente_revision',
     canal:                'web_minorista',
     origen_ref:           origenRef,
-    notas:                `Pedido WooCommerce #${order.id} — ${tienda.nombre}`,
+    notas:                `Pedido WooCommerce #${order.id} — ${tienda.nombre}` + (esPendiente ? ' (pendiente de pago)' : ''),
     org_id:               tienda.user_id,
   }
 
@@ -163,7 +168,7 @@ serve(async (req) => {
 
   try {
     await sendPushToOrg(admin, tienda.user_id, {
-      title: '💰 Nueva venta desde la web',
+      title: esPendiente ? '⏳ Pedido pendiente de pago' : '💰 Nueva venta desde la web',
       body:  `${nombreCliente} · ${fmtMoneyAR(total)}`,
       url:   '/ventas?web=1',
       tag:   'venta-web-' + venta.id,
