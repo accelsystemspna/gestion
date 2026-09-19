@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../lib/AuthContext'
 import { syncManyToWoo, conCategoriasWeb } from '../../lib/wooSync'
+import ImagenesCompartidas from './ImagenesCompartidas'
 
 // ─── Helpers de UI ───────────────────────────────────────────────────────────
 
@@ -110,7 +111,7 @@ export default function Integraciones() {
       const [{ data: productos }, { data: subcategorias }] = await Promise.all([
         supabase
           .from('productos')
-          .select('id, categoria_id, sku, nombre, costo_base, imagen_url, imagen_web_url, imagenes_web, activo, seo_titulo, seo_descripcion, peso_kg, paquete_largo, paquete_ancho, paquete_alto, tiendas_ids, categorias_web_ids, promo_activa, promo_tipo, promo_valor, promo_lleva, promo_paga, promo_canal, promo_fecha_desde, promo_fecha_hasta'),
+          .select('id, categoria_id, sku, nombre, costo_base, imagen_url, imagen_web_url, imagenes_web, video_url, usar_imagenes_compartidas, activo, seo_titulo, seo_descripcion, peso_kg, paquete_largo, paquete_ancho, paquete_alto, tiendas_ids, categorias_web_ids, promo_activa, promo_tipo, promo_valor, promo_lleva, promo_paga, promo_canal, promo_fecha_desde, promo_fecha_hasta'),
         supabase.from('subcategorias').select('id, nombre'),
       ])
       const propios = (productos || [])
@@ -228,6 +229,12 @@ export default function Integraciones() {
           })}
         </div>
       )}
+
+      {/* Imágenes compartidas: van en la web, por eso viven acá */}
+      <div style={{ marginTop: 32, paddingTop: 20, borderTop: '1px solid var(--border)' }}>
+        <h2 style={{ fontSize: 16, margin: '0 0 12px' }}>Imágenes compartidas</h2>
+        <ImagenesCompartidas />
+      </div>
 
       {/* Info de próximas funciones */}
       <div style={{ marginTop: 24, padding: '14px 16px', borderRadius: 8, background: 'var(--bg-muted)', border: '1px solid var(--border)' }}>

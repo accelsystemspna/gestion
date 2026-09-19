@@ -1,5 +1,19 @@
+import { supabase } from './supabase'
 import { precioVenta } from './pricing'
 import { promoParaSync, calcularLineaConPromo, etiquetaOferta } from './promos'
+
+// Biblioteca de imágenes compartidas (las que se repiten en todos los
+// productos). Se cachea unos segundos para que un re-sync masivo no la pida
+// una vez por producto.
+let _compartidas = { ts: 0, data: null }
+export async function cargarImagenesCompartidas({ force = false } = {}) {
+  if (!force && _compartidas.data && Date.now() - _compartidas.ts < 30000) return _compartidas.data
+  const { data, error } = await supabase
+    .from('imagenes_compartidas').select('id, url').eq('activa', true).order('orden').order('id')
+  if (error) return []   // tabla todavía no creada: se sincroniza sin compartidas
+  _compartidas = { ts: Date.now(), data: data || [] }
+  return _compartidas.data
+}
 
 /**
  * Resuelve categorias_web_ids (ids de subcategorías) a sus nombres, para
@@ -25,7 +39,7 @@ export function conCategoriasWeb(producto, subcategorias) {
  * @param {object}   producto - { sku, nombre, costo_base, imagen_web_url, imagen_url, activo, tiendas_ids }
  * @returns {Promise<boolean>} true si se sincronizó al menos una tienda sin error
  */
-export async function syncToWoo({ tiendas, listas, producto }) {
+export async function syncToWoo({ tiendas, listas, producto, compartidas }) {
   const ids = (producto.tiendas_ids || []).map(String)
 
   const wooTiendas = tiendas.filter(
@@ -38,6 +52,13 @@ export async function syncToWoo({ tiendas, listas, producto }) {
   )
 
   let ok = true
+
+  // Imágenes compartidas: cada una lleva una `key` fija (shared-<id>) para que
+  // WordPress la suba UNA vez a la biblioteca de medios y la reutilice en todos
+  // los productos, en vez de descargar una copia por producto y por guardado.
+  const usaCompartidas = wooTiendas.length > 0 && producto.usar_imagenes_compartidas !== false
+  const listaCompartidas = usaCompartidas ? (compartidas ?? await cargarImagenesCompartidas()) : []
+  const sharedGallery = listaCompartidas.map((im, i) => ({ key: `shared-${im.id}`, url: im.url, position: i }))
 
   for (const tienda of wooTiendas) {
     const lista  = listas.find(l => String(l.id) === String(tienda.lista_id))
@@ -93,6 +114,8 @@ export async function syncToWoo({ tiendas, listas, producto }) {
         oferta_badge:     etiquetaOferta(promo),
         image_url:        producto.imagen_web_url || producto.imagen_url || '',
         gallery_urls:     producto.imagenes_web || [],
+        video_url:        producto.video_url || '',
+        shared_gallery:   sharedGallery,
         categories:       producto.categorias_web || [],
         activo:           producto.activo !== false,
         seo_title:        producto.seo_titulo || '',
@@ -146,12 +169,13 @@ export async function syncManyToWoo(productos, { tiendas, listas }, { batchSize 
   const candidatos = (productos || []).filter(p => p.tiendas_ids?.length)
   let sincronizados = 0
   let errores = 0
+  const compartidas = candidatos.length ? await cargarImagenesCompartidas({ force: true }) : []
 
   for (let i = 0; i < candidatos.length; i += batchSize) {
     const tanda = candidatos.slice(i, i + batchSize)
     const resultados = await Promise.all(
       tanda.map(producto =>
-        syncToWoo({ tiendas, listas, producto }).catch(() => false)
+        syncToWoo({ tiendas, listas, producto, compartidas }).catch(() => false)
       )
     )
     for (const r of resultados) r ? sincronizados++ : errores++

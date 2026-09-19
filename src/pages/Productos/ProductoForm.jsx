@@ -3,7 +3,7 @@ import { supabase } from '../../lib/supabase'
 import { fmtMoney, padId } from '../../lib/format'
 import { calcCosto3D, calcInsumo, precioVenta } from '../../lib/pricing'
 import { recalcularCCPorProductos } from '../../lib/recalcularCC'
-import { syncToWoo } from '../../lib/wooSync'
+import { syncToWoo, cargarImagenesCompartidas } from '../../lib/wooSync'
 import { useAuth } from '../../lib/AuthContext'
 
 const SKU_RE = /^[A-Z]{3}[0-9]{6}(-V\d+)?$/
@@ -18,6 +18,24 @@ const PROMO_CANALES = {
   local: '🏪 Solo local',
   web:   '🌐 Solo web',
   ambos: '🏪🌐 Ambos',
+}
+
+// Devuelve el ID de 11 caracteres de un link de YouTube (Short, watch, youtu.be
+// o embed), o null si no parece un link válido.
+function youtubeId(url) {
+  if (!url) return null
+  try {
+    const u = new URL(url.trim())
+    const host = u.hostname.replace(/^(www|m)\./, '')
+    let id = null
+    if (host === 'youtu.be') id = u.pathname.split('/')[1]
+    else if (host === 'youtube.com') {
+      const parts = u.pathname.split('/')
+      if (parts[1] === 'shorts' || parts[1] === 'embed') id = parts[2]
+      else if (u.pathname === '/watch') id = u.searchParams.get('v')
+    }
+    return id && /^[\w-]{11}$/.test(id) ? id : null
+  } catch { return null }
 }
 
 // Definidos FUERA del componente para que React no los desmonte en cada render
@@ -54,6 +72,8 @@ const blank = {
   imagen_url: '',
   imagen_web_url: '',
   imagenes_web: [],
+  video_url: '',
+  usar_imagenes_compartidas: true,
   categorias_web_ids: [],
   seo_titulo: '',
   seo_descripcion: '',
@@ -110,6 +130,8 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
         imagen_url: initial.imagen_url || '',
         imagen_web_url: initial.imagen_web_url || '',
         imagenes_web: initial.imagenes_web || [],
+        video_url: initial.video_url || '',
+        usar_imagenes_compartidas: initial.usar_imagenes_compartidas !== false,
         categorias_web_ids: initial.categorias_web_ids || [],
         seo_titulo: initial.seo_titulo || '',
         seo_descripcion: initial.seo_descripcion || '',
@@ -158,6 +180,8 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
   const [expandedTarifa, setExpandedTarifa] = useState(0)
   const [savedFlash, setSavedFlash] = useState(false)  // ✅ flash "Guardado"
   const [tab, setTab] = useState('general')  // 'general' | 'web'
+  const [compartidas, setCompartidas] = useState([])
+  useEffect(() => { cargarImagenesCompartidas({ force: true }).then(setCompartidas) }, [])
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }))
 
@@ -359,6 +383,10 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
     if (err) return setSkuError(err)
     if (!form.nombre) return alert('El nombre es requerido')
     if (!form.categoria_id) return alert('Seleccioná una categoría')
+    if (form.video_url?.trim() && !youtubeId(form.video_url)) {
+      setTab('web')
+      return alert('El link de YouTube no es válido. Pegá el link del Short (ej. https://youtube.com/shorts/xxxxxxxxxxx) o dejá el campo vacío.')
+    }
     setSaving(true)
     const payload = {
       nombre: form.nombre, sku: form.sku, descripcion: form.descripcion || null,
@@ -370,6 +398,8 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
       imagen_url: form.imagen_url || null,
       imagen_web_url: form.imagen_web_url || null,
       imagenes_web: form.imagenes_web || [],
+      video_url: form.video_url?.trim() || null,
+      usar_imagenes_compartidas: form.usar_imagenes_compartidas !== false,
       categorias_web_ids: form.categorias_web_ids || [],
       seo_titulo: form.seo_titulo || null,
       seo_descripcion: form.seo_descripcion || null,
@@ -419,6 +449,8 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
         imagen_web_url: form.imagen_web_url || '',
         imagen_url:    form.imagen_url || '',
         imagenes_web:  form.imagenes_web || [],
+        video_url:     payload.video_url,
+        usar_imagenes_compartidas: payload.usar_imagenes_compartidas,
         categorias_web: (form.categorias_web_ids || [])
           .map(id => subcategoriasTodas.find(s => String(s.id) === String(id))?.nombre)
           .filter(Boolean),
@@ -509,6 +541,8 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
         imagen_url:       form.imagen_url ?? null,
         imagen_web_url:   form.imagen_web_url ?? null,
         imagenes_web:     [],
+        video_url:        '',
+        usar_imagenes_compartidas: form.usar_imagenes_compartidas !== false,
         incremento:       form.incremento ?? 0,
         tiendas_ids:      form.tiendas_ids ?? [],
         categorias_web_ids: form.categorias_web_ids ?? [],
@@ -879,6 +913,56 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
                       </label>
                     </div>
                   </div>
+                </div>
+
+                {/* Video (YouTube Short) */}
+                {(() => {
+                  const vid = youtubeId(form.video_url)
+                  const hayTexto = !!form.video_url?.trim()
+                  return (
+                    <div style={{ marginTop:14, maxWidth:560 }}>
+                      <F label="Video de YouTube (Short) — aparece en la galería de la web">
+                        <input className="input" style={si()} value={form.video_url} onChange={e=>set('video_url',e.target.value)}
+                          placeholder="https://youtube.com/shorts/xxxxxxxxxxx" />
+                      </F>
+                      {hayTexto && (
+                        <div style={{ display:'flex', alignItems:'center', gap:8, marginTop:6, fontSize:11, color: vid ? '#16a34a' : 'var(--danger)' }}>
+                          {vid ? (
+                            <>
+                              <img src={`https://i.ytimg.com/vi/${vid}/hqdefault.jpg`} alt="" style={{ width:64, height:36, objectFit:'cover', borderRadius:4, border:'1px solid var(--border)' }} />
+                              <span>✓ Link válido</span>
+                            </>
+                          ) : (
+                            <span>No parece un link de YouTube (Short, youtu.be o watch).</span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })()}
+
+                {/* Imágenes compartidas (biblioteca común a todos los productos) */}
+                <div style={{ marginTop:14, maxWidth:560 }}>
+                  <label style={{ display:'flex', alignItems:'center', gap:8, cursor:'pointer', userSelect:'none' }}>
+                    <input type="checkbox" checked={form.usar_imagenes_compartidas !== false} onChange={e=>set('usar_imagenes_compartidas', e.target.checked)} />
+                    <span style={{ fontSize:13, fontWeight:600 }}>Mostrar las imágenes compartidas en este producto</span>
+                  </label>
+                  {compartidas.length === 0 ? (
+                    <div style={{ fontSize:11, color:'var(--text-muted)', marginTop:4 }}>
+                      Todavía no hay imágenes compartidas. Se cargan una sola vez en Configuración → Integraciones → Imágenes compartidas.
+                    </div>
+                  ) : (
+                    <div style={{ opacity: form.usar_imagenes_compartidas !== false ? 1 : 0.4 }}>
+                      <div style={{ fontSize:11, color:'var(--text-muted)', margin:'4px 0 6px' }}>
+                        Se agregan a la galería después de las fotos de arriba ({compartidas.length}). Se editan en Configuración → Integraciones → Imágenes compartidas.
+                      </div>
+                      <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
+                        {compartidas.map(im => (
+                          <img key={im.id} src={im.url} alt="" style={{ width:44, height:44, objectFit:'cover', borderRadius:5, border:'1px solid var(--border)' }} />
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 

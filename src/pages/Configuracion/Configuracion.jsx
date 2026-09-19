@@ -13,13 +13,13 @@ import Apariencia from './Apariencia'
 const TABS = [
   { id: 'branding',      label: 'Branding' },
   { id: 'listas',        label: 'Listas de precios' },
-  { id: 'rubros',        label: '🗂 Rubros' },
+  { id: 'rubros',        label: 'Rubros' },
   { id: 'categorias',    label: 'Categorías' },
-  { id: 'integraciones', label: '🔗 Integraciones' },
-  { id: 'apariencia',    label: '🌙 Apariencia' },
+  { id: 'integraciones', label: 'Integraciones' },
+  { id: 'apariencia',    label: 'Apariencia' },
   { id: 'usuarios',      label: 'Usuarios y roles',      soloMaster: true },
-  { id: 'backup',        label: '💾 Backup',             soloMaster: true },
-  { id: 'arca',          label: '🏛️ ARCA / Facturación', soloMaster: true },
+  { id: 'backup',        label: 'Backup',                soloMaster: true },
+  { id: 'arca',          label: 'ARCA / Facturación', soloMaster: true },
 ]
 
 export default function Configuracion() {
