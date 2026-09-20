@@ -8,6 +8,7 @@
 import { supabase }                                from './supabase'
 import { precioVenta, calcInsumo, calcTarifaCost } from './pricing'
 import { syncManyToWoo, conCategoriasWeb }         from './wooSync'
+import { syncMayorista }                           from './mayoristaSync'
 
 /**
  * Recalcula los precios de todas las ventas pendientes en cuenta corriente
@@ -268,6 +269,11 @@ export async function recalcularProductosPorMaterial(_materialId) {
     console.log(TAG + ` sync web: ${res.sincronizados}/${res.total} OK`)
   }
 
+  // Portal mayorista: no depende de tiendas_ids (filtra por subcategoría), así que
+  // se envían todos los productos cuyo costo cambió.
+  const resMay = await syncMayorista({ ids: productosActualizadosIds })
+  if (!resMay.sinTienda) console.log(TAG + ` sync mayorista: ${resMay.enviados}/${resMay.total} OK`)
+
   console.log(TAG + ' fin: ' + productosActualizadosIds.length + ' productos, ' +
     ventasActualizadas + ' ventas, ' + clientesAfectados + ' clientes, ' + sincronizados + ' sincronizados a la web')
 
@@ -304,5 +310,9 @@ export async function resyncProductosPorLista(_listaId) {
   const conCats = productos.map(p => conCategoriasWeb(p, subcategorias || []))
   const res = await syncManyToWoo(conCats, { tiendas: tiendas || [], listas: listas || [] })
   console.log(TAG + ` lista de precios actualizada — sync web: ${res.sincronizados}/${res.total} OK`)
+
+  // Si la lista que cambió es la del portal mayorista, hay que re-enviar todo el catálogo.
+  const resMay = await syncMayorista()
+  if (!resMay.sinTienda) console.log(TAG + ` lista de precios actualizada — sync mayorista: ${resMay.enviados}/${resMay.total} OK`)
   return res
 }

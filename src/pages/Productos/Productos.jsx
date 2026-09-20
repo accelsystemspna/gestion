@@ -10,6 +10,7 @@ import ImageThumb from '../../components/ImageThumb'
 import { exportCatalogoPDF } from '../../lib/pdf'
 import { exportCatalogoCSV } from '../../lib/csv'
 import { syncToWoo, syncManyToWoo, conCategoriasWeb } from '../../lib/wooSync'
+import { syncMayorista, ocultarEnMayorista } from '../../lib/mayoristaSync'
 import { useAuth } from '../../lib/AuthContext'
 
 function OfertaBadge({ producto }) {
@@ -165,14 +166,19 @@ export default function Productos() {
         syncToWoo({ tiendas, listas, producto: conCategoriasWeb({ ...producto, activo: activoNuevo }, subcategorias) })
           .catch(err => console.error('[wooSync]', err))
       }
+      syncMayorista({ ids: [id] }).catch(err => console.error('[mayoristaSync]', err))
     }
   }
 
   const handleDelete = async (id) => {
     if (!confirm('¿Eliminar este producto?')) return
+    const sku = items.find(p => p.id === id)?.sku
     const { error } = await supabase.from('productos').delete().eq('id', id)
     if (error) alert('Error: ' + error.message)
-    else load()
+    else {
+      ocultarEnMayorista([sku])
+      load()
+    }
   }
 
   const getCatLabel = () => categoriaSel
@@ -195,17 +201,24 @@ export default function Productos() {
 
   const handleSyncAll = async () => {
     const candidatos = items.filter(p => p.tiendas_ids?.length)
-    if (!candidatos.length) {
+    const hayMayorista = tiendas.some(t => t.tipo === 'mayorista' && t.activa && t.url && t.webhook_secret)
+    if (!candidatos.length && !hayMayorista) {
       alert('Ningún producto tiene una tienda web asignada todavía.')
       return
     }
-    if (!confirm(`Se van a re-sincronizar ${candidatos.length} producto(s) con sus tiendas web. ¿Continuar?`)) return
+    if (!confirm(`Se van a re-sincronizar ${candidatos.length} producto(s) con sus tiendas web${hayMayorista ? ' y todo el catálogo con el portal mayorista' : ''}. ¿Continuar?`)) return
 
     setSyncingAll(true)
     const conCats = candidatos.map(p => conCategoriasWeb(p, subcategorias))
-    const { total, sincronizados, errores } = await syncManyToWoo(conCats, { tiendas, listas })
+    const { total, sincronizados, errores } = candidatos.length
+      ? await syncManyToWoo(conCats, { tiendas, listas })
+      : { total: 0, sincronizados: 0, errores: 0 }
+    const may = hayMayorista ? await syncMayorista() : null
     setSyncingAll(false)
-    alert(`Sincronización terminada: ${sincronizados}/${total} OK${errores ? `, ${errores} con error (ver consola)` : ''}.`)
+    alert(
+      `Sincronización terminada: ${sincronizados}/${total} OK${errores ? `, ${errores} con error (ver consola)` : ''}.` +
+      (may ? `\nPortal mayorista: ${may.enviados}/${may.total} enviados${may.errores ? ` — ${may.detalle || 'con errores (ver consola)'}` : ''}.` : '')
+    )
   }
 
   return (

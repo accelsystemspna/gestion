@@ -4,6 +4,7 @@ import { fmtMoney, padId } from '../../lib/format'
 import { calcCosto3D, calcInsumo, precioVenta } from '../../lib/pricing'
 import { recalcularCCPorProductos } from '../../lib/recalcularCC'
 import { syncToWoo, cargarImagenesCompartidas } from '../../lib/wooSync'
+import { syncMayorista } from '../../lib/mayoristaSync'
 import { useAuth } from '../../lib/AuthContext'
 
 const SKU_RE = /^[A-Z]{3}[0-9]{6}(-V\d+)?$/
@@ -69,6 +70,7 @@ const blank = {
   subcategoria_id: '',
   alto_producto: '',
   ancho_producto: '',
+  multiplo_mayorista: '',
   imagen_url: '',
   imagen_web_url: '',
   imagenes_web: [],
@@ -139,6 +141,7 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
         paquete_largo: initial.paquete_largo ?? '',
         paquete_ancho: initial.paquete_ancho ?? '',
         paquete_alto: initial.paquete_alto ?? '',
+        multiplo_mayorista: initial.multiplo_mayorista ?? '',
         incremento: initial.incremento || 0,
         stock_actual: initial.stock_actual ?? 0,
         promo_activa: initial.promo_activa ?? false,
@@ -428,6 +431,12 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
       promo_fecha_hasta: form.promo_fecha_hasta || null,
       activo: form.activo !== false,
     }
+    // Múltiplo de compra en el portal mayorista (2, 3 o vacío = automático según el alto).
+    // Solo se manda si tiene valor o ya tenía uno, para que guardar un producto no dependa
+    // de haber corrido supabase_mayorista.sql.
+    if (form.multiplo_mayorista || initial?.multiplo_mayorista != null) {
+      payload.multiplo_mayorista = form.multiplo_mayorista ? Number(form.multiplo_mayorista) : null
+    }
     const res = form.id
       ? await supabase.from('productos').update(payload).eq('id', form.id)
       : await supabase.from('productos').insert(payload)
@@ -472,6 +481,9 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
         promo_fecha_hasta: payload.promo_fecha_hasta,
       },
     }).catch(err => console.error('[wooSync]', err))
+
+    // Enviar al portal mayorista (si hay una tienda mayorista activa; si no, no hace nada)
+    if (payload.sku) syncMayorista({ skus: [payload.sku] }).catch(err => console.error('[mayoristaSync]', err))
 
     // Si es una edición, recalcular en background todas las CC pendientes
     // que contengan este producto, sin bloquear el flujo de guardado.
@@ -760,6 +772,14 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
                   <input className="input" style={si()} type="number" step="1" value={form.stock_actual} onChange={e=>set('stock_actual',e.target.value)} placeholder="0" />
                   <span style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>Se descuenta solo con cada venta. Corregilo a mano cuando quieras (ej. después de fabricar).</span>
                 </F>
+                <F label="Mayorista">
+                  <select className="input" style={si()} value={form.multiplo_mayorista ?? ''} onChange={e=>set('multiplo_mayorista', e.target.value)}>
+                    <option value="">Auto</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                  </select>
+                  <span style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>Unidades por modelo en el portal mayorista. Auto = según el alto (30 cm → 3, resto → 2).</span>
+                </F>
               </div>
 
               {/* Imagen — versión ultra compacta */}
@@ -1046,13 +1066,13 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
               {/* Canales de venta */}
               <div>
                 {secLabel('¿A qué webs se sube?')}
-                {tiendas.length === 0 ? (
+                {tiendas.filter(t=>t.tipo!=='mayorista').length === 0 ? (
                   <div style={{ marginTop:10, fontSize:12, color:'var(--text-muted)' }}>
                     No hay tiendas configuradas. Se agregan desde Configuración → Integraciones.
                   </div>
                 ) : (
                   <div style={{ display:'flex', flexWrap:'wrap', gap:8, marginTop:10 }}>
-                    {tiendas.map(t=>{
+                    {tiendas.filter(t=>t.tipo!=='mayorista').map(t=>{
                       const COLORS={woocommerce:['#7c3aed','#f5f3ff'],mercadolibre:['#d97706','#fffbeb']}
                       const [color,bg]=COLORS[t.tipo]||['#64748b','#f1f5f9']
                       const sel=(form.tiendas_ids||[]).map(String).includes(String(t.id))

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../lib/AuthContext'
 import { syncManyToWoo, conCategoriasWeb } from '../../lib/wooSync'
+import { syncMayorista } from '../../lib/mayoristaSync'
 import ImagenesCompartidas from './ImagenesCompartidas'
 
 // ─── Helpers de UI ───────────────────────────────────────────────────────────
@@ -9,6 +10,7 @@ import ImagenesCompartidas from './ImagenesCompartidas'
 const TIPOS = {
   woocommerce:  { label: 'WooCommerce', color: '#7c3aed', bg: 'rgba(124,58,237,0.12)', sigla: 'WC' },
   mercadolibre: { label: 'Mercado Libre', color: '#d97706', bg: 'rgba(217,119,6,0.12)', sigla: 'ML' },
+  mayorista:    { label: 'Mayorista', color: '#0f766e', bg: 'rgba(15,118,110,0.12)', sigla: 'MY' },
 }
 
 function TipoBadge({ tipo }) {
@@ -49,7 +51,7 @@ const blank = {
   nombre: '', tipo: 'woocommerce', url: '',
   consumer_key: '', consumer_secret: '', webhook_secret: '',
   app_id: '', access_token: '',
-  lista_id: '', categorias_ids: [], activa: true, notas: '',
+  lista_id: '', categorias_ids: [], subcategorias_ids: [], activa: true, notas: '',
 }
 
 export default function Integraciones() {
@@ -57,6 +59,7 @@ export default function Integraciones() {
   const [tiendas, setTiendas]     = useState([])
   const [listas, setListas]       = useState([])
   const [categorias, setCategorias] = useState([])
+  const [subcategorias, setSubcategorias] = useState([])
   const [editing, setEditing]     = useState(null)
   const [loading, setLoading]     = useState(true)
   const [syncingId, setSyncingId] = useState(null)
@@ -64,14 +67,16 @@ export default function Integraciones() {
 
   const load = async () => {
     setLoading(true)
-    const [t, l, c] = await Promise.all([
+    const [t, l, c, s] = await Promise.all([
       supabase.from('tiendas').select('*').eq('user_id', orgId).order('created_at'),
       supabase.from('listas_precios').select('*').order('created_at'),
       supabase.from('categorias').select('id, nombre').order('nombre'),
+      supabase.from('subcategorias').select('id, nombre, categoria_id').order('nombre'),
     ])
     setTiendas(t.data || [])
     setListas(l.data || [])
     setCategorias(c.data || [])
+    setSubcategorias(s.data || [])
     setLoading(false)
   }
   useEffect(() => { load() }, [])
@@ -91,12 +96,21 @@ export default function Integraciones() {
       activa:          !!form.activa,
       notas:           form.notas || null,
     }
+    // Solo se manda la columna nueva para el mayorista, así las demás tiendas se
+    // siguen guardando aunque todavía no se haya corrido supabase_mayorista.sql.
+    if (form.tipo === 'mayorista') payload.subcategorias_ids = form.subcategorias_ids || []
     const res = form.id
       ? await supabase.from('tiendas').update(payload).eq('id', form.id)
       : await supabase.from('tiendas').insert({ ...payload, user_id: orgId })
-    if (res.error) { alert('Error: ' + res.error.message); return }
+    if (res.error) {
+      const falta = /tiendas_tipo_check|subcategorias_ids/.test(res.error.message)
+      alert('Error: ' + res.error.message + (falta ? '\n\nFalta correr supabase_mayorista.sql en Supabase → SQL Editor.' : ''))
+      return
+    }
     setEditing(null)
     load()
+    // Si cambió la selección de subcategorías o la lista de precios, se re-envía todo.
+    if (form.tipo === 'mayorista' && form.activa) syncMayorista().catch(() => {})
   }
 
   const toggleActiva = async (tienda) => {
@@ -108,6 +122,16 @@ export default function Integraciones() {
     setSyncingId(tienda.id)
     setSyncMsg((m) => ({ ...m, [tienda.id]: null }))
     try {
+      if (tienda.tipo === 'mayorista') {
+        const r = await syncMayorista({ tienda })
+        setSyncMsg((m) => ({
+          ...m,
+          [tienda.id]: r.errores
+            ? `Error al sincronizar: ${r.detalle || 'ver consola'} (${r.enviados}/${r.total} enviados)`
+            : `${r.enviados}/${r.total} producto(s) enviados al portal mayorista`,
+        }))
+        return
+      }
       const [{ data: productos }, { data: subcategorias }] = await Promise.all([
         supabase
           .from('productos')
@@ -155,7 +179,9 @@ export default function Integraciones() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {tiendas.map((t) => {
             const lista = listas.find((l) => l.id === t.lista_id)
-            const cats  = (t.categorias_ids || []).map((id) => categorias.find((c) => String(c.id) === String(id))?.nombre).filter(Boolean)
+            const cats  = t.tipo === 'mayorista'
+              ? (t.subcategorias_ids || []).map((id) => subcategorias.find((c) => String(c.id) === String(id))?.nombre).filter(Boolean)
+              : (t.categorias_ids || []).map((id) => categorias.find((c) => String(c.id) === String(id))?.nombre).filter(Boolean)
             return (
               <div key={t.id} style={{
                 border: '1px solid var(--border)', borderRadius: 8, padding: '14px 16px',
@@ -199,7 +225,9 @@ export default function Integraciones() {
                         </span>
                       ))
                     ) : (
-                      <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Todas las categorías</span>
+                      <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                        {t.tipo === 'mayorista' ? 'Todas las subcategorías' : 'Todas las categorías'}
+                      </span>
                     )}
                   </div>
                   {syncMsg[t.id] && (
@@ -210,7 +238,7 @@ export default function Integraciones() {
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-                  {t.tipo === 'woocommerce' && t.url && t.webhook_secret && (
+                  {(t.tipo === 'woocommerce' || t.tipo === 'mayorista') && t.url && t.webhook_secret && (
                     <button
                       className="btn btn-sm btn-ghost"
                       onClick={() => handleSync(t)}
@@ -239,7 +267,7 @@ export default function Integraciones() {
       {/* Info de próximas funciones */}
       <div style={{ marginTop: 24, padding: '14px 16px', borderRadius: 8, background: 'var(--bg-muted)', border: '1px solid var(--border)' }}>
         <p style={{ margin: 0, fontSize: 13, color: 'var(--text-muted)' }}>
-          Los productos se sincronizan automáticamente a WooCommerce al guardarlos, y también cuando cambia el precio de un insumo, una tarifa o una lista de precios.
+          Los productos se sincronizan automáticamente a WooCommerce y al portal mayorista al guardarlos, y también cuando cambia el precio de un insumo, una tarifa o una lista de precios.
           Usá <strong>Sincronizar ahora</strong> en cada tienda para forzar una resincronización completa cuando quieras.
           <br />
           <strong style={{ color: 'var(--text)' }}>Próximamente:</strong> integración con Mercado Libre vía OAuth.
@@ -251,6 +279,7 @@ export default function Integraciones() {
           initial={editing}
           listas={listas}
           categorias={categorias}
+          subcategorias={subcategorias}
           onCancel={() => setEditing(null)}
           onSave={handleSave}
         />
@@ -261,11 +290,12 @@ export default function Integraciones() {
 
 // ─── Formulario ───────────────────────────────────────────────────────────────
 
-function TiendaForm({ initial, listas, categorias, onCancel, onSave }) {
+function TiendaForm({ initial, listas, categorias, subcategorias, onCancel, onSave }) {
   const [form, setForm] = useState(() => ({
     ...blank,
     ...initial,
     categorias_ids: initial.categorias_ids ? [...initial.categorias_ids] : [],
+    subcategorias_ids: initial.subcategorias_ids ? [...initial.subcategorias_ids] : [],
   }))
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }))
 
@@ -282,6 +312,17 @@ function TiendaForm({ initial, listas, categorias, onCancel, onSave }) {
       return {
         ...f,
         categorias_ids: ids.includes(sid) ? ids.filter((i) => i !== sid) : [...ids, sid],
+      }
+    })
+  }
+
+  const toggleSubcategoria = (id) => {
+    setForm((f) => {
+      const ids = f.subcategorias_ids.map(String)
+      const sid = String(id)
+      return {
+        ...f,
+        subcategorias_ids: ids.includes(sid) ? ids.filter((i) => i !== sid) : [...ids, sid],
       }
     })
   }
@@ -312,10 +353,46 @@ function TiendaForm({ initial, listas, categorias, onCancel, onSave }) {
               <label>Plataforma</label>
               <select className="select" value={form.tipo} onChange={(e) => set('tipo', e.target.value)}>
                 <option value="woocommerce">WooCommerce</option>
+                <option value="mayorista">Mayorista</option>
                 <option value="mercadolibre">Mercado Libre</option>
               </select>
             </div>
           </div>
+
+          {/* Portal mayorista */}
+          {form.tipo === 'mayorista' && (
+            <div style={{ border: '1px solid #0f766e44', borderRadius: 8, padding: '12px 14px', background: 'rgba(15,118,110,0.07)' }}>
+              <p style={{ margin: '0 0 10px', fontSize: 13, fontWeight: 600, color: '#0f766e' }}>Portal mayorista (WordPress)</p>
+              <div className="field" style={{ marginBottom: 10 }}>
+                <label>URL de la tienda</label>
+                <input
+                  className="input"
+                  value={form.url}
+                  onChange={(e) => set('url', e.target.value)}
+                  placeholder="https://mayorista.mitienda.com"
+                />
+              </div>
+              <div className="field">
+                <label>Webhook Secret</label>
+                <input
+                  className="input"
+                  type={showSecret ? 'text' : 'password'}
+                  value={form.webhook_secret}
+                  onChange={(e) => set('webhook_secret', e.target.value)}
+                  placeholder="Copiá el secret desde WordPress → Mayorista → Configuración"
+                  style={{ fontFamily: 'monospace', fontSize: 13 }}
+                />
+                <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, marginTop: 6, cursor: 'pointer', color: 'var(--text-muted)', userSelect: 'none' }}>
+                  <input type="checkbox" checked={showSecret} onChange={(e) => setShowSecret(e.target.checked)} />
+                  Mostrar secret
+                </label>
+              </div>
+              <p style={{ fontSize: 11, color: '#0f766e', margin: '8px 0 0' }}>
+                La URL y el secret se ven en WP Admin → Mayorista → Configuración → "Sincronización con el programa de gestión".
+                Los productos se envían al portal con el precio de la lista que elijas abajo.
+              </p>
+            </div>
+          )}
 
           {/* Credenciales WooCommerce */}
           {form.tipo === 'woocommerce' && (
@@ -424,6 +501,7 @@ function TiendaForm({ initial, listas, categorias, onCancel, onSave }) {
           </div>
 
           {/* Categorías */}
+          {form.tipo !== 'mayorista' && (
           <div>
             <label style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-muted)', display: 'block', marginBottom: 6 }}>
               Categorías a sincronizar
@@ -462,6 +540,49 @@ function TiendaForm({ initial, listas, categorias, onCancel, onSave }) {
               Sin selección = se sincronizan todas las categorías.
             </p>
           </div>
+          )}
+
+          {/* Subcategorías (portal mayorista) */}
+          {form.tipo === 'mayorista' && (
+          <div>
+            <label style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-muted)', display: 'block', marginBottom: 6 }}>
+              Subcategorías que se muestran en el portal
+            </label>
+            {subcategorias.length === 0 ? (
+              <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: 0 }}>No hay subcategorías creadas.</p>
+            ) : (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                {subcategorias.map((c) => {
+                  const sel = form.subcategorias_ids.map(String).includes(String(c.id))
+                  return (
+                    <label
+                      key={c.id}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer',
+                        padding: '5px 10px', borderRadius: 6, fontSize: 13,
+                        border: `1px solid ${sel ? '#0f766e' : 'var(--border)'}`,
+                        background: sel ? 'rgba(15,118,110,0.12)' : 'var(--bg-cell)',
+                        color: sel ? '#0f766e' : 'var(--text)',
+                        userSelect: 'none', transition: 'all 0.15s',
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        style={{ display: 'none' }}
+                        checked={sel}
+                        onChange={() => toggleSubcategoria(c.id)}
+                      />
+                      {sel ? '✓ ' : ''}{c.nombre}
+                    </label>
+                  )
+                })}
+              </div>
+            )}
+            <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '6px 0 0' }}>
+              Sin selección = se envían todos los productos. Los que queden fuera de las subcategorías elegidas se ocultan en el portal.
+            </p>
+          </div>
+          )}
 
           {/* Activa */}
           <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', userSelect: 'none' }}>
