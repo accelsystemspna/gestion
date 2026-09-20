@@ -11,6 +11,7 @@ import Configuracion from './pages/Configuracion/Configuracion'
 import Clientes from './pages/Clientes/Clientes'
 import Ventas from './pages/Ventas/Ventas'
 import Facturas from './pages/Facturas/Facturas'
+import Tiendas from './pages/Tiendas/Tiendas'
 
 export default function App() {
   return (
@@ -33,6 +34,7 @@ export default function App() {
             <Route path="/presupuesto" element={<Presupuesto />} />
             <Route path="/clientes" element={<Clientes />} />
             <Route path="/ventas" element={<Ventas />} />
+            <Route path="/tiendas" element={<ProtectedRoute nivel="admin"><Tiendas /></ProtectedRoute>} />
             <Route path="/facturas" element={<Facturas />} />
             <Route path="/configuracion" element={<ProtectedRoute nivel="admin"><Configuracion /></ProtectedRoute>} />
           </Route>

@@ -10,6 +10,7 @@ const NOTIF_DISMISSED_KEY = 'notif_banner_dismissed'
 
 const navItems = [
   { to: '/ventas',        label: 'Ventas',        icon: '🛒' },
+  { to: '/tiendas',       label: 'Tiendas',       icon: '🌐', minAdmin: true },
   { to: '/presupuesto',   label: 'Presupuestos',  icon: '📄' },
   { to: '/clientes',      label: 'Clientes',      icon: '👥' },
   { to: '/productos',     label: 'Productos',     icon: '📦', minAdmin: true },
@@ -57,12 +58,18 @@ export default function Layout() {
     return () => window.removeEventListener('pointerdown', handler)
   }, [])
 
-  // ── Aviso de ventas web pendientes de revisión ───────────────────────────
+  // ── Aviso de pedidos web abiertos (esperando pago o por completar) → menú Tiendas ──
   useEffect(() => {
-    const cargar = () => {
-      supabase.from('ventas').select('id', { count: 'exact', head: true })
-        .eq('estado', 'pendiente_revision')
-        .then(({ count }) => setVentasWebPendientes(count ?? 0))
+    const cargar = async () => {
+      let r = await supabase.from('ventas').select('id', { count: 'exact', head: true })
+        .not('origen_ref', 'is', null)
+        .in('estado_web', ['esperando_pago', 'procesado'])
+      // Si todavía no se corrió el SQL de Tiendas (no existe estado_web), se cuentan los pedidos por revisar.
+      if (r.error) {
+        r = await supabase.from('ventas').select('id', { count: 'exact', head: true })
+          .not('origen_ref', 'is', null).eq('estado', 'pendiente_revision')
+      }
+      setVentasWebPendientes(r.count ?? 0)
     }
     cargar()
 
@@ -150,7 +157,7 @@ export default function Layout() {
           >
             <span style={{ fontSize: 16 }}>{item.icon}</span>
             {item.label}
-            {item.to === '/ventas' && ventasWebPendientes > 0 && (
+            {item.to === '/tiendas' && ventasWebPendientes > 0 && (
               <span style={{
                 marginLeft: 'auto', background: '#f59e0b', color: '#1e1b0d',
                 borderRadius: 10, fontSize: 11, fontWeight: 800, padding: '1px 7px',
@@ -203,7 +210,7 @@ export default function Layout() {
       {/* ── Toast: nueva venta web ── */}
       {toast && (
         <div
-          onClick={() => { setToast(null); navigate('/ventas?web=1') }}
+          onClick={() => { setToast(null); navigate('/tiendas') }}
           style={{
             position: 'fixed', top: 16, right: 16, zIndex: 1000, cursor: 'pointer',
             background: '#0891b2', color: 'white', borderRadius: 10, padding: '14px 18px',
@@ -218,7 +225,7 @@ export default function Layout() {
             <div style={{ fontSize: 13, opacity: 0.95, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {toast.cliente_nombre || 'Consumidor Final'} · {fmtMoney(toast.total)}
             </div>
-            <div style={{ fontSize: 11, opacity: 0.8, marginTop: 4 }}>Tocá para revisarla →</div>
+            <div style={{ fontSize: 11, opacity: 0.8, marginTop: 4 }}>Tocá para verla en Tiendas →</div>
           </div>
           <button
             onClick={(e) => { e.stopPropagation(); setToast(null) }}

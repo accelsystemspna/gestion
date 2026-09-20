@@ -5,6 +5,8 @@ import jsPDF from 'jspdf'
 import { generarFacturaC, buildWhatsAppText } from '../../lib/facturaC'
 import { ajustarStock } from '../../lib/stock'
 import FacturaCPreview from './FacturaCPreview'
+import ImageThumb from '../../components/ImageThumb'
+import { ESTADOS_WEB, FASES_FACTURABLES, estadoWebDe } from '../../lib/pedidosWeb'
 
 const fmtDate = (d) =>
   d ? new Date(d + 'T00:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—'
@@ -67,6 +69,15 @@ export default function VentaDetalle({ ventaId, onClose, onUpdated }) {
   const [factEmitida,    setFactEmitida]    = useState(null)   // datos tras emitir
   const [descargando,    setDescargando]    = useState(false)
   const [showPreview,    setShowPreview]    = useState(false)  // preview antes de emitir
+
+  // Fotos de los productos (para reconocer qué es cada renglón)
+  const [imagenes, setImagenes] = useState({})
+  useEffect(() => {
+    const ids = [...new Set(items.map(i => i.producto_id).filter(Boolean))]
+    if (!ids.length) return
+    supabase.from('productos').select('id, imagen_url, imagen_web_url').in('id', ids)
+      .then(({ data }) => setImagenes(Object.fromEntries((data ?? []).map(p => [p.id, p.imagen_url || p.imagen_web_url || null]))))
+  }, [items])
 
   useEffect(() => {
     const h = (e) => { if (e.key === 'Escape') onClose() }
@@ -424,6 +435,10 @@ export default function VentaDetalle({ ventaId, onClose, onUpdated }) {
   const esAnulado  = venta.estado === 'anulado'
   const esPendiente = venta.estado === 'pendiente' || venta.estado === 'parcial' || venta.estado === 'pendiente_revision'
   const canal = CANAL_S[venta.canal]
+  // Un pedido de la web se factura recién cuando está armado (fase "Listo para despachar").
+  const esPedidoWeb = !!venta.origen_ref
+  const faseWeb = esPedidoWeb ? estadoWebDe(venta) : null
+  const puedeFacturar = !esPedidoWeb || FASES_FACTURABLES.includes(faseWeb)
 
   return (<>
     <div style={{ position: 'fixed', inset: 0, zIndex: 500, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
@@ -488,7 +503,13 @@ export default function VentaDetalle({ ventaId, onClose, onUpdated }) {
                 {items.map((it, i) => (
                   <tr key={it.id} style={{ borderTop: '1px solid var(--border)', background: i % 2 === 1 ? 'var(--surface)' : undefined }}>
                     <td style={{ padding: '8px 10px' }}>
-                      {it.descripcion}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        {imagenes[it.producto_id] && <ImageThumb src={imagenes[it.producto_id]} size={38} radius={5} alt={it.descripcion} />}
+                        <div style={{ minWidth: 0 }}>
+                          <div>{it.descripcion}</div>
+                          {it.sku && <div style={{ fontFamily: 'monospace', fontSize: 11, color: 'var(--text-muted)' }}>{it.sku}</div>}
+                        </div>
+                      </div>
                     </td>
                     <td style={{ padding: '8px 10px', textAlign: 'right' }}>{it.cantidad}</td>
                     <td style={{ padding: '8px 10px', textAlign: 'right', color: 'var(--text-muted)' }}>{fmtMoney(it.precio_unitario)}</td>
@@ -630,6 +651,11 @@ export default function VentaDetalle({ ventaId, onClose, onUpdated }) {
                 <div style={{ fontSize: 11, color: '#166534' }}>
                   Vto: {venta.cae_vto}
                 </div>
+              </div>
+            ) : !puedeFacturar ? (
+              <div style={{ background: 'var(--bg-muted)', border: '1px dashed var(--border)', borderRadius: 8, padding: '10px 12px', fontSize: 12, color: 'var(--text-muted)' }}>
+                Todavía no se puede facturar: el pedido está en <strong>{ESTADOS_WEB[faseWeb]?.label}</strong>.
+                Se habilita cuando esté <strong>Listo para despachar</strong> (se cambia desde Tiendas).
               </div>
             ) : (
               <button onClick={() => setShowFactModal(true)}
