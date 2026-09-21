@@ -12,6 +12,7 @@
 import { serve }        from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { sendPushToOrg } from '../_shared/webpush.ts'
+import { ESTADOS_BORRADOR, filaPedido } from '../_shared/woo.ts'
 
 function fmtMoneyAR(n: number): string {
   return '$ ' + Math.round(n).toLocaleString('es-AR')
@@ -101,6 +102,24 @@ async function moverStock(admin: any, items: { producto_id: string | null; canti
   ))
 }
 
+// Guarda el pedido tal cual lo manda WooCommerce (todos los estados) para verlo en el panel de Tiendas.
+// Es "mejor esfuerzo": si la tabla todavía no existe (supabase_woo_panel.sql) o falla algo, no afecta a las ventas.
+async function guardarSnapshot(admin: any, tienda: any, order: any, topic: string) {
+  try {
+    if (ESTADOS_BORRADOR.has(order.status)) return
+    if (topic === 'order.deleted') {
+      // Al borrar un pedido WooCommerce solo manda su id.
+      await admin.from('pedidos_web').update({ estado: 'trash', sincronizado_en: new Date().toISOString() })
+        .eq('tienda_id', tienda.id).eq('woo_id', order.id)
+      return
+    }
+    const { error } = await admin.from('pedidos_web').upsert(filaPedido(order, { id: tienda.id, user_id: tienda.user_id }), { onConflict: 'tienda_id,woo_id' })
+    if (error && !/relation|does not exist|schema cache/i.test(error.message)) console.warn('[woo-order-webhook] snapshot:', error.message)
+  } catch (err) {
+    console.warn('[woo-order-webhook] snapshot:', err)
+  }
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
   if (req.method !== 'POST') return json({ error: 'Método no permitido' }, 405)
@@ -136,6 +155,17 @@ serve(async (req) => {
   let order: any
   try { order = JSON.parse(rawBody) } catch { return json({ ok: true, skipped: 'ping' }) }
   if (!order?.id) return json({ ok: true, skipped: 'sin order id' })
+
+  const topic       = (req.headers.get('x-wc-webhook-topic') || '').toLowerCase()
+  // Las importaciones históricas desde el panel (x-gestion-backfill) no mandan notificaciones push.
+  const esBackfill  = req.headers.get('x-gestion-backfill') === '1'
+  await guardarSnapshot(admin, tienda, order, topic)
+  if (!esBackfill) {
+    // Sirve para mostrar en el panel si la tienda está mandando avisos (best-effort).
+    try { await admin.from('tiendas').update({ ultimo_webhook_en: new Date().toISOString() }).eq('id', tienda.id) } catch { /* columna aún no creada */ }
+  }
+  // Pedido eliminado en WooCommerce (papelera): para las ventas equivale a cancelarlo.
+  if (topic === 'order.deleted') order = { ...order, status: 'cancelled' }
 
   const estadoWeb = ESTADO_WEB[order.status]
   if (!estadoWeb) {
@@ -192,7 +222,7 @@ serve(async (req) => {
       await moverStock(admin, its ?? [], 1)
     }
 
-    if (!mismoEstado && actual === 'esperando_pago' && (estadoWeb === 'en_preparacion' || estadoWeb === 'completado')) {
+    if (!esBackfill && !mismoEstado && actual === 'esperando_pago' && (estadoWeb === 'en_preparacion' || estadoWeb === 'completado')) {
       try {
         await sendPushToOrg(admin, tienda.user_id, {
           title: '✅ Pago acreditado',
@@ -218,9 +248,13 @@ serve(async (req) => {
   const nombreCliente = [order.billing?.first_name, order.billing?.last_name]
     .filter(Boolean).join(' ').trim() || 'Consumidor Final'
 
-  const now   = new Date()
-  const fecha = now.toISOString().slice(0, 10)
-  const hora  = now.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })
+  // Fecha y hora reales del pedido (así una importación histórica no queda con la fecha de hoy),
+  // en hora argentina. WooCommerce da date_created_gmt sin zona horaria.
+  const gmt   = typeof order.date_created_gmt === 'string' && order.date_created_gmt ? order.date_created_gmt : null
+  const creado = gmt ? new Date(/[zZ]|[+-]\d\d:?\d\d$/.test(gmt) ? gmt : gmt + 'Z') : new Date()
+  const now   = isNaN(creado.getTime()) ? new Date() : creado
+  const fecha = now.toLocaleDateString('en-CA', { timeZone: 'America/Argentina/Buenos_Aires' })
+  const hora  = now.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Argentina/Buenos_Aires' })
   const total = Number(order.total) || 0
 
   const ventaPayload = {
@@ -238,6 +272,7 @@ serve(async (req) => {
     estado:               'pendiente_revision',
     canal:                esMayorista ? 'web_mayorista' : 'web_minorista',
     origen_ref:           origenRef,
+    created_at:           now.toISOString(),
     notas:                (esMayorista ? `Pedido mayorista ${order.number ?? order.id}` : `Pedido WooCommerce #${order.id}`) + ` — ${tienda.nombre}` + (esPendiente ? ' (pendiente de pago)' : ''),
     org_id:               tienda.user_id,
   }
@@ -323,7 +358,7 @@ serve(async (req) => {
   }
 
   try {
-    await sendPushToOrg(admin, tienda.user_id, {
+    if (!esBackfill) await sendPushToOrg(admin, tienda.user_id, {
       title: esPendiente
         ? '⏳ Pedido pendiente de pago'
         : esMayorista ? '🏭 Nuevo pedido mayorista' : '💰 Nueva venta desde la web',

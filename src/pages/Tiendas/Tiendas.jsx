@@ -4,6 +4,7 @@ import { useAuth } from '../../lib/AuthContext'
 import { fmtMoney } from '../../lib/format'
 import VentaDetalle from '../Ventas/VentaDetalle'
 import ImageThumb from '../../components/ImageThumb'
+import WooPanel from './woo/WooPanel'
 import {
   ESTADOS_WEB, FASES, estadoWebDe, ordenWooId, perteneceATienda,
   cambiarEstadoWeb, cargarItemsDeVentas, cargarItemsPedidos, estadisticasClientes, guardarComoCliente,
@@ -424,17 +425,17 @@ export default function Tiendas() {
           </div>
 
           {/* KPIs */}
-          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 16 }}>
+          {tab !== 'woo' && <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 16 }}>
             <Kpi label="Esperando pago" value={kpi.esperando} sub={kpi.esperando ? fmtMoney(kpi.montoEsperando) : 'nada pendiente'} color={kpi.esperando ? '#b45309' : undefined} />
             <Kpi label="En preparación" value={kpi.enPrep} sub="pagados, por armar" color="#0e7490" />
             <Kpi label="Listos para despachar" value={kpi.listos} sub="para facturar y enviar" color="#6d28d9" />
             <Kpi label="Pedidos del mes" value={kpi.pedidosMes} />
             <Kpi label="Facturación del mes" value={fmtMoney(kpi.factMes)} />
-          </div>
+          </div>}
 
           {/* Pestañas */}
           <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', marginBottom: 14 }}>
-            {[['pedidos', 'Pedidos'], ['clientes', 'Clientes']].map(([id, label]) => (
+            {[['pedidos', 'Pedidos'], ['clientes', 'Clientes'], ['woo', 'Panel WooCommerce']].map(([id, label]) => (
               <button key={id} onClick={() => setTab(id)} style={{
                 padding: '9px 20px', border: 'none', background: 'none', cursor: 'pointer', fontSize: 14,
                 fontWeight: tab === id ? 600 : 400, color: tab === id ? 'var(--primary)' : 'var(--text-muted)',
@@ -444,7 +445,7 @@ export default function Tiendas() {
           </div>
 
           {/* Filtros */}
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginBottom: 12 }}>
+          {tab !== 'woo' && <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginBottom: 12 }}>
             {tab === 'pedidos' && [['todos', 'Todos'], ...Object.entries(ESTADOS_WEB).map(([k, v]) => [k, v.label])].map(([k, label]) => (
               <button key={k} onClick={() => setFiltro(k)} className="btn btn-sm" style={{
                 background: filtro === k ? 'var(--primary)' : undefined, color: filtro === k ? '#fff' : undefined,
@@ -467,7 +468,12 @@ export default function Tiendas() {
                 </button>
               )
             })()}
-          </div>
+          </div>}
+
+          {/* ── PANEL WOOCOMMERCE ─────────────────────────────────────── */}
+          {tab === 'woo' && (
+            <WooPanel tiendas={tiendas} tiendaSelId={sel} ventas={ventas} onCambio={() => cargar(true)} />
+          )}
 
           {/* ── PEDIDOS ─────────────────────────────────────────────────── */}
           {tab === 'pedidos' && (
