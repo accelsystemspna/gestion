@@ -5,6 +5,8 @@ import { fmtMoney } from '../../lib/format'
 import VentaDetalle from '../Ventas/VentaDetalle'
 import ImageThumb from '../../components/ImageThumb'
 import WooPanel from './woo/WooPanel'
+import ClientesPortal from './ClientesPortal'
+import { portalApi, imprimirEtiqueta, ventanaPreparando, ventanaError } from '../../lib/portalApi'
 import {
   ESTADOS_WEB, FASES, estadoWebDe, ordenWooId, perteneceATienda,
   cambiarEstadoWeb, cargarItemsDeVentas, cargarItemsPedidos, estadisticasClientes, guardarComoCliente,
@@ -22,7 +24,7 @@ const FORMA_LABEL = {
   transferencia: 'Transferencia', cuenta_corriente: 'Cta. corriente',
 }
 
-const COLUMNAS_BASE = 'id, numero, fecha, hora, created_at, cliente_id, cliente_nombre, cliente_email, cliente_telefono, cliente_direccion, total, forma_pago, estado, estado_web, origen_estado, origen_pago, origen_ref, tienda_id, factura_emitida, notas'
+const COLUMNAS_BASE = 'id, numero, canal, fecha, hora, created_at, cliente_id, cliente_nombre, cliente_email, cliente_telefono, cliente_direccion, total, forma_pago, estado, estado_web, origen_estado, origen_pago, origen_ref, tienda_id, factura_emitida, notas'
 // Datos del pedido del portal mayorista (supabase_mayorista_pedidos.sql)
 const COLUMNAS = COLUMNAS_BASE + ', origen_numero, origen_logistica, origen_tracking, origen_tracking_url, origen_estado_portal, cliente_dni, cliente_empresa, cliente_direccion_envio, contacto_preferido'
 
@@ -54,12 +56,18 @@ const SIGUIENTE = {
 }
 
 // Foto + código + cantidad de cada producto del pedido
-function ItemsPedido({ items, grande = false }) {
+function ItemsPedido({ items, grande = false, onProduccion = null, ocupado = false }) {
   if (!items) return <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Cargando productos…</div>
   if (!items.length) return <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Este pedido no tiene productos cargados.</div>
   const foto = grande ? 76 : 48
+  const sinIndice = !!onProduccion && items.some(i => i.indice == null)
   return (
     <div style={{ display: 'flex', flexDirection: grande ? 'column' : 'row', gap: grande ? 10 : 8, flexWrap: 'wrap' }}>
+      {sinIndice && (
+        <div style={{ fontSize: 12, color: '#78350f', background: '#fef3c7', borderRadius: 8, padding: '6px 10px', width: '100%' }}>
+          Para cambiar la fabricación de este pedido tocá primero «Actualizar desde el portal».
+        </div>
+      )}
       {items.map(it => (
         <div key={it.id} style={{
           display: 'flex', gap: 10, alignItems: 'center',
@@ -84,6 +92,14 @@ function ItemsPedido({ items, grande = false }) {
               )}
             </div>
             <div style={{ fontSize: 12, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: grande ? 'normal' : 'nowrap', maxWidth: grande ? 'none' : 170 }}>{it.descripcion}</div>
+            {onProduccion && it.indice != null && (
+              <select className="input" style={{ marginTop: 5, padding: '3px 8px', fontSize: 12, width: 'auto' }}
+                disabled={ocupado} value={it.produccion || ''}
+                onChange={e => e.target.value && onProduccion(it.indice, e.target.value)}>
+                {!it.produccion && <option value="">Fabricación…</option>}
+                {Object.entries(ESTADOS_PRODUCCION).map(([k, p]) => <option key={k} value={k}>{p.label}</option>)}
+              </select>
+            )}
           </div>
           <div style={{ fontWeight: 800, fontSize: grande ? 22 : 16, color: 'var(--primary)', flexShrink: 0 }}>×{it.cantidad}</div>
         </div>
@@ -127,6 +143,9 @@ export default function Tiendas() {
   const [despachoId, setDespachoId] = useState(null)      // pedido del portal que se está despachando
   const [trackingTxt, setTrackingTxt] = useState('')
   const [notificarCli, setNotificarCli] = useState(true)
+  const [portalOcupado, setPortalOcupado] = useState(null)  // acción en curso sobre un pedido del portal
+  const [edicionTrack, setEdicionTrack]   = useState({ id: null, texto: '', avisar: false })  // seguimiento en edición
+  const [pendientesPortal, setPendientesPortal] = useState(0) // clientes del portal esperando aprobación
 
   const cargar = async (silencioso = false) => {
     if (!silencioso) setLoading(true)
@@ -179,6 +198,22 @@ export default function Tiendas() {
 
   const tiendaSel = sel === 'todas' ? null : tiendas.find(t => String(t.id) === String(sel))
   const tiendaDeVenta = (v) => tiendas.find(t => perteneceATienda(v, t)) || null
+  // Tienda mayorista con la que se trabajan los clientes del portal: la elegida, o la primera activa
+  const tiendaPortal = tiendaSel?.tipo === 'mayorista' ? tiendaSel : (tiendas.find(t => t.tipo === 'mayorista' && t.activa !== false) || null)
+
+  // Aviso de clientes del portal esperando aprobación (mejor esfuerzo: si falla, no se muestra nada)
+  useEffect(() => {
+    if (!tiendaPortal) return
+    let vivo = true
+    portalApi('leads', { tienda_id: tiendaPortal.id, status: 'pendiente' }).then(r => {
+      if (vivo && r.ok) setPendientesPortal(Number(r.conteos?.pendiente ?? r.leads?.length ?? 0))
+    })
+    return () => { vivo = false }
+  }, [tiendaPortal?.id])   // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Seguimiento que se está editando en el detalle: arranca con el que ya tiene el pedido
+  const textoTrack  = (v) => (edicionTrack.id === v.id ? edicionTrack.texto : (v.origen_tracking || ''))
+  const avisarTrack = (v) => edicionTrack.id === v.id && edicionTrack.avisar
 
   const ventasSel = useMemo(
     () => (tiendaSel ? ventas.filter(v => perteneceATienda(v, tiendaSel)) : ventas),
@@ -256,12 +291,80 @@ export default function Tiendas() {
     if (ok) setDespachoId(null)
   }
 
+  // ── Acciones sobre un pedido del portal mayorista (todo pasa por la función portal-api) ──
+  // Cada una muestra el resultado en el cartel y refresca la lista. Si el portal falla no se cambia nada.
+  const accionPortal = async (venta, clave, accion, datos, textoOk) => {
+    setPortalOcupado(clave)
+    setMsg(null)
+    const r = await portalApi(accion, { venta_id: venta.id, ...datos })
+    setPortalOcupado(null)
+    if (!r.ok) { setMsg({ tipo: 'error', texto: r.error }); return null }
+    if (textoOk) setMsg({ tipo: 'ok', texto: typeof textoOk === 'function' ? textoOk(r) : textoOk })
+    cargar(true)
+    setVersionItems(n => n + 1)
+    return r
+  }
+
+  const cambiarFabricacion = (venta, item, status) =>
+    accionPortal(venta, 'fab', 'order-item-status', { item: String(item), status }, (r) => {
+      const fase = r.estado_web && r.estado_web !== estadoWebDe(venta) ? ` El pedido pasó a «${ESTADOS_WEB[r.estado_web]?.label || r.estado_web}».` : ''
+      return 'Fabricación actualizada en el portal.' + fase
+    })
+
+  const avisarCliente = (venta) =>
+    accionPortal(venta, 'aviso', 'order-notify', {}, (r) => {
+      const partes = []
+      partes.push(r.email_sent ? 'Se envió el email' : 'No se pudo enviar el email')
+      partes.push(r.wa_sent ? 'se envió el WhatsApp' : 'no se envió el WhatsApp')
+      return partes.join(' y ') + '.'
+    }).then(r => {
+      // Si el WhatsApp no salió solo, se abre el link para mandarlo a mano
+      if (r && !r.wa_sent && r.wa_link) window.open(r.wa_link, '_blank', 'noopener')
+    })
+
+  const guardarSeguimiento = (venta) =>
+    accionPortal(venta, 'track', 'order-tracking', { tracking: textoTrack(venta).trim(), notificar: avisarTrack(venta) },
+      (r) => (r.tracking ? `Seguimiento guardado: ${r.tracking}.` : 'Se borró el seguimiento.') +
+             (avisarTrack(venta) ? (r.email_sent ? ' Se avisó al cliente por email.' : ' No se pudo avisar al cliente.') : ''))
+
+  const actualizarDesdePortal = (venta) =>
+    accionPortal(venta, 'sync', 'order', {}, 'Pedido actualizado con los datos del portal.')
+
+  const imprimirEtiquetaPedido = async (venta) => {
+    // La ventana se abre en el clic (si no, el navegador la bloquea) y se completa cuando llegan los datos.
+    // Si el portal falla la ventana NO se cierra: muestra el motivo (y el cartel de la pantalla también).
+    const win = window.open('', '_blank')
+    if (!win) { setMsg({ tipo: 'error', texto: 'El navegador bloqueó la ventana de impresión. Permitila para este sitio y probá de nuevo.' }); return }
+    ventanaPreparando(win)
+    setPortalOcupado('etiqueta')
+    setMsg(null)
+    let r
+    try {
+      r = await portalApi('order-label', { venta_id: venta.id })
+    } catch (err) {
+      r = { ok: false, error: err.message }
+    }
+    setPortalOcupado(null)
+    if (!r.ok || !r.label) {
+      const motivo = r.error || 'El portal no devolvió los datos de la etiqueta.'
+      ventanaError(win, motivo)
+      setMsg({ tipo: 'error', texto: 'No se pudo preparar la etiqueta: ' + motivo })
+      return
+    }
+    imprimirEtiqueta(r.label, win)
+  }
+
   // ── Eliminar pedidos cancelados (uno o todos los de la vista) ─────────────
   const eliminarCancelados = async (lista, pregunta) => {
     if (!lista.length || !window.confirm(pregunta)) return
     setMsg(null)
     const r = await eliminarPedidosCancelados(lista)
     if (r.error) setMsg({ tipo: 'error', texto: `No se pudo eliminar todo (${r.eliminadas} eliminados). ${r.error}` })
+    else if (r.bloqueadas?.length) setMsg({
+      tipo: 'error',
+      texto: `${r.eliminadas} eliminado${r.eliminadas !== 1 ? 's' : ''}. ${r.bloqueadas.length} NO se eliminó porque el portal falló: ${r.bloqueadas[0].error}` +
+             (r.omitidas ? ` (${r.omitidas} más no se eliminaron porque ya tienen factura.)` : ''),
+    })
     else setMsg({
       tipo: 'ok',
       texto: `${r.eliminadas} pedido${r.eliminadas !== 1 ? 's' : ''} cancelado${r.eliminadas !== 1 ? 's' : ''} eliminado${r.eliminadas !== 1 ? 's' : ''}.` +
@@ -458,7 +561,7 @@ export default function Tiendas() {
           </div>
 
           {/* KPIs */}
-          {tab !== 'woo' && <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 16 }}>
+          {tab !== 'woo' && tab !== 'portal' && <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 16 }}>
             <Kpi label="Esperando pago" value={kpi.esperando} sub={kpi.esperando ? fmtMoney(kpi.montoEsperando) : 'nada pendiente'} color={kpi.esperando ? '#b45309' : undefined} />
             <Kpi label="En preparación" value={kpi.enPrep} sub="pagados, por armar" color="#0e7490" />
             <Kpi label="Listos para despachar" value={kpi.listos} sub="para facturar y enviar" color="#6d28d9" />
@@ -468,17 +571,19 @@ export default function Tiendas() {
 
           {/* Pestañas */}
           <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', marginBottom: 14 }}>
-            {[['pedidos', 'Pedidos'], ['clientes', 'Clientes'], ['woo', 'Panel WooCommerce']].map(([id, label]) => (
+            {[['pedidos', 'Pedidos'], ['clientes', 'Clientes'], ...(tiendaPortal ? [['portal', 'Clientes del portal']] : []), ['woo', 'Panel WooCommerce']].map(([id, label]) => (
               <button key={id} onClick={() => setTab(id)} style={{
                 padding: '9px 20px', border: 'none', background: 'none', cursor: 'pointer', fontSize: 14,
                 fontWeight: tab === id ? 600 : 400, color: tab === id ? 'var(--primary)' : 'var(--text-muted)',
                 borderBottom: tab === id ? '2px solid var(--primary)' : '2px solid transparent', marginBottom: -1,
-              }}>{label}</button>
+              }}>{label}{id === 'portal' && pendientesPortal > 0 && (
+                <span style={{ marginLeft: 6, background: '#dc2626', color: '#fff', borderRadius: 999, fontSize: 11, fontWeight: 700, padding: '1px 7px' }}>{pendientesPortal}</span>
+              )}</button>
             ))}
           </div>
 
           {/* Filtros */}
-          {tab !== 'woo' && <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginBottom: 12 }}>
+          {tab !== 'woo' && tab !== 'portal' && <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginBottom: 12 }}>
             {tab === 'pedidos' && [['todos', 'Todos'], ...Object.entries(ESTADOS_WEB).map(([k, v]) => [k, v.label])].map(([k, label]) => (
               <button key={k} onClick={() => setFiltro(k)} className="btn btn-sm" style={{
                 background: filtro === k ? 'var(--primary)' : undefined, color: filtro === k ? '#fff' : undefined,
@@ -502,6 +607,11 @@ export default function Tiendas() {
               )
             })()}
           </div>}
+
+          {/* ── CLIENTES DEL PORTAL MAYORISTA ─────────────────────────── */}
+          {tab === 'portal' && tiendaPortal && (
+            <ClientesPortal tienda={tiendaPortal} onPendientes={setPendientesPortal} />
+          )}
 
           {/* ── PANEL WOOCOMMERCE ─────────────────────────────────────── */}
           {tab === 'woo' && (
@@ -759,7 +869,19 @@ export default function Tiendas() {
                       </div>
                     )
                   })()}
-                  <ItemsPedido items={itemsPedido[v.id]} grande />
+                  {esMay && e !== 'cancelado' && e !== 'completado' && (itemsPedido[v.id]?.length > 0) && (
+                    <div style={{ marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
+                      <span style={{ color: 'var(--text-muted)' }}>Marcar todos como</span>
+                      <select className="input" style={{ padding: '4px 8px', fontSize: 13, width: 'auto' }} value=""
+                        disabled={!!portalOcupado}
+                        onChange={ev => ev.target.value && cambiarFabricacion(v, 'all', ev.target.value)}>
+                        <option value="">Elegir…</option>
+                        {Object.entries(ESTADOS_PRODUCCION).map(([k, p]) => <option key={k} value={k}>{p.label}</option>)}
+                      </select>
+                    </div>
+                  )}
+                  <ItemsPedido items={itemsPedido[v.id]} grande ocupado={!!portalOcupado}
+                    onProduccion={esMay && e !== 'cancelado' && e !== 'completado' ? (indice, st) => cambiarFabricacion(v, indice, st) : null} />
                 </div>
 
                 {/* Comprador, pago y (portal mayorista) entrega */}
@@ -800,6 +922,22 @@ export default function Tiendas() {
                                 : <strong style={{ color: 'var(--text)' }}>{v.origen_tracking}</strong>)
                             : '—'}
                         </div>
+                        {e !== 'cancelado' && (
+                          <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                            <div style={{ display: 'flex', gap: 6 }}>
+                              <input className="input" style={{ flex: 1, padding: '5px 8px', fontSize: 13 }} placeholder="N° de seguimiento"
+                                value={textoTrack(v)} onChange={ev => setEdicionTrack({ id: v.id, texto: ev.target.value, avisar: avisarTrack(v) })} />
+                              <button className="btn btn-sm" disabled={!!portalOcupado || textoTrack(v).trim() === (v.origen_tracking || '')}
+                                onClick={() => guardarSeguimiento(v)}>
+                                {portalOcupado === 'track' ? '…' : 'Guardar'}
+                              </button>
+                            </div>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, cursor: 'pointer', userSelect: 'none' }}>
+                              <input type="checkbox" checked={avisarTrack(v)} onChange={ev => setEdicionTrack({ id: v.id, texto: textoTrack(v), avisar: ev.target.checked })} />
+                              Avisar al cliente
+                            </label>
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}
@@ -816,6 +954,21 @@ export default function Tiendas() {
 
               <div className="modal-footer" style={{ flexWrap: 'wrap' }}>
                 {botonesPedido(v)}
+                {esMay && (
+                  <>
+                    <button className="btn btn-sm" disabled={!!portalOcupado} onClick={() => imprimirEtiquetaPedido(v)}>
+                      {portalOcupado === 'etiqueta' ? '…' : '🏷️ Imprimir etiqueta'}
+                    </button>
+                    {e !== 'cancelado' && (
+                      <button className="btn btn-sm" disabled={!!portalOcupado} onClick={() => avisarCliente(v)}>
+                        {portalOcupado === 'aviso' ? '…' : '📣 Avisar al cliente'}
+                      </button>
+                    )}
+                    <button className="btn btn-sm" disabled={!!portalOcupado} onClick={() => actualizarDesdePortal(v)}>
+                      {portalOcupado === 'sync' ? '…' : '🔄 Actualizar desde el portal'}
+                    </button>
+                  </>
+                )}
                 <button className="btn btn-sm" onClick={() => setDetalleId(v.id)}>{v.factura_emitida ? 'Ver factura' : 'Ver venta'}</button>
                 <button className="btn btn-sm" onClick={() => setPedidoId(null)}>Cerrar</button>
               </div>

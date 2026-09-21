@@ -13,6 +13,7 @@ import { serve }        from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { sendPushToOrg } from '../_shared/webpush.ts'
 import { ESTADOS_BORRADOR, filaPedido } from '../_shared/woo.ts'
+import { ajustarFasePorProduccion } from '../_shared/produccion.ts'
 
 function fmtMoneyAR(n: number): string {
   return '$ ' + Math.round(n).toLocaleString('es-AR')
@@ -259,13 +260,16 @@ serve(async (req) => {
     if (cancelar) cambios.estado = 'anulado'
 
     // Estado de fabricación por renglón (solo portal mayorista).
-    const prodCambiados = await aplicarProduccion(admin, existente.id, order.line_items ?? [], produccionDe(order))
+    const infoProd = produccionDe(order)
+    const prodCambiados = await aplicarProduccion(admin, existente.id, order.line_items ?? [], infoProd)
 
     if (!Object.keys(cambios).length) {
       if (!prodCambiados) return json({ ok: true, ya_existia: true, venta_id: existente.id })
       // Solo cambió la fabricación: se "toca" la venta (mismo valor) para que Tiendas se entere en tiempo real.
       await admin.from('ventas').update({ estado_web: existente.estado_web }).eq('id', existente.id)
-      return json({ ok: true, actualizado: true, venta_id: existente.id, estado_web: actual })
+      // Si con esto quedaron todos los productos listos, el pedido pasa a "Listo para despachar" (y al revés).
+      const fase = await ajustarFasePorProduccion(admin, existente.id)
+      return json({ ok: true, actualizado: true, venta_id: existente.id, estado_web: fase ?? actual })
     }
 
     let { error: errUpd } = await admin.from('ventas').update(cambios).eq('id', existente.id)
@@ -294,7 +298,8 @@ serve(async (req) => {
         console.warn('[woo-order-webhook] error al enviar push:', err)
       }
     }
-    return json({ ok: true, actualizado: true, venta_id: existente.id, estado_web: mismoEstado ? actual : estadoWeb })
+    const fase = infoProd.length && estadoWeb !== 'cancelado' ? await ajustarFasePorProduccion(admin, existente.id) : null
+    return json({ ok: true, actualizado: true, venta_id: existente.id, estado_web: fase ?? (mismoEstado ? actual : estadoWeb) })
   }
 
   if (!ESTADOS_NUEVOS.has(order.status)) {

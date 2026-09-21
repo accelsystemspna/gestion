@@ -1,5 +1,6 @@
 import { supabase } from './supabase'
 import { ajustarStock } from './stock'
+import { portalApi } from './portalApi'
 
 // Fases de un pedido de la web. En WooCommerce "en preparación" y "listo para
 // despachar" son el mismo estado (processing): la diferencia solo existe acá.
@@ -200,6 +201,7 @@ export async function cargarItemsPedidos(ventaIds) {
       cantidad: Number(it.cantidad) || 0,
       imagen: p?.imagen_url || p?.imagen_web_url || null,
       produccion: it.produccion || null,
+      indice: it.origen_indice ?? null,
     })
   }
   return porVenta
@@ -302,12 +304,24 @@ export async function guardarComoCliente({ grupo, orgId }) {
  * Elimina definitivamente pedidos web CANCELADOS. Los que ya tienen factura
  * emitida no se tocan (una factura no se borra). Si alguno quedó sin anular,
  * primero se le devuelve el stock.
- * @returns {Promise<{ eliminadas: number, omitidas: number, error?: string }>}
+ * Los pedidos del portal mayorista se eliminan también en el portal (order-delete): si el
+ * portal falla, ese pedido NO se borra acá y queda en `bloqueadas` con el motivo.
+ * @returns {Promise<{ eliminadas: number, omitidas: number, bloqueadas: { venta: object, error: string }[], error?: string }>}
  */
 export async function eliminarPedidosCancelados(ventas) {
-  const elegibles = ventas.filter(v => estadoWebDe(v) === 'cancelado' && !v.factura_emitida)
-  const omitidas = ventas.length - elegibles.length
+  const posibles = ventas.filter(v => estadoWebDe(v) === 'cancelado' && !v.factura_emitida)
+  const omitidas = ventas.length - posibles.length
   let eliminadas = 0
+
+  const elegibles = []
+  const bloqueadas = []
+  for (const v of posibles) {
+    if (v.canal === 'web_mayorista') {
+      const r = await portalApi('order-delete', { venta_id: v.id })
+      if (!r.ok) { bloqueadas.push({ venta: v, error: r.error }); continue }
+    }
+    elegibles.push(v)
+  }
 
   for (let i = 0; i < elegibles.length; i += 100) {
     const tanda = elegibles.slice(i, i + 100)
@@ -321,10 +335,10 @@ export async function eliminarPedidosCancelados(ventas) {
     }
 
     const { error: errItems } = await supabase.from('venta_items').delete().in('venta_id', ids)
-    if (errItems) return { eliminadas, omitidas, error: errItems.message }
+    if (errItems) return { eliminadas, omitidas, bloqueadas, error: errItems.message }
     const { error } = await supabase.from('ventas').delete().in('id', ids)
-    if (error) return { eliminadas, omitidas, error: error.message }
+    if (error) return { eliminadas, omitidas, bloqueadas, error: error.message }
     eliminadas += ids.length
   }
-  return { eliminadas, omitidas }
+  return { eliminadas, omitidas, bloqueadas }
 }
