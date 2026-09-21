@@ -85,6 +85,58 @@ function camposPortalDe(order: any): Record<string, string> {
   return out
 }
 
+// Estado de fabricación de cada renglón (solo lo manda el portal mayorista): meta "produccion" con
+// {"0":"a_fabricar","1":"listo"} y, en cada line_item, meta "indice". WooCommerce minorista no trae nada
+// de esto → devuelve [] y no se toca nada.
+const ESTADOS_PRODUCCION = new Set(['a_fabricar', 'programado', 'listo', 'en_stock'])
+type InfoProd = { indice: number | null; produccion: string | null }
+function produccionDe(order: any): InfoProd[] {
+  let mapa: Record<string, unknown> = {}
+  const metaProd = (order.meta_data ?? []).find((m: any) => m?.key === 'produccion')?.value
+  if (metaProd) {
+    try { mapa = typeof metaProd === 'string' ? JSON.parse(metaProd) : metaProd } catch { mapa = {} }
+  }
+  const lineas: any[] = order.line_items ?? []
+  const info = lineas.map((li, pos) => {
+    const raw = (li?.meta_data ?? []).find((m: any) => m?.key === 'indice')?.value
+    const indice = raw === undefined || raw === null || raw === '' || isNaN(Number(raw)) ? null : Number(raw)
+    const est = String((mapa && (mapa as any)[String(indice ?? pos)]) ?? '')
+    return { indice, produccion: ESTADOS_PRODUCCION.has(est) ? est : null }
+  })
+  return info.some((i) => i.indice !== null || i.produccion) ? info : []
+}
+
+// Actualiza el estado de fabricación de los renglones de una venta ya existente.
+// Mejor esfuerzo: si todavía no se corrió supabase_mayorista_produccion.sql, no hace nada.
+async function aplicarProduccion(admin: any, ventaId: string, lineItems: any[], info: InfoProd[]): Promise<number> {
+  if (!info.length) return 0
+  try {
+    const { data: filas, error } = await admin.from('venta_items').select('id, sku, origen_indice, produccion').eq('venta_id', ventaId)
+    if (error || !filas?.length) return 0
+    const usadas = new Set<string>()
+    let cambiados = 0
+    for (let pos = 0; pos < lineItems.length; pos++) {
+      const { indice, produccion } = info[pos] ?? { indice: null, produccion: null }
+      if (indice === null && !produccion) continue
+      let fila = indice !== null ? filas.find((f: any) => f.origen_indice === indice && !usadas.has(f.id)) : null
+      // Pedidos viejos sin índice guardado: se empareja por SKU.
+      if (!fila && lineItems[pos]?.sku) fila = filas.find((f: any) => f.origen_indice == null && f.sku === lineItems[pos].sku && !usadas.has(f.id))
+      if (!fila) continue
+      usadas.add(fila.id)
+      const cambios: Record<string, unknown> = {}
+      if (indice !== null && fila.origen_indice !== indice) cambios.origen_indice = indice
+      if (produccion && fila.produccion !== produccion) cambios.produccion = produccion
+      if (!Object.keys(cambios).length) continue
+      const { error: e } = await admin.from('venta_items').update(cambios).eq('id', fila.id)
+      if (!e) cambiados++
+    }
+    return cambiados
+  } catch (err) {
+    console.warn('[woo-order-webhook] producción:', err)
+    return 0
+  }
+}
+
 // Suma (signo=1) o resta (signo=-1) unidades al stock de los productos indicados.
 async function moverStock(admin: any, items: { producto_id: string | null; cantidad: number }[], signo: 1 | -1) {
   const porProducto: Record<string, number> = {}
@@ -206,7 +258,15 @@ serve(async (req) => {
     const cancelar = !mismoEstado && estadoWeb === 'cancelado' && existente.estado !== 'anulado' && !existente.factura_emitida
     if (cancelar) cambios.estado = 'anulado'
 
-    if (!Object.keys(cambios).length) return json({ ok: true, ya_existia: true, venta_id: existente.id })
+    // Estado de fabricación por renglón (solo portal mayorista).
+    const prodCambiados = await aplicarProduccion(admin, existente.id, order.line_items ?? [], produccionDe(order))
+
+    if (!Object.keys(cambios).length) {
+      if (!prodCambiados) return json({ ok: true, ya_existia: true, venta_id: existente.id })
+      // Solo cambió la fabricación: se "toca" la venta (mismo valor) para que Tiendas se entere en tiempo real.
+      await admin.from('ventas').update({ estado_web: existente.estado_web }).eq('id', existente.id)
+      return json({ ok: true, actualizado: true, venta_id: existente.id, estado_web: actual })
+    }
 
     let { error: errUpd } = await admin.from('ventas').update(cambios).eq('id', existente.id)
     if (errUpd && /column|schema cache/i.test(errUpd.message)) {
@@ -307,6 +367,7 @@ serve(async (req) => {
     : { data: [] as any[] }
   const prodBySku = Object.fromEntries((productos ?? []).map((p: any) => [p.sku, p.id]))
 
+  const infoProd = produccionDe(order)
   const itemsPayload = lineItems.map((li) => {
     const productoId = li.sku ? prodBySku[li.sku] ?? null : null
     const cantidad   = Number(li.quantity) || 1
@@ -325,7 +386,22 @@ serve(async (req) => {
   })
 
   if (itemsPayload.length) {
-    await Promise.all(itemsPayload.map((ip) => admin.from('venta_items').insert(ip)))
+    await Promise.all(itemsPayload.map(async (ip, pos) => {
+      // Portal mayorista: se guarda el índice del renglón y su estado de fabricación.
+      // Si esas columnas todavía no existen se inserta igual, sin ellas.
+      const prod = infoProd[pos]
+      if (prod) {
+        const extra: Record<string, unknown> = {}
+        if (prod.indice !== null) extra.origen_indice = prod.indice
+        if (prod.produccion) extra.produccion = prod.produccion
+        if (Object.keys(extra).length) {
+          const { error } = await admin.from('venta_items').insert({ ...ip, ...extra })
+          if (!error) return
+          if (!/column|schema cache/i.test(error.message)) console.warn('[woo-order-webhook] item:', error.message)
+        }
+      }
+      await admin.from('venta_items').insert(ip)
+    }))
   }
 
   // Descontar stock de los productos matcheados (informativo, no bloquea nada)

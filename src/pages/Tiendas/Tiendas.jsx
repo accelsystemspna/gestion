@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../lib/AuthContext'
 import { fmtMoney } from '../../lib/format'
@@ -8,7 +8,7 @@ import WooPanel from './woo/WooPanel'
 import {
   ESTADOS_WEB, FASES, estadoWebDe, ordenWooId, perteneceATienda,
   cambiarEstadoWeb, cargarItemsDeVentas, cargarItemsPedidos, estadisticasClientes, guardarComoCliente,
-  eliminarPedidosCancelados,
+  eliminarPedidosCancelados, ESTADOS_PRODUCCION, resumenProduccion,
 } from '../../lib/pedidosWeb'
 
 const TIPOS = {
@@ -75,7 +75,14 @@ function ItemsPedido({ items, grande = false }) {
             </div>
           )}
           <div style={{ minWidth: 0, flex: 1 }}>
-            <div style={{ fontFamily: 'monospace', fontWeight: 800, fontSize: grande ? 15 : 13 }}>{it.codigo || 'Sin código'}</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+              <span style={{ fontFamily: 'monospace', fontWeight: 800, fontSize: grande ? 15 : 13 }}>{it.codigo || 'Sin código'}</span>
+              {ESTADOS_PRODUCCION[it.produccion] && (
+                <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 7px', borderRadius: 10, color: ESTADOS_PRODUCCION[it.produccion].color, background: ESTADOS_PRODUCCION[it.produccion].bg }}>
+                  {ESTADOS_PRODUCCION[it.produccion].label}
+                </span>
+              )}
+            </div>
             <div style={{ fontSize: 12, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: grande ? 'normal' : 'nowrap', maxWidth: grande ? 'none' : 170 }}>{it.descripcion}</div>
           </div>
           <div style={{ fontWeight: 800, fontSize: grande ? 22 : 16, color: 'var(--primary)', flexShrink: 0 }}>×{it.cantidad}</div>
@@ -111,6 +118,8 @@ export default function Tiendas() {
   const [detalleId, setDetalleId] = useState(null)
   const [pedidoId, setPedidoId]   = useState(null)        // pedido abierto en el detalle
   const [itemsPedido, setItemsPedido] = useState({})      // { [ventaId]: renglones con foto y código }
+  const [versionItems, setVersionItems] = useState(0)     // sube cuando el portal avisa un cambio
+  const versionVista = useRef(0)
   const [items, setItems]       = useState([])
   const [cargandoItems, setCargandoItems] = useState(false)
   const [grupoSel, setGrupoSel] = useState(null)
@@ -148,6 +157,25 @@ export default function Tiendas() {
     setLoading(false)
   }
   useEffect(() => { if (orgId) cargar() }, [orgId])
+
+  // Los cambios que llegan del portal (estado, tracking, fabricación) se ven sin recargar:
+  // por tiempo real y, como respaldo, al volver a la pestaña.
+  useEffect(() => {
+    if (!orgId) return
+    const refrescar = () => { setVersionItems(n => n + 1); cargar(true) }
+    let timer
+    const pronto = () => { clearTimeout(timer); timer = setTimeout(refrescar, 800) }
+    const canal = supabase.channel('tiendas-pedidos')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'ventas' }, pronto)
+      .subscribe()
+    const alVolver = () => { if (document.visibilityState === 'visible') pronto() }
+    document.addEventListener('visibilitychange', alVolver)
+    return () => {
+      clearTimeout(timer)
+      document.removeEventListener('visibilitychange', alVolver)
+      supabase.removeChannel(canal)
+    }
+  }, [orgId])   // eslint-disable-line react-hooks/exhaustive-deps
 
   const tiendaSel = sel === 'todas' ? null : tiendas.find(t => String(t.id) === String(sel))
   const tiendaDeVenta = (v) => tiendas.find(t => perteneceATienda(v, t)) || null
@@ -252,7 +280,10 @@ export default function Tiendas() {
   }, [tab, visibles, limite, pedidoId])
 
   useEffect(() => {
-    const faltan = idsAVer.filter(id => !(id in itemsPedido))
+    // Si llegó un aviso del portal se vuelven a pedir todos (sin vaciar la lista mientras tanto).
+    const refresco = versionVista.current !== versionItems
+    versionVista.current = versionItems
+    const faltan = refresco ? idsAVer : idsAVer.filter(id => !(id in itemsPedido))
     if (!faltan.length) return
     let vivo = true
     cargarItemsPedidos(faltan).then(r => {
@@ -264,7 +295,7 @@ export default function Tiendas() {
       })
     })
     return () => { vivo = false }
-  }, [idsAVer])   // eslint-disable-line react-hooks/exhaustive-deps
+  }, [idsAVer, versionItems])   // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Clientes: items de los pedidos para las estadísticas ──────────────────
   useEffect(() => {
@@ -308,7 +339,9 @@ export default function Tiendas() {
     const its = itemsPedido[v.id]
     if (!its || !its.length) return ''
     const unidades = its.reduce((s, i) => s + i.cantidad, 0)
-    return `${its.length} producto${its.length !== 1 ? 's' : ''} · ${unidades} unidad${unidades !== 1 ? 'es' : ''}`
+    const prod = resumenProduccion(its)
+    return `${its.length} producto${its.length !== 1 ? 's' : ''} · ${unidades} unidad${unidades !== 1 ? 'es' : ''}` +
+      (prod ? ` · Fabricación ${prod.listos}/${prod.total}` : '')
   }
 
   // Botones según la fase: confirmar pago -> armar -> listo -> facturar y despachar
@@ -714,6 +747,18 @@ export default function Tiendas() {
                 {/* Qué hay que preparar */}
                 <div>
                   <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 8 }}>Productos del pedido</div>
+                  {(() => {
+                    const prod = resumenProduccion(itemsPedido[v.id])
+                    if (!prod) return null
+                    return (
+                      <div style={{ marginBottom: 8, padding: '8px 12px', borderRadius: 8, fontSize: 13, fontWeight: 600,
+                        background: prod.todoListo ? 'rgba(34,197,94,0.15)' : 'var(--bg-muted)', color: prod.todoListo ? '#15803d' : 'var(--text-muted)' }}>
+                        {prod.todoListo
+                          ? '✅ Fabricación terminada: todo está listo para despachar.'
+                          : `🛠️ Fabricación: ${prod.listos} de ${prod.total} productos listos.`}
+                      </div>
+                    )
+                  })()}
                   <ItemsPedido items={itemsPedido[v.id]} grande />
                 </div>
 

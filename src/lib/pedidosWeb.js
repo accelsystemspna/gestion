@@ -161,13 +161,24 @@ export async function cargarItemsDeVentas(ventaIds) {
 export async function cargarItemsPedidos(ventaIds) {
   const items = []
   for (let i = 0; i < ventaIds.length; i += 150) {
-    const { data } = await supabase
+    const ids = ventaIds.slice(i, i + 150)
+    // origen_indice / produccion los llena el portal mayorista (supabase_mayorista_produccion.sql).
+    let { data, error } = await supabase
       .from('venta_items')
-      .select('id, venta_id, descripcion, sku, cantidad, producto_id')
-      .in('venta_id', ventaIds.slice(i, i + 150))
+      .select('id, venta_id, descripcion, sku, cantidad, producto_id, origen_indice, produccion')
+      .in('venta_id', ids)
       .order('id')
+    if (error) {
+      ;({ data } = await supabase
+        .from('venta_items')
+        .select('id, venta_id, descripcion, sku, cantidad, producto_id')
+        .in('venta_id', ids)
+        .order('id'))
+    }
     if (data) items.push(...data)
   }
+  // En pedidos del portal se respeta el orden original de los renglones.
+  items.sort((a, b) => (a.origen_indice ?? 1e9) - (b.origen_indice ?? 1e9))
 
   const prodIds = [...new Set(items.map(i => i.producto_id).filter(Boolean))]
   const productos = {}
@@ -188,9 +199,27 @@ export async function cargarItemsPedidos(ventaIds) {
       codigo: it.sku || p?.sku || '',
       cantidad: Number(it.cantidad) || 0,
       imagen: p?.imagen_url || p?.imagen_web_url || null,
+      produccion: it.produccion || null,
     })
   }
   return porVenta
+}
+
+// Estado de fabricación de cada renglón de un pedido del portal mayorista.
+export const ESTADOS_PRODUCCION = {
+  a_fabricar: { label: 'A fabricar', color: '#b45309', bg: 'rgba(245,158,11,0.15)' },
+  programado: { label: 'Programado', color: '#1d4ed8', bg: 'rgba(59,130,246,0.14)' },
+  listo:      { label: 'Listo',      color: '#15803d', bg: 'rgba(34,197,94,0.15)' },
+  en_stock:   { label: 'En stock',   color: '#0f766e', bg: 'rgba(20,184,166,0.15)' },
+}
+
+// Resumen de fabricación: null si el pedido no trae estados; si no, { total, listos, todoListo }.
+// "Listo" y "En stock" cuentan como terminados.
+export function resumenProduccion(items) {
+  const conEstado = (items || []).filter(i => i.produccion)
+  if (!conEstado.length) return null
+  const listos = conEstado.filter(i => i.produccion === 'listo' || i.produccion === 'en_stock').length
+  return { total: items.length, listos, todoListo: listos === items.length }
 }
 
 // Agrupa las ventas por comprador y calcula sus estadísticas de compra.
