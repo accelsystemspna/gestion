@@ -1,7 +1,31 @@
 import { createContext, useContext, useEffect, useState } from 'react'
-import { supabase } from './supabase'
+import { supabase, esAppInstalada } from './supabase'
 
 const AuthContext = createContext(null)
+
+// En el navegador (no en la app instalada) la sesión se cierra sola al pasar un día
+// completo, aunque la pestaña nunca se haya cerrado. Se guarda junto a la sesión
+// (misma sessionStorage), así que sobrevive a un F5 pero no a cerrar el navegador.
+const LOGIN_AT = 'gestion_login_at'
+const UN_DIA_MS = 24 * 60 * 60 * 1000
+
+function marcarInicioSesion() {
+  if (esAppInstalada) return
+  try { sessionStorage.setItem(LOGIN_AT, String(Date.now())) } catch { /* storage bloqueado */ }
+}
+function borrarInicioSesion() {
+  try { sessionStorage.removeItem(LOGIN_AT) } catch { /* storage bloqueado */ }
+}
+// true si ya pasó más de un día desde que se inició sesión en este navegador.
+function sesionVencida() {
+  if (esAppInstalada) return false
+  let desde
+  try { desde = sessionStorage.getItem(LOGIN_AT) } catch { return false }
+  // Sesión restaurada sin esta marca (por ejemplo, recién agregada esta función):
+  // se toma "ahora" como inicio en vez de cerrarla de sorpresa.
+  if (!desde) { marcarInicioSesion(); return false }
+  return Date.now() - Number(desde) > UN_DIA_MS
+}
 
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(null)
@@ -60,10 +84,31 @@ export function AuthProvider({ children }) {
       + '@gestion.internal'
   }
 
-  const signIn = (usuario, password) =>
-    supabase.auth.signInWithPassword({ email: toEmail(usuario), password })
+  const signIn = async (usuario, password) => {
+    const r = await supabase.auth.signInWithPassword({ email: toEmail(usuario), password })
+    if (!r.error) marcarInicioSesion()
+    return r
+  }
 
-  const signOut = () => supabase.auth.signOut()
+  const signOut = () => {
+    borrarInicioSesion()
+    return supabase.auth.signOut()
+  }
+
+  // Navegador (no la app instalada): si pasó más de un día desde que se inició sesión,
+  // se cierra sola — aunque la pestaña haya quedado abierta todo ese tiempo. Se revisa
+  // apenas hay sesión, cada tanto mientras la pestaña sigue abierta, y al volver a ella.
+  useEffect(() => {
+    if (!userId || esAppInstalada) return
+    const revisar = () => { if (sesionVencida()) signOut() }
+    revisar()
+    const id = setInterval(revisar, 10 * 60 * 1000)
+    document.addEventListener('visibilitychange', revisar)
+    return () => {
+      clearInterval(id)
+      document.removeEventListener('visibilitychange', revisar)
+    }
+  }, [userId])
 
   const isMaster = !profile || profile?.rol === 'master'
   const isAdmin  = isMaster || profile?.rol === 'admin'

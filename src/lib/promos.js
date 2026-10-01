@@ -1,4 +1,4 @@
-import { fmtMoney } from './format'
+import { fmtMoney } from './format.js'
 
 const hoyStr = () => new Date().toISOString().slice(0, 10)
 

@@ -89,6 +89,11 @@ export default function Presupuesto() {
   const [search, setSearch] = useState('')
   const [showCatalogo, setShowCatalogo] = useState(false)
 
+  // Ítem libre: se escribe el nombre, el precio final y la cantidad a mano,
+  // sin pasar por el catálogo ni por la lista de precios.
+  const [libre, setLibre] = useState({ nombre: '', precio: '', cantidad: 1 })
+  const [libreErr, setLibreErr] = useState('')
+
   const [saving, setSaving] = useState(false)
   const [exporting, setExporting] = useState(false)
 
@@ -163,6 +168,12 @@ export default function Presupuesto() {
 
   const extrasConPrecio = useMemo(() => {
     return extras.map((it) => {
+      // Ítem libre: el precio es el que se escribió a mano, tal cual — no pasa
+      // por la lista de precios ni por promociones del catálogo.
+      if (it.libre) {
+        const precio = Number(it.precioLibre) || 0
+        return { ...it, precio, subtotal: precio * it.cantidad, promoEtiqueta: null }
+      }
       const base = precioVenta(Number(it.producto.costo_base), lista)
       const { precio, promoEtiqueta } = precioConPromoProducto(it.producto, 'local', base, it.cantidad)
       return { ...it, precio, subtotal: precio * it.cantidad, promoEtiqueta }
@@ -195,6 +206,21 @@ export default function Presupuesto() {
     setExtras((prev) => prev.map((it) => it._key === key ? { ...it, cantidad: Math.max(1, Number(val) || 1) } : it))
 
   const quitarExtra = (key) => setExtras((prev) => prev.filter((it) => it._key !== key))
+
+  // Ítem libre: nombre + precio final + cantidad, escritos a mano.
+  const agregarLibre = () => {
+    if (!libre.nombre.trim()) { setLibreErr('Escribí el nombre del producto.'); return }
+    if (!libre.precio || Number(libre.precio) <= 0) { setLibreErr('Ingresá un precio mayor a 0.'); return }
+    setExtras((prev) => [...prev, {
+      _key: newKey(),
+      producto: { id: null, nombre: libre.nombre.trim(), sku: '', imagen_url: null },
+      cantidad: Number(libre.cantidad) || 1,
+      libre: true,
+      precioLibre: Number(libre.precio),
+    }])
+    setLibre({ nombre: '', precio: '', cantidad: 1 })
+    setLibreErr('')
+  }
 
   // Piezas
   const setPieza = (i, k, v) => setPiezas((prev) => prev.map((p, idx) => idx === i ? { ...p, [k]: v } : p))
@@ -232,7 +258,7 @@ export default function Presupuesto() {
   const cargarPresupuesto = (p) => {
     if (!window.confirm('¿Cargar este presupuesto? Se reemplazarán los datos actuales del formulario.')) return
     const medida = (p.items ?? []).find(it => it.tipo === 'medida')
-    const prods  = (p.items ?? []).filter(it => it.tipo === 'producto')
+    const prods  = (p.items ?? []).filter(it => it.tipo === 'producto' || it.tipo === 'libre')
 
     setCliente(p.cliente ?? '')
     setCliSeleccionado(null)
@@ -251,6 +277,13 @@ export default function Presupuesto() {
     }
 
     const extrasRestaurados = prods.map(it => {
+      // Ítem libre: no busca en el catálogo, el precio es el que se guardó tal cual.
+      if (it.tipo === 'libre') {
+        return {
+          _key: newKey(), cantidad: it.cantidad ?? 1, libre: true, precioLibre: it.precio ?? 0,
+          producto: { id: null, nombre: it.nombre, sku: it.sku ?? '', imagen_url: null },
+        }
+      }
       const prod = productos.find(p2 => p2.id === it.producto_id) ?? {
         id: it.producto_id, nombre: it.nombre, sku: it.sku ?? '',
         costo_base: 0, imagen_url: null, categoria: it.categoria ?? null,
@@ -271,7 +304,7 @@ export default function Presupuesto() {
       piezas, tarifas_sel: tarifasSel,
     }
     const itemsExtras = extrasConPrecio.map((it) => ({
-      tipo: 'producto', producto_id: it.producto.id, sku: it.producto.sku,
+      tipo: it.libre ? 'libre' : 'producto', producto_id: it.producto.id, sku: it.producto.sku,
       nombre: it.producto.nombre, categoria: it.producto.categoria,
       cantidad: it.cantidad, precio: it.precio, subtotal: it.subtotal,
     }))
@@ -320,7 +353,7 @@ export default function Presupuesto() {
         itemsPDF.push({ sku: '—', nombre: descripcion || 'Trabajo a medida', cantidad: Number(cantidad) || 1, precio: ventaMedida, imagen_url: null })
       }
       for (const it of extrasConPrecio) {
-        itemsPDF.push({ sku: it.producto.sku, nombre: it.producto.nombre, cantidad: it.cantidad, precio: it.precio, imagen_url: it.producto.imagen_url || null })
+        itemsPDF.push({ sku: it.producto.sku || '—', nombre: it.producto.nombre, cantidad: it.cantidad, precio: it.precio, imagen_url: it.producto.imagen_url || null })
       }
       await exportPresupuestoPDF({ presupuesto: null, items: itemsPDF, cliente, branding, lista, validez })
     } catch (err) {
@@ -346,9 +379,9 @@ export default function Presupuesto() {
             precio: it.costo_unitario ?? 0,
             imagen_url: null,
           })
-        } else if (it.tipo === 'producto') {
+        } else if (it.tipo === 'producto' || it.tipo === 'libre') {
           itemsPDF.push({
-            sku: it.sku ?? '—',
+            sku: it.sku || '—',
             nombre: it.nombre ?? '',
             cantidad: it.cantidad ?? 1,
             precio: it.precio ?? 0,
@@ -694,49 +727,79 @@ export default function Presupuesto() {
                     </div>
                   )}
                 </div>
-
-                {extras.length > 0 && (
-                  <table className="table">
-                    <thead>
-                      <tr>
-                        <th style={{ width:44 }}></th>
-                        <th>Producto</th>
-                        <th style={{ textAlign:'right' }}>Cant.</th>
-                        <th style={{ textAlign:'right' }}>Unit.</th>
-                        <th style={{ textAlign:'right' }}>Subtotal</th>
-                        <th></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {extrasConPrecio.map(it => (
-                        <tr key={it._key}>
-                          <td style={{ width:44, padding:'5px 6px' }}>
-                            <ImageThumb src={it.producto.imagen_url} size={34} />
-                          </td>
-                          <td>
-                            <strong style={{ fontSize:13 }}>{it.producto.nombre}</strong>
-                            <div style={{ fontSize:11, color:'var(--text-muted)' }}>{it.producto.sku}</div>
-                            {it.promoEtiqueta && (
-                              <div style={{ fontSize:11, color:'#16a34a', fontWeight:700 }}>{it.promoEtiqueta}</div>
-                            )}
-                          </td>
-                          <td style={{ textAlign:'right' }}>
-                            <input type="number" min={1} value={it.cantidad}
-                              onChange={e=>cambiarCantidadExtra(it._key,e.target.value)}
-                              className="input" style={{ width:56, textAlign:'right', padding:'4px 7px', fontSize:13 }} />
-                          </td>
-                          <td style={{ textAlign:'right', fontSize:13 }}>{fmtMoney(it.precio)}</td>
-                          <td style={{ textAlign:'right', fontWeight:600, fontSize:13 }}>{fmtMoney(it.subtotal)}</td>
-                          <td style={{ textAlign:'right' }}>
-                            <button className="btn btn-sm btn-ghost" onClick={() => quitarExtra(it._key)} style={{ color:'var(--danger)', fontSize:12 }}>Quitar</button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                )}
               </div>
             )}
+
+            {/* Lista de lo ya agregado (del catálogo o libre): visible aunque el buscador esté cerrado */}
+            {extras.length > 0 && (
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th style={{ width:44 }}></th>
+                    <th>Producto</th>
+                    <th style={{ textAlign:'right' }}>Cant.</th>
+                    <th style={{ textAlign:'right' }}>Unit.</th>
+                    <th style={{ textAlign:'right' }}>Subtotal</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {extrasConPrecio.map(it => (
+                    <tr key={it._key}>
+                      <td style={{ width:44, padding:'5px 6px' }}>
+                        <ImageThumb src={it.producto.imagen_url} size={34} />
+                      </td>
+                      <td>
+                        <strong style={{ fontSize:13 }}>{it.producto.nombre}</strong>
+                        <div style={{ fontSize:11, color:'var(--text-muted)' }}>{it.libre ? 'Ítem libre' : it.producto.sku}</div>
+                        {it.promoEtiqueta && (
+                          <div style={{ fontSize:11, color:'#16a34a', fontWeight:700 }}>{it.promoEtiqueta}</div>
+                        )}
+                      </td>
+                      <td style={{ textAlign:'right' }}>
+                        <input type="number" min={1} value={it.cantidad}
+                          onChange={e=>cambiarCantidadExtra(it._key,e.target.value)}
+                          className="input" style={{ width:56, textAlign:'right', padding:'4px 7px', fontSize:13 }} />
+                      </td>
+                      <td style={{ textAlign:'right', fontSize:13 }}>{fmtMoney(it.precio)}</td>
+                      <td style={{ textAlign:'right', fontWeight:600, fontSize:13 }}>{fmtMoney(it.subtotal)}</td>
+                      <td style={{ textAlign:'right' }}>
+                        <button className="btn btn-sm btn-ghost" onClick={() => quitarExtra(it._key)} style={{ color:'var(--danger)', fontSize:12 }}>Quitar</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+
+          <div style={{ height:1, background:'var(--border)', flexShrink:0 }} />
+
+          {/* Ítem libre: nombre, precio y cantidad a mano, sin catálogo ni lista de precios */}
+          <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+            {subLabel('Ítem libre (sin catálogo)')}
+            <div style={{ display:'grid', gridTemplateColumns:'2fr 1fr 1fr auto', gap:6, alignItems:'end' }}>
+              <F label="Producto / descripción">
+                <input className="input" style={si()} placeholder="Ej: Flete, instalación..."
+                  value={libre.nombre}
+                  onChange={e => { setLibre(p => ({ ...p, nombre: e.target.value })); setLibreErr('') }}
+                  onKeyDown={e => { if (e.key === 'Enter') agregarLibre() }} />
+              </F>
+              <F label="Precio">
+                <input className="input" style={si()} type="number" step="0.01" placeholder="0.00"
+                  value={libre.precio}
+                  onChange={e => { setLibre(p => ({ ...p, precio: e.target.value })); setLibreErr('') }}
+                  onKeyDown={e => { if (e.key === 'Enter') agregarLibre() }} />
+              </F>
+              <F label="Cant.">
+                <input className="input" style={si()} type="number" min={1}
+                  value={libre.cantidad}
+                  onChange={e => setLibre(p => ({ ...p, cantidad: e.target.value }))}
+                  onKeyDown={e => { if (e.key === 'Enter') agregarLibre() }} />
+              </F>
+              <button className="btn btn-sm btn-primary" onClick={agregarLibre}>+ Agregar</button>
+            </div>
+            {libreErr && <div style={{ fontSize:12, color:'#dc2626', fontWeight:500 }}>{libreErr}</div>}
           </div>
         </div>
 
@@ -793,7 +856,7 @@ export default function Presupuesto() {
 
           {totalExtras > 0 && (
             <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, color:'var(--text-muted)' }}>
-              <span>Productos catálogo</span>
+              <span>Productos / ítems libres</span>
               <span style={{ fontWeight:600, color:'var(--text)' }}>{fmtMoney(totalExtras)}</span>
             </div>
           )}

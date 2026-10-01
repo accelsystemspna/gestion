@@ -1,6 +1,6 @@
-import { supabase } from './supabase'
-import { precioVenta } from './pricing'
-import { promoParaSync, calcularLineaConPromo, etiquetaOferta } from './promos'
+import { supabase } from './supabase.js'
+import { precioVenta } from './pricing.js'
+import { promoParaSync, calcularLineaConPromo, etiquetaOferta } from './promos.js'
 
 // Biblioteca de imágenes compartidas (las que se repiten en todos los
 // productos). Se cachea unos segundos para que un re-sync masivo no la pida

@@ -1,5 +1,5 @@
-import { supabase } from './supabase'
-import { precioVenta } from './pricing'
+import { supabase } from './supabase.js'
+import { precioVenta } from './pricing.js'
 
 // Cantidad de productos por request al sitio (el plugin acepta hasta 500).
 const TANDA = 100
