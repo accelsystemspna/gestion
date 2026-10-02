@@ -85,7 +85,7 @@ export default function ComboForm({ initial, onCancel, onSaved, onAvanzado }) {
     if (filtroSub) r = r.filter((p) => p.subcategoria_id === Number(filtroSub))
     const q = buscar.trim().toLowerCase()
     if (q) r = r.filter((p) => p.nombre.toLowerCase().includes(q) || (p.sku || '').toLowerCase().includes(q))
-    return r.slice(0, 60)
+    return r
   }, [productosDisponibles, filtroCat, filtroSub, buscar])
 
   const detalle = useMemo(() => items.map((it) => {
