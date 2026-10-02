@@ -90,9 +90,11 @@ export default function Presupuesto() {
   const [showCatalogo, setShowCatalogo] = useState(false)
 
   // Ítem libre: se escribe el nombre, el precio final y la cantidad a mano,
-  // sin pasar por el catálogo ni por la lista de precios.
-  const [libre, setLibre] = useState({ nombre: '', precio: '', cantidad: 1 })
+  // sin pasar por el catálogo ni por la lista de precios. La foto es opcional
+  // (si no se carga ninguna, el PDF lo muestra como "sin imagen").
+  const [libre, setLibre] = useState({ nombre: '', precio: '', cantidad: 1, imagen_url: '' })
   const [libreErr, setLibreErr] = useState('')
+  const [subiendoLibre, setSubiendoLibre] = useState(false)
 
   const [saving, setSaving] = useState(false)
   const [exporting, setExporting] = useState(false)
@@ -207,19 +209,33 @@ export default function Presupuesto() {
 
   const quitarExtra = (key) => setExtras((prev) => prev.filter((it) => it._key !== key))
 
-  // Ítem libre: nombre + precio final + cantidad, escritos a mano.
+  // Ítem libre: nombre + precio final + cantidad, escritos a mano, con foto opcional.
   const agregarLibre = () => {
     if (!libre.nombre.trim()) { setLibreErr('Escribí el nombre del producto.'); return }
     if (!libre.precio || Number(libre.precio) <= 0) { setLibreErr('Ingresá un precio mayor a 0.'); return }
     setExtras((prev) => [...prev, {
       _key: newKey(),
-      producto: { id: null, nombre: libre.nombre.trim(), sku: '', imagen_url: null },
+      producto: { id: null, nombre: libre.nombre.trim(), sku: '', imagen_url: libre.imagen_url || null },
       cantidad: Number(libre.cantidad) || 1,
       libre: true,
       precioLibre: Number(libre.precio),
     }])
-    setLibre({ nombre: '', precio: '', cantidad: 1 })
+    setLibre({ nombre: '', precio: '', cantidad: 1, imagen_url: '' })
     setLibreErr('')
+  }
+
+  // Foto del ítem libre: mismo storage que usan las fotos de productos.
+  const subirImagenLibre = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setSubiendoLibre(true)
+    const ext = file.name.split('.').pop()
+    const path = `web/presupuesto-${Date.now()}.${ext}`
+    const { error } = await supabase.storage.from('productos').upload(path, file, { upsert: true })
+    if (error) { alert('Error al subir la foto: ' + error.message); setSubiendoLibre(false); return }
+    const { data } = supabase.storage.from('productos').getPublicUrl(path)
+    setLibre((p) => ({ ...p, imagen_url: data.publicUrl }))
+    setSubiendoLibre(false)
   }
 
   // Piezas
@@ -281,12 +297,12 @@ export default function Presupuesto() {
       if (it.tipo === 'libre') {
         return {
           _key: newKey(), cantidad: it.cantidad ?? 1, libre: true, precioLibre: it.precio ?? 0,
-          producto: { id: null, nombre: it.nombre, sku: it.sku ?? '', imagen_url: null },
+          producto: { id: null, nombre: it.nombre, sku: it.sku ?? '', imagen_url: it.imagen_url ?? null },
         }
       }
       const prod = productos.find(p2 => p2.id === it.producto_id) ?? {
         id: it.producto_id, nombre: it.nombre, sku: it.sku ?? '',
-        costo_base: 0, imagen_url: null, categoria: it.categoria ?? null,
+        costo_base: 0, imagen_url: it.imagen_url ?? null, categoria: it.categoria ?? null,
       }
       return { _key: newKey(), producto: prod, cantidad: it.cantidad ?? 1 }
     })
@@ -305,7 +321,7 @@ export default function Presupuesto() {
     }
     const itemsExtras = extrasConPrecio.map((it) => ({
       tipo: it.libre ? 'libre' : 'producto', producto_id: it.producto.id, sku: it.producto.sku,
-      nombre: it.producto.nombre, categoria: it.producto.categoria,
+      nombre: it.producto.nombre, categoria: it.producto.categoria, imagen_url: it.producto.imagen_url || null,
       cantidad: it.cantidad, precio: it.precio, subtotal: it.subtotal,
     }))
     const payload = {
@@ -385,7 +401,7 @@ export default function Presupuesto() {
             nombre: it.nombre ?? '',
             cantidad: it.cantidad ?? 1,
             precio: it.precio ?? 0,
-            imagen_url: null,
+            imagen_url: it.imagen_url || null,
           })
         }
       }
@@ -798,6 +814,20 @@ export default function Presupuesto() {
                   onKeyDown={e => { if (e.key === 'Enter') agregarLibre() }} />
               </F>
               <button className="btn btn-sm btn-primary" onClick={agregarLibre}>+ Agregar</button>
+            </div>
+            <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+              {libre.imagen_url ? (
+                <ImageThumb src={libre.imagen_url} size={32} />
+              ) : (
+                <div style={{ width:32, height:32, borderRadius:4, background:'var(--bg-muted)', flexShrink:0 }} />
+              )}
+              <label className="btn btn-sm btn-ghost" style={{ cursor:'pointer' }}>
+                {subiendoLibre ? 'Subiendo...' : libre.imagen_url ? '📷 Cambiar foto' : '📷 Agregar foto (opcional)'}
+                <input type="file" accept="image/*" style={{ display:'none' }} disabled={subiendoLibre} onChange={subirImagenLibre} />
+              </label>
+              {libre.imagen_url && (
+                <button className="btn btn-sm btn-ghost" style={{ color:'var(--danger)' }} onClick={() => setLibre(p => ({ ...p, imagen_url: '' }))}>Quitar foto</button>
+              )}
             </div>
             {libreErr && <div style={{ fontSize:12, color:'#dc2626', fontWeight:500 }}>{libreErr}</div>}
           </div>
