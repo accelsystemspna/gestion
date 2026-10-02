@@ -159,7 +159,7 @@ export default function Ventas() {
       supabase.from('clientes').select('*').order('nombre'),
       supabase.from('materiales').select('*').order('nombre'),
       supabase.from('tarifas').select('*').order('id'),
-      supabase.from('arca_config').select('*').eq('id', 1).maybeSingle(),
+      supabase.from('arca_config').select('*').eq('user_id', orgId).maybeSingle(),
     ]).then(([pr, ca, li, cl, ma, ta, ar]) => {
       setProductos(pr.data ?? [])
       setCategorias(ca.data ?? [])

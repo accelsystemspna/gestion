@@ -110,7 +110,7 @@ export default function Presupuesto() {
       supabase.from('productos').select('*').eq('activo', true).order('nombre'),
       supabase.from('materiales').select('*').order('nombre'),
       supabase.from('tarifas').select('*').order('id'),
-      supabase.from('branding').select('*').eq('id', 1).maybeSingle(),
+      supabase.from('branding').select('*').eq('user_id', orgId).maybeSingle(),
     ]).then(([li, pr, ma, ta, br]) => {
       setListas(li.data || [])
       setProductos(pr.data || [])

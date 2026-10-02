@@ -7,6 +7,7 @@ import { ajustarStock } from '../../lib/stock'
 import FacturaCPreview from './FacturaCPreview'
 import ImageThumb from '../../components/ImageThumb'
 import { ESTADOS_WEB, FASES_FACTURABLES, estadoWebDe } from '../../lib/pedidosWeb'
+import { useAuth } from '../../lib/AuthContext'
 
 const fmtDate = (d) =>
   d ? new Date(d + 'T00:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—'
@@ -54,6 +55,7 @@ async function urlToDataUrl(url) {
 }
 
 export default function VentaDetalle({ ventaId, onClose, onUpdated }) {
+  const { orgId } = useAuth()
   const [venta,         setVenta]         = useState(null)
   const [items,         setItems]         = useState([])
   const [loading,       setLoading]       = useState(true)
@@ -90,8 +92,8 @@ export default function VentaDetalle({ ventaId, onClose, onUpdated }) {
     Promise.all([
       supabase.from('ventas').select('*').eq('id', ventaId).single(),
       supabase.from('venta_items').select('*').eq('venta_id', ventaId).order('id'),
-      supabase.from('branding').select('*').eq('id', 1).maybeSingle(),
-      supabase.from('arca_config').select('*').eq('id', 1).maybeSingle(),
+      supabase.from('branding').select('*').eq('user_id', orgId).maybeSingle(),
+      supabase.from('arca_config').select('*').eq('user_id', orgId).maybeSingle(),
     ]).then(([v, it, br, ar]) => {
       setVenta(v.data)
       setItems(it.data ?? [])

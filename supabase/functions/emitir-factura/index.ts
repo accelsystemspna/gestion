@@ -221,9 +221,20 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
     )
 
-    // Cargar config ARCA
+    // Identificar el negocio del que llama (cada uno factura con SU propio CUIT/certificado).
+    const authHeader = req.headers.get('Authorization') ?? ''
+    const { data: { user } } = await supabaseClient.auth.getUser(authHeader.replace(/^Bearer /i, ''))
+    if (!user) {
+      return new Response(JSON.stringify({ ok: false, error: 'No autorizado' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401,
+      })
+    }
+    const { data: perfil } = await supabaseClient.from('profiles').select('org_id').eq('id', user.id).maybeSingle()
+    const orgId = perfil?.org_id ?? user.id
+
+    // Cargar config ARCA (la de esta organización, no la de otra)
     const { data: cfg, error: cfgErr } = await supabaseClient
-      .from('arca_config').select('*').eq('id', 1).single()
+      .from('arca_config').select('*').eq('user_id', orgId).maybeSingle()
 
     if (cfgErr || !cfg) {
       return new Response(JSON.stringify({ ok: false, error: 'ARCA no configurado' }), {
@@ -238,7 +249,7 @@ serve(async (req) => {
     let token: string, sign: string
 
     const { data: cached } = await supabaseClient
-      .from('arca_token').select('*').eq('id', 1).maybeSingle()
+      .from('arca_token').select('*').eq('user_id', orgId).maybeSingle()
 
     const ahora = new Date()
     if (cached?.token && cached?.expiracion && new Date(cached.expiracion) > ahora) {
@@ -249,8 +260,8 @@ serve(async (req) => {
       token = ta.token
       sign  = ta.sign
       await supabaseClient.from('arca_token').upsert({
-        id: 1, token, sign, expiracion: ta.expiracion, updated_at: new Date().toISOString(),
-      })
+        user_id: orgId, token, sign, expiracion: ta.expiracion, updated_at: new Date().toISOString(),
+      }, { onConflict: 'user_id' })
     }
 
     // ── Acción ───────────────────────────────────────────────────────────────

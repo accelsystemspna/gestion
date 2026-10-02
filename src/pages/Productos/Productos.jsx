@@ -59,7 +59,7 @@ export default function Productos() {
       supabase.from('productos').select('*').order('created_at', { ascending: false }),
       supabase.from('listas_precios').select('*').order('created_at'),
       supabase.from('categorias').select('*').order('nombre'),
-      supabase.from('branding').select('*').eq('id', 1).maybeSingle(),
+      supabase.from('branding').select('*').eq('user_id', orgId).maybeSingle(),
       supabase.from('rubros').select('*').order('created_at'),
       supabase.from('subcategorias').select('*').order('nombre'),
       supabase.from('tiendas').select('id, nombre, tipo, activa, url, webhook_secret, lista_id').eq('activa', true).order('created_at'),
