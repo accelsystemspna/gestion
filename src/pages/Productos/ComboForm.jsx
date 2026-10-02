@@ -48,7 +48,7 @@ export default function ComboForm({ initial, onCancel, onSaved, onAvanzado }) {
       supabase.from('subcategorias').select('*').order('nombre'),
       supabase.from('tiendas').select('id, nombre, tipo, activa, url, webhook_secret, lista_id').eq('activa', true).order('created_at'),
       supabase.from('listas_precios').select('*').order('created_at'),
-      supabase.from('productos').select('id, sku, nombre, imagen_url, costo_base, categoria_id, subcategoria_id, alto_producto, multiplo_mayorista, combo_items').order('nombre'),
+      supabase.from('productos').select('id, sku, nombre, imagen_url, costo_base, categoria_id, subcategoria_id, alto_producto, multiplo_mayorista, combo_items').order('sku'),
     ]).then(([c, s, t, l, p]) => {
       setCategorias(c.data || [])
       setSubcategorias(s.data || [])
@@ -203,7 +203,7 @@ export default function ComboForm({ initial, onCancel, onSaved, onAvanzado }) {
                   {fotosDisponibles.map((url) => (
                     <button key={url} onClick={() => setImagenUrl(url)}
                       style={{ padding: 0, border: url === imagenUrl ? '2px solid var(--primary)' : '2px solid transparent', borderRadius: 6, cursor: 'pointer', background: 'none' }}>
-                      <ImageThumb src={url} size={44} />
+                      <img src={url} alt="" style={{ width: 44, height: 44, objectFit: 'contain', borderRadius: 4, background: '#fff', display: 'block' }} />
                     </button>
                   ))}
                 </div>
@@ -265,7 +265,9 @@ export default function ComboForm({ initial, onCancel, onSaved, onAvanzado }) {
                       display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: 6, borderRadius: 8, cursor: yaAgregado ? 'default' : 'pointer',
                       border: yaAgregado ? '2px solid var(--primary)' : '1px solid var(--border)', background: yaAgregado ? 'var(--bg-highlight)' : 'var(--bg-card)', opacity: yaAgregado ? 0.7 : 1,
                     }}>
-                    {p.imagen_url ? <ImageThumb src={p.imagen_url} size={56} /> : <div style={{ width: 56, height: 56, borderRadius: 6, background: 'var(--bg-muted)' }} />}
+                    {p.imagen_url
+                      ? <img src={p.imagen_url} alt="" style={{ width: 56, height: 56, objectFit: 'contain', borderRadius: 6, background: '#fff', border: '1px solid var(--border)', display: 'block' }} />
+                      : <div style={{ width: 56, height: 56, borderRadius: 6, background: 'var(--bg-muted)' }} />}
                     <div style={{ fontSize: 11, textAlign: 'center', lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', width: '100%' }}>{p.nombre}</div>
                     <code style={{ fontSize: 10, color: 'var(--text-muted)' }}>{p.sku}</code>
                   </button>
