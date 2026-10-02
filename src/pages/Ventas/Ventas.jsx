@@ -4,7 +4,7 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../lib/AuthContext'
 import { fmtMoney } from '../../lib/format'
 import { calcInsumo, precioVenta } from '../../lib/pricing'
-import { ajustarStock } from '../../lib/stock'
+import { ajustarStock, aplicarStockPropio } from '../../lib/stock'
 import { precioConPromoProducto, promoDeProducto, etiquetaOferta } from '../../lib/promos'
 
 function snapSegs(segs) {
@@ -153,15 +153,15 @@ export default function Ventas() {
   // ── Carga inicial ────────────────────────────────────────────────────────
   useEffect(() => {
     Promise.all([
-      supabase.from('productos').select('id, nombre, sku, costo_base, imagen_url, categoria_id, stock_actual, promo_activa, promo_tipo, promo_valor, promo_lleva, promo_paga, promo_canal, promo_fecha_desde, promo_fecha_hasta').eq('activo', true).order('nombre'),
+      supabase.from('productos').select('id, nombre, sku, org_id, costo_base, imagen_url, categoria_id, stock_actual, promo_activa, promo_tipo, promo_valor, promo_lleva, promo_paga, promo_canal, promo_fecha_desde, promo_fecha_hasta').eq('activo', true).order('nombre'),
       supabase.from('categorias').select('id, nombre').order('nombre'),
       supabase.from('listas_precios').select('*').order('created_at'),
       supabase.from('clientes').select('*').order('nombre'),
       supabase.from('materiales').select('*').order('nombre'),
       supabase.from('tarifas').select('*').order('id'),
       supabase.from('arca_config').select('*').eq('user_id', orgId).maybeSingle(),
-    ]).then(([pr, ca, li, cl, ma, ta, ar]) => {
-      setProductos(pr.data ?? [])
+    ]).then(async ([pr, ca, li, cl, ma, ta, ar]) => {
+      setProductos(await aplicarStockPropio(pr.data ?? [], orgId))
       setCategorias(ca.data ?? [])
       setListas(li.data ?? [])
       setClientes(cl.data ?? [])

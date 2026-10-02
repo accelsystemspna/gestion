@@ -13,6 +13,7 @@ import { exportCatalogoCSV } from '../../lib/csv'
 import { syncToWoo, syncManyToWoo, conCategoriasWeb } from '../../lib/wooSync'
 import { syncMayorista, ocultarEnMayorista } from '../../lib/mayoristaSync'
 import { useAuth } from '../../lib/AuthContext'
+import { aplicarStockPropio } from '../../lib/stock'
 
 function OfertaBadge({ producto }) {
   const texto = etiquetaOferta(promoDeProducto(producto, 'local') || promoDeProducto(producto, 'web'))
@@ -46,9 +47,22 @@ export default function Productos() {
 
   // "Editar" de un producto: si es un combo (tiene combo_items) abre la pantalla
   // simple de combos; si no, el formulario completo de producto de siempre.
+  const fijarStockPropio = async (p) => {
+    const v = prompt(`Stock de tu negocio para ${p.nombre} (${p.sku}).
+El producto es de otro negocio: no se edita, pero el stock lo llevás vos.`, String(p.stock_actual ?? 0))
+    if (v === null) return
+    const n = parseInt(v, 10)
+    if (Number.isNaN(n)) return alert('Poné un número entero.')
+    const { error } = await supabase.rpc('fijar_stock_propio', { p_producto: p.id, p_stock: n })
+    if (error) return alert('Error: ' + error.message)
+    setItems((prev) => prev.map((x) => x.id === p.id ? { ...x, stock_actual: n } : x))
+  }
+
   const abrirEditar = (p) => {
     if (p?.org_id && p.org_id !== orgId) {
-      alert('Este producto es de otro negocio (lo activó el Principal): lo podés vender, pero no editar.')
+      // Si el stock es propio del negocio (no compartido) se puede fijar cuánto hay acá.
+      if (p.stock_propio) fijarStockPropio(p)
+      else alert('Este producto es de otro negocio (lo activó el Principal) y comparte su stock: lo podés vender, pero no editar.')
       return
     }
     if (p?.combo_items?.length) setEditingCombo(p)
@@ -77,7 +91,7 @@ export default function Productos() {
       supabase.from('subcategorias').select('*').order('nombre'),
       supabase.from('tiendas').select('id, nombre, tipo, activa, url, webhook_secret, lista_id').eq('activa', true).order('created_at'),
     ])
-    setItems(p.data || [])
+    setItems(await aplicarStockPropio(p.data || [], orgId))
     setListas(l.data || [])
     setCategorias(c.data || [])
     setBranding(br.data || {})

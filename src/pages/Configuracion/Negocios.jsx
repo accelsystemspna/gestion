@@ -46,7 +46,7 @@ export default function Negocios() {
       supabase.from('negocios').select('*').order('created_at'),
       supabase.from('profiles').select('id, nombre, email, rol, org_id').order('created_at'),
       supabase.from('categorias').select('id, nombre, sku_prefijo').eq('org_id', orgId).order('nombre'),
-      supabase.from('categorias_acceso').select('categoria_id, org_id'),
+      supabase.from('categorias_acceso').select('categoria_id, org_id, comparte_stock'),
     ])
     setNegocios((n.data || []).filter((x) => x.org_id !== orgId))
     setPerfiles(p.data || [])
@@ -81,7 +81,15 @@ export default function Negocios() {
     if (err) return alert('Error: ' + err.message)
     setAccesos((prev) => activo
       ? prev.filter((a) => !(a.org_id === orgNeg && a.categoria_id === catId))
-      : [...prev, { org_id: orgNeg, categoria_id: catId }])
+      : [...prev, { org_id: orgNeg, categoria_id: catId, comparte_stock: false }])
+  }
+
+  const toggleStock = async (orgNeg, catId) => {
+    const nuevo = !accesos.find((a) => a.org_id === orgNeg && a.categoria_id === catId)?.comparte_stock
+    const { error: err } = await supabase.from('categorias_acceso').update({ comparte_stock: nuevo })
+      .eq('org_id', orgNeg).eq('categoria_id', catId)
+    if (err) return alert('Error: ' + err.message)
+    setAccesos((prev) => prev.map((a) => a.org_id === orgNeg && a.categoria_id === catId ? { ...a, comparte_stock: nuevo } : a))
   }
 
   const agregarUsuario = async (e, orgNeg) => {
@@ -173,15 +181,26 @@ export default function Negocios() {
               <div style={{ padding: '4px 20px 20px', borderTop: '1px solid var(--border)' }}>
                 <h4 style={{ margin: '14px 0 8px', fontSize: 13 }}>Categorías activadas</h4>
                 <p style={{ margin: '0 0 8px', fontSize: 12, color: 'var(--text-muted)' }}>
-                  Las que marques las ve y las puede vender (sin editarlas). Lo que cree por su cuenta es solo de este negocio.
+                  Las que marques las ve y las puede vender (sin editarlas). Con "Comparte stock" vende del mismo stock tuyo; sin eso lleva su propio stock de esos productos (arranca en 0). Lo que cree por su cuenta es solo de este negocio.
                 </p>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                  {categorias.map((c) => (
-                    <label key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, padding: '4px 10px', border: '1px solid var(--border)', borderRadius: 6, cursor: 'pointer' }}>
-                      <input type="checkbox" checked={tieneAcceso(neg.org_id, c.id)} onChange={() => toggleAcceso(neg.org_id, c.id)} />
-                      {c.nombre}
-                    </label>
-                  ))}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {categorias.map((c) => {
+                    const activa = tieneAcceso(neg.org_id, c.id)
+                    const comparte = accesos.find((a) => a.org_id === neg.org_id && a.categoria_id === c.id)?.comparte_stock
+                    return (
+                      <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 16, fontSize: 13, padding: '6px 10px', border: '1px solid var(--border)', borderRadius: 6 }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', flex: 1 }}>
+                          <input type="checkbox" checked={activa} onChange={() => toggleAcceso(neg.org_id, c.id)} />
+                          {c.nombre}
+                        </label>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: activa ? 'pointer' : 'not-allowed', opacity: activa ? 1 : 0.4 }}
+                          title="Tildado: vende del mismo stock. Sin tildar: el negocio lleva su propio stock de estos productos.">
+                          <input type="checkbox" disabled={!activa} checked={!!activa && !!comparte} onChange={() => toggleStock(neg.org_id, c.id)} />
+                          Comparte stock
+                        </label>
+                      </div>
+                    )
+                  })}
                   {categorias.length === 0 && <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>No tenés categorías para compartir.</span>}
                 </div>
 
