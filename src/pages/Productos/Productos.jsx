@@ -4,6 +4,7 @@ import { fmtMoney } from '../../lib/format'
 import { precioVenta } from '../../lib/pricing'
 import { promoDeProducto, etiquetaOferta } from '../../lib/promos'
 import ProductoForm, { nuevoProductoDraftKey } from './ProductoForm'
+import ComboForm from './ComboForm'
 import PromoModal from './PromoModal'
 import BarcodeModal from './BarcodeModal'
 import ImageThumb from '../../components/ImageThumb'
@@ -40,7 +41,15 @@ export default function Productos() {
   const [categoriaSel, setCategoriaSel] = useState('')
   const [search, setSearch] = useState('')
   const [editing, setEditing] = useState(null)
+  const [editingCombo, setEditingCombo] = useState(null)
   const [formKey, setFormKey] = useState(0)
+
+  // "Editar" de un producto: si es un combo (tiene combo_items) abre la pantalla
+  // simple de combos; si no, el formulario completo de producto de siempre.
+  const abrirEditar = (p) => {
+    if (p?.combo_items?.length) setEditingCombo(p)
+    else { setFormKey((k) => k + 1); setEditing(p) }
+  }
   const [loading, setLoading] = useState(true)
   const [exportModal, setExportModal] = useState(null)  // null | 'pdf' | 'csv'
   const [sortCol, setSortCol]   = useState('sku')       // columna activa
@@ -230,6 +239,7 @@ export default function Productos() {
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <button className="btn btn-primary" onClick={() => { setFormKey(k => k + 1); setEditing({}) }}>+ Nuevo producto</button>
+          <button className="btn" onClick={() => setEditingCombo({})}>🧩 Nuevo combo</button>
           <button
             className="btn"
             onClick={() => setExportModal('pdf')}
@@ -507,7 +517,7 @@ export default function Productos() {
                       >
                         Oferta
                       </button>
-                      <button className="btn btn-sm btn-ghost" onClick={() => { setFormKey(k => k + 1); setEditing(p) }}>Editar</button>
+                      <button className="btn btn-sm btn-ghost" onClick={() => abrirEditar(p)}>Editar</button>
                       <button className="btn btn-sm btn-ghost" onClick={() => handleDelete(p.id)} style={{ color: 'var(--danger)' }}>Eliminar</button>
                     </td>
                   </tr>
@@ -580,7 +590,7 @@ export default function Productos() {
                   >
                     Oferta
                   </button>
-                  <button className="btn btn-sm btn-ghost" onClick={() => { setFormKey(k => k + 1); setEditing(p) }}>Editar</button>
+                  <button className="btn btn-sm btn-ghost" onClick={() => abrirEditar(p)}>Editar</button>
                   <button className="btn btn-sm btn-ghost" onClick={() => handleDelete(p.id)} style={{ color: 'var(--danger)' }}>Eliminar</button>
                 </div>
               </div>
@@ -625,6 +635,15 @@ export default function Productos() {
           onSaved={() => { setEditing(null); load() }}
           onSavedNext={() => load()}
           onSavedVariant={(variantData) => { load(); setFormKey(k => k + 1); setEditing(variantData) }}
+        />
+      )}
+
+      {editingCombo && (
+        <ComboForm
+          initial={Object.keys(editingCombo).length > 0 ? editingCombo : null}
+          onCancel={() => setEditingCombo(null)}
+          onSaved={() => { setEditingCombo(null); load() }}
+          onAvanzado={() => { setFormKey((k) => k + 1); setEditing(editingCombo); setEditingCombo(null) }}
         />
       )}
     </div>
