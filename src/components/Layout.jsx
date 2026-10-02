@@ -11,9 +11,9 @@ const NOTIF_DISMISSED_KEY = 'notif_banner_dismissed'
 const navItems = [
   { to: '/ventas',        label: 'Ventas',        icon: '🛒' },
   { to: '/tiendas',       label: 'Tiendas',       icon: '🌐', minAdmin: true },
+  { to: '/productos',     label: 'Productos',     icon: '📦', minAdmin: true },
   { to: '/presupuesto',   label: 'Presupuestos',  icon: '📄' },
   { to: '/clientes',      label: 'Clientes',      icon: '👥' },
-  { to: '/productos',     label: 'Productos',     icon: '📦', minAdmin: true },
   { to: '/materiales',    label: 'Materiales',    icon: '🪵', minAdmin: true },
   { to: '/facturas',      label: 'Facturas',      icon: '🏛️', minAdmin: true },
   { to: '/dashboard',     label: 'Dashboard',     icon: '📊', minAdmin: true },
