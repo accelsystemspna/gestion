@@ -84,6 +84,7 @@ const blank = {
   paquete_ancho: '',
   paquete_alto: '',
   tiendas_ids: [],
+  combo_items: [],
   piezas: [{ ...blankPieza }],
   tarifas_sel: [{ ...blankTarifaSel }],
   gramos_filamento: '',
@@ -153,6 +154,7 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
         promo_fecha_desde: initial.promo_fecha_desde || '',
         promo_fecha_hasta: initial.promo_fecha_hasta || '',
         tiendas_ids: initial.tiendas_ids || [],
+        combo_items: initial.combo_items || [],
         tarifas_sel: initial.tarifas_producto || [{ ...blankTarifaSel }],
         piezas: initial.piezas || [{
           material_id: initial.material_id || '',
@@ -174,6 +176,8 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
   const [tiendas, setTiendas] = useState([])
   const [rubros, setRubros] = useState([])
   const [rubroFiltro, setRubroFiltro] = useState('')
+  const [productos, setProductos] = useState([])
+  const [buscarCombo, setBuscarCombo] = useState('')
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [uploadingWeb, setUploadingWeb] = useState(false)
@@ -223,7 +227,8 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
       supabase.from('tiendas').select('id, nombre, tipo, activa, url, webhook_secret, lista_id').eq('activa', true).order('created_at'),
       supabase.from('rubros').select('*').order('created_at'),
       supabase.from('subcategorias').select('*').order('nombre'),
-    ]).then(([c, m, t, l, ti, r, sTodas]) => {
+      supabase.from('productos').select('id, sku, nombre, imagen_url, costo_base, combo_items').order('nombre'),
+    ]).then(([c, m, t, l, ti, r, sTodas, pr]) => {
       setCategorias(c.data || [])
       setMateriales(m.data || [])
       setTarifas(t.data || [])
@@ -231,6 +236,7 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
       setTiendas(ti.data || [])
       setRubros(r.data || [])
       setSubcategoriasTodas(sTodas.data || [])
+      setProductos(pr.data || [])
       // rubroFiltro arranca vacío (Todos) para no ocultar la categoría actual
     })
   }, [])
@@ -271,11 +277,26 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
     return { piezasDetalle, tarifasDetalle, costoMateriales, costoTarifas, total: costoMateriales + costoTarifas }
   }, [form.piezas, form.tarifas_sel, form.incremento, materiales, tarifas, tipoFab])
 
+  // Combo: productos que se pueden elegir — ni combos (para no anidar) ni el propio producto.
+  const productosParaCombo = useMemo(
+    () => productos.filter((p) => !p.combo_items?.length && p.id !== form.id),
+    [productos, form.id],
+  )
+  const comboDetalle = useMemo(() => {
+    return (form.combo_items || []).map((it) => {
+      const prod = productos.find((p) => p.id === it.producto_id)
+      const costo = (Number(prod?.costo_base) || 0) * (Number(it.cantidad) || 0)
+      return { ...it, prod, costo }
+    })
+  }, [form.combo_items, productos])
+  const comboTotal = useMemo(() => comboDetalle.reduce((s, d) => s + d.costo, 0), [comboDetalle])
+
   const costoBase = useMemo(() => {
     if (tipoFab === 'Melamina') return desglose?.total ?? 0
+    if (tipoFab === 'Combo') return comboTotal
     const tar = tarifas.find((t) => t.id === Number(form.tarifa_id))
     return calcCosto3D({ tarifa: tar, gramos: form.gramos_filamento, horas: form.imp_horas, minutos: form.imp_minutos })
-  }, [form, tarifas, tipoFab, desglose])
+  }, [form, tarifas, tipoFab, desglose, comboTotal])
 
   const validateSku = (v) => {
     if (!v) return 'SKU requerido'
@@ -288,6 +309,28 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
     set('sku', up)
     setSkuError(validateSku(up))
   }
+
+  // Combo: agregar/quitar/cambiar cantidad de los productos que lo componen.
+  const productosFiltradosCombo = useMemo(() => {
+    const q = buscarCombo.trim().toLowerCase()
+    if (!q) return []
+    return productosParaCombo
+      .filter((p) => p.nombre.toLowerCase().includes(q) || (p.sku || '').toLowerCase().includes(q))
+      .slice(0, 12)
+  }, [productosParaCombo, buscarCombo])
+
+  const agregarAlCombo = (producto) => {
+    setForm((f) => {
+      const ya = (f.combo_items || []).find((it) => it.producto_id === producto.id)
+      if (ya) return { ...f, combo_items: f.combo_items.map((it) => it.producto_id === producto.id ? { ...it, cantidad: it.cantidad + 1 } : it) }
+      return { ...f, combo_items: [...(f.combo_items || []), { producto_id: producto.id, cantidad: 1 }] }
+    })
+    setBuscarCombo('')
+  }
+  const cambiarCantidadCombo = (productoId, cantidad) =>
+    setForm((f) => ({ ...f, combo_items: f.combo_items.map((it) => it.producto_id === productoId ? { ...it, cantidad: Math.max(1, Number(cantidad) || 1) } : it) }))
+  const quitarDelCombo = (productoId) =>
+    setForm((f) => ({ ...f, combo_items: f.combo_items.filter((it) => it.producto_id !== productoId) }))
 
   const handleCategoriaChange = async (catId) => {
     setForm((f) => ({ ...f, categoria_id: catId, subcategoria_id: '' }))
@@ -386,6 +429,7 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
     if (err) return setSkuError(err)
     if (!form.nombre) return alert('El nombre es requerido')
     if (!form.categoria_id) return alert('Seleccioná una categoría')
+    if (tipoFab === 'Combo' && !(form.combo_items || []).length) return alert('Agregá al menos un producto al combo.')
     if (form.video_url?.trim() && !youtubeId(form.video_url)) {
       setTab('web')
       return alert('El link de YouTube no es válido. Pegá el link del Short (ej. https://youtube.com/shorts/xxxxxxxxxxx) o dejá el campo vacío.')
@@ -419,6 +463,7 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
       gramos_filamento: tipoFab === 'Impresión 3D' ? Number(form.gramos_filamento) || null : null,
       imp_horas: tipoFab === 'Impresión 3D' ? Number(form.imp_horas) || null : null,
       imp_minutos: tipoFab === 'Impresión 3D' ? Number(form.imp_minutos) || null : null,
+      combo_items: tipoFab === 'Combo' ? form.combo_items || [] : null,
       costo_base: costoBase,
       stock_actual: form.stock_actual !== '' ? Number(form.stock_actual) : 0,
       promo_activa: !!form.promo_activa,
@@ -808,14 +853,64 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
               </F>
             </div>
 
-            {/* ══ COL 2 — Materiales + Tarifas ═════════════ */}
+            {/* ══ COL 2 — Materiales + Tarifas (o productos del combo) ═════ */}
             <div className="producto-form-col" style={{ ...col, borderRight:'1px solid var(--border)' }}>
-              {secLabel('Materiales y tarifas')}
+              {secLabel(tipoFab === 'Combo' ? 'Productos del combo' : 'Materiales y tarifas')}
 
               {!form.categoria_id
                 ? <div style={{ marginTop:20, textAlign:'center', color:'var(--text-muted)', fontSize:12 }}>👈 Elegí una categoría</div>
                 : tipoFab === 'Melamina'
                   ? <>{renderMateriales()}<div style={{ height:1, background:'var(--border)', margin:'4px 0' }} />{renderTarifas()}</>
+                  : tipoFab === 'Combo'
+                  ? (
+                    <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                      <div style={{ position:'relative' }}>
+                        <input className="input" style={si()} placeholder="Buscar producto por nombre o SKU..." value={buscarCombo} onChange={e=>setBuscarCombo(e.target.value)} />
+                        {productosFiltradosCombo.length > 0 && (
+                          <div style={{ position:'absolute', top:'100%', left:0, right:0, zIndex:20, background:'var(--bg-card)', border:'1px solid var(--border)', borderRadius:6, maxHeight:220, overflowY:'auto', boxShadow:'0 4px 12px rgba(0,0,0,0.08)', marginTop:2 }}>
+                            {productosFiltradosCombo.map(p => (
+                              <div key={p.id} onClick={() => agregarAlCombo(p)}
+                                style={{ padding:'8px 12px', borderBottom:'1px solid var(--border)', cursor:'pointer', display:'flex', alignItems:'center', gap:10 }}
+                                onMouseEnter={e => e.currentTarget.style.background='var(--bg-muted)'}
+                                onMouseLeave={e => e.currentTarget.style.background='var(--bg-card)'}>
+                                <div style={{ flex:1, minWidth:0 }}>
+                                  <strong style={{ fontSize:14 }}>{p.nombre}</strong>
+                                  <div><code style={{ fontSize:11, color:'var(--text-muted)' }}>{p.sku}</code></div>
+                                </div>
+                                <span style={{ fontSize:12, color:'var(--text-muted)' }}>{fmtMoney(p.costo_base)}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {comboDetalle.length === 0 ? (
+                        <div style={{ textAlign:'center', color:'var(--text-muted)', fontSize:12, padding:'10px 0' }}>Buscá y agregá los productos que componen el combo.</div>
+                      ) : (
+                        <table className="table">
+                          <thead><tr><th>Producto</th><th style={{ textAlign:'right' }}>Cant.</th><th style={{ textAlign:'right' }}>Costo</th><th></th></tr></thead>
+                          <tbody>
+                            {comboDetalle.map(it => (
+                              <tr key={it.producto_id}>
+                                <td>
+                                  <strong style={{ fontSize:13 }}>{it.prod?.nombre || '(producto eliminado)'}</strong>
+                                  <div style={{ fontSize:11, color:'var(--text-muted)' }}>{it.prod?.sku}</div>
+                                </td>
+                                <td style={{ textAlign:'right' }}>
+                                  <input type="number" min={1} value={it.cantidad} onChange={e=>cambiarCantidadCombo(it.producto_id, e.target.value)}
+                                    className="input" style={{ width:56, textAlign:'right', padding:'4px 7px', fontSize:13 }} />
+                                </td>
+                                <td style={{ textAlign:'right', fontSize:13 }}>{fmtMoney(it.costo)}</td>
+                                <td style={{ textAlign:'right' }}>
+                                  <button className="btn btn-sm btn-ghost" onClick={() => quitarDelCombo(it.producto_id)} style={{ color:'var(--danger)', fontSize:12 }}>Quitar</button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      )}
+                    </div>
+                  )
                   : (
                     <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
                       <F label="Tarifa de impresión"><select className="select" style={si()} value={form.tarifa_id} onChange={e=>set('tarifa_id',e.target.value)}><option value="">— Seleccionar —</option>{tarifasFiltradas.map(t=><option key={t.id} value={t.id}>{padId(t.id)} · {t.nombre}</option>)}</select></F>
@@ -851,6 +946,17 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
                         {desglose.tarifasDetalle.map((d,i)=>(
                           <div key={i} style={{ display:'flex', justifyContent:'space-between', padding:'1px 0', borderBottom:'1px solid var(--border)' }}>
                             <span style={{ color:'var(--text-muted)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', maxWidth:'55%' }}>T{i+1}{d.tar?` ${d.tar.nombre}`:''}</span>
+                            <span style={{ fontWeight:600, whiteSpace:'nowrap' }}>{fmtMoney(d.costo)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {tipoFab==='Combo' && comboDetalle.length > 0 && (
+                      <div style={{ fontSize:12, display:'flex', flexDirection:'column', gap:2 }}>
+                        {comboDetalle.map((d) => (
+                          <div key={d.producto_id} style={{ display:'flex', justifyContent:'space-between', padding:'1px 0', borderBottom:'1px solid var(--border)' }}>
+                            <span style={{ color:'var(--text-muted)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', maxWidth:'55%' }}>×{d.cantidad} {d.prod?.nombre || '—'}</span>
                             <span style={{ fontWeight:600, whiteSpace:'nowrap' }}>{fmtMoney(d.costo)}</span>
                           </div>
                         ))}

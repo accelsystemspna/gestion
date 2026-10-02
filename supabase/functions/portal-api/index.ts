@@ -13,6 +13,7 @@
 import { serve }        from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { ESTADOS_PRODUCCION, ajustarFasePorProduccion } from '../_shared/produccion.ts'
+import { expandirCombos } from '../_shared/combos.ts'
 
 const cors = {
   'Access-Control-Allow-Origin':  '*',
@@ -75,7 +76,8 @@ async function llamarPortal(tienda: any, ruta: string, payload: Record<string, u
 }
 
 async function devolverStock(admin: any, ventaId: string | number) {
-  const { data: items } = await admin.from('venta_items').select('producto_id, cantidad').eq('venta_id', ventaId)
+  const { data: itemsCrudos } = await admin.from('venta_items').select('producto_id, cantidad').eq('venta_id', ventaId)
+  const items = await expandirCombos(admin, itemsCrudos ?? [])
   const porProducto: Record<string, number> = {}
   for (const it of items ?? []) {
     if (it.producto_id) porProducto[it.producto_id] = (porProducto[it.producto_id] || 0) + Number(it.cantidad)

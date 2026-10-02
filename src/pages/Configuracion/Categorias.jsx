@@ -267,6 +267,7 @@ function CategoriaForm({ initial, rubros, onCancel, onSave }) {
               <select className="select" value={form.tipo_fabricacion} onChange={(e) => set('tipo_fabricacion', e.target.value)}>
                 <option value="Melamina">Melamina</option>
                 <option value="Impresión 3D">Impresión 3D</option>
+                <option value="Combo">Combo</option>
               </select>
             </div>
           </div>

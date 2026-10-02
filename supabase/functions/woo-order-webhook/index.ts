@@ -14,6 +14,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { sendPushToOrg } from '../_shared/webpush.ts'
 import { ESTADOS_BORRADOR, filaPedido } from '../_shared/woo.ts'
 import { ajustarFasePorProduccion } from '../_shared/produccion.ts'
+import { expandirCombos } from '../_shared/combos.ts'
 
 function fmtMoneyAR(n: number): string {
   return '$ ' + Math.round(n).toLocaleString('es-AR')
@@ -139,7 +140,8 @@ async function aplicarProduccion(admin: any, ventaId: string, lineItems: any[], 
 }
 
 // Suma (signo=1) o resta (signo=-1) unidades al stock de los productos indicados.
-async function moverStock(admin: any, items: { producto_id: string | null; cantidad: number }[], signo: 1 | -1) {
+async function moverStock(admin: any, itemsCrudos: { producto_id: string | null; cantidad: number }[], signo: 1 | -1) {
+  const items = await expandirCombos(admin, itemsCrudos)
   const porProducto: Record<string, number> = {}
   for (const it of items) {
     if (!it.producto_id) continue
