@@ -47,6 +47,10 @@ export default function Productos() {
   // "Editar" de un producto: si es un combo (tiene combo_items) abre la pantalla
   // simple de combos; si no, el formulario completo de producto de siempre.
   const abrirEditar = (p) => {
+    if (p?.org_id && p.org_id !== orgId) {
+      alert('Este producto es de otro negocio (lo activó el Principal): lo podés vender, pero no editar.')
+      return
+    }
     if (p?.combo_items?.length) setEditingCombo(p)
     else { setFormKey((k) => k + 1); setEditing(p) }
   }
@@ -163,7 +167,12 @@ export default function Productos() {
     else { setSortCol(col); setSortDir('asc') }
   }
 
+  // Los productos que activó el Principal se pueden vender pero no tocar: la base los
+  // rechaza en silencio (0 filas), así que se frena acá antes de sincronizar nada.
+  const esAjeno = (id) => { const p = items.find((x) => x.id === id); return !!p?.org_id && p.org_id !== orgId }
+
   const handleToggleActivo = async (id, currentActivo) => {
+    if (esAjeno(id)) return alert('Este producto es de otro negocio: no se puede modificar.')
     const activoNuevo = currentActivo === false  // estaba inactivo → se reactiva
     const { error } = await supabase.from('productos').update({ activo: activoNuevo }).eq('id', id)
     if (error) {
@@ -180,6 +189,7 @@ export default function Productos() {
   }
 
   const handleDelete = async (id) => {
+    if (esAjeno(id)) return alert('Este producto es de otro negocio: no se puede eliminar.')
     if (!confirm('¿Eliminar este producto?')) return
     const sku = items.find(p => p.id === id)?.sku
     const { error } = await supabase.from('productos').delete().eq('id', id)

@@ -21,7 +21,7 @@ const navItems = [
 ]
 
 export default function Layout() {
-  const { user, profile, signOut, isAdmin, orgId } = useAuth()
+  const { user, profile, signOut, isAdmin, orgId, negocioNombre } = useAuth()
   const navigate  = useNavigate()
   const location  = useLocation()
   const [open, setOpen] = useState(false)
@@ -183,7 +183,7 @@ export default function Layout() {
               {profile?.nombre || user?.email}
             </div>
             <div style={{ fontSize: 11, color: '#94a3b8', textTransform: 'capitalize' }}>
-              {profile?.rol || 'usuario'}
+              {profile?.rol || 'usuario'}{negocioNombre ? ` · ${negocioNombre}` : ''}
             </div>
           </div>
         </div>

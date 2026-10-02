@@ -3,6 +3,7 @@ import { useAuth } from '../../lib/AuthContext'
 import Branding from './Branding'
 import ListasPrecios from './ListasPrecios'
 import Usuarios from './Usuarios'
+import Negocios from './Negocios'
 import Categorias from './Categorias'
 import Integraciones from './Integraciones'
 import Rubros from './Rubros'
@@ -17,14 +18,15 @@ const TABS = [
   { id: 'categorias',    label: 'Categorías' },
   { id: 'integraciones', label: 'Integraciones' },
   { id: 'apariencia',    label: 'Apariencia' },
+  { id: 'negocios',      label: 'Negocios',              soloPrincipal: true },
   { id: 'usuarios',      label: 'Usuarios y roles',      soloMaster: true },
   { id: 'backup',        label: 'Backup',                soloMaster: true },
   { id: 'arca',          label: 'ARCA / Facturación', soloMaster: true },
 ]
 
 export default function Configuracion() {
-  const { isMaster } = useAuth()
-  const tabs = TABS.filter(t => !t.soloMaster || isMaster)
+  const { isMaster, isPrincipal } = useAuth()
+  const tabs = TABS.filter(t => (!t.soloMaster || isMaster) && (!t.soloPrincipal || isPrincipal))
   const [tab, setTab] = useState('branding')
 
   return (
@@ -61,6 +63,7 @@ export default function Configuracion() {
 
       {tab === 'branding' && <Branding />}
       {tab === 'listas' && <ListasPrecios />}
+      {tab === 'negocios' && <Negocios />}
       {tab === 'usuarios' && <Usuarios />}
       {tab === 'categorias' && <Categorias />}
       {tab === 'rubros' && <Rubros />}

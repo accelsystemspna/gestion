@@ -5,6 +5,7 @@ import { precioVenta } from '../../lib/pricing'
 import { syncToWoo } from '../../lib/wooSync'
 import { syncMayorista } from '../../lib/mayoristaSync'
 import ImageThumb from '../../components/ImageThumb'
+import { useAuth } from '../../lib/AuthContext'
 
 const SKU_RE = /^[A-Z]{3}[0-9]{6}(-V\d+)?$/
 
@@ -19,6 +20,7 @@ const field = { display: 'flex', flexDirection: 'column', gap: 4 }
 const label = { fontSize: 12, fontWeight: 600, color: 'var(--text-muted)' }
 
 export default function ComboForm({ initial, onCancel, onSaved, onAvanzado }) {
+  const { orgId } = useAuth()
   const esNuevo = !initial?.id
   const [categorias, setCategorias] = useState([])
   const [subcategorias, setSubcategorias] = useState([])
@@ -58,7 +60,8 @@ export default function ComboForm({ initial, onCancel, onSaved, onAvanzado }) {
     })
   }, [])
 
-  const categoriasCombo = useMemo(() => categorias.filter((c) => c.tipo_fabricacion === 'Combo'), [categorias])
+  // El combo se guarda solo en categorías propias (las activadas por el Principal son de lectura).
+  const categoriasCombo = useMemo(() => categorias.filter((c) => c.tipo_fabricacion === 'Combo' && c.org_id === orgId), [categorias, orgId])
   const catSel = useMemo(() => categorias.find((c) => c.id === Number(categoriaId)), [categorias, categoriaId])
   const esMayorista = !!catSel?.es_mayorista
   const subOpciones = useMemo(() => subcategorias.filter((s) => s.categoria_id === Number(categoriaId)), [subcategorias, categoriaId])

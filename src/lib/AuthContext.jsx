@@ -110,13 +110,24 @@ export function AuthProvider({ children }) {
     }
   }, [userId])
 
-  const isMaster = !profile || profile?.rol === 'master'
+  // principal = dueño del sistema (ve todos los negocios); master = dueño de un negocio.
+  // El principal también cuenta como master dentro de su propio negocio.
+  const isPrincipal = profile?.rol === 'principal'
+  const isMaster = !profile || profile?.rol === 'master' || isPrincipal
   const isAdmin  = isMaster || profile?.rol === 'admin'
   const orgId    = profile?.org_id ?? session?.user?.id ?? null
 
+  // Nombre del negocio al que pertenece el usuario (se muestra en el menú lateral).
+  const [negocioNombre, setNegocioNombre] = useState('')
+  useEffect(() => {
+    if (!orgId || !userId) return
+    supabase.from('negocios').select('nombre').eq('org_id', orgId).maybeSingle()
+      .then(({ data }) => setNegocioNombre(data?.nombre || ''))
+  }, [orgId, userId])
+
   return (
     <AuthContext.Provider
-      value={{ session, user: session?.user ?? null, profile, loading, profileLoading, isMaster, isAdmin, orgId, signIn, signOut }}
+      value={{ session, user: session?.user ?? null, profile, loading, profileLoading, isMaster, isAdmin, isPrincipal, orgId, negocioNombre, signIn, signOut }}
     >
       {children}
     </AuthContext.Provider>

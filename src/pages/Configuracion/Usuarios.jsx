@@ -23,7 +23,7 @@ async function callEdge(action, body = {}) {
 const blank = { nombre: '', password: '', rol: 'vendedor' }
 
 export default function Usuarios() {
-  const { user } = useAuth()
+  const { user, orgId } = useAuth()
   const [items, setItems]   = useState([])
   const [loading, setLoading] = useState(true)
   const [form, setForm]     = useState(blank)
@@ -32,12 +32,13 @@ export default function Usuarios() {
 
   const load = async () => {
     setLoading(true)
-    const { data } = await supabase.from('profiles').select('*').order('created_at')
+    // Solo el equipo de este negocio (el principal ve los demás desde "Negocios").
+    const { data } = await supabase.from('profiles').select('*').eq('org_id', orgId).order('created_at')
     setItems(data || [])
     setLoading(false)
   }
 
-  useEffect(() => { load() }, [])
+  useEffect(() => { if (orgId) load() }, [orgId])
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
 
@@ -95,7 +96,6 @@ export default function Usuarios() {
           <div>
             <label style={{ fontSize: 12, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>Rol</label>
             <select className="select" value={form.rol} onChange={e => set('rol', e.target.value)}>
-              <option value="master">Master — control total</option>
               <option value="admin">Admin — sin ARCA ni usuarios</option>
               <option value="vendedor">Vendedor — solo ventas</option>
             </select>
@@ -144,7 +144,7 @@ export default function Usuarios() {
                   </td>
                   <td style={{ color: 'var(--text-muted)', fontSize: 13 }}>{u.email}</td>
                   <td>
-                    {u.id === user?.id ? (
+                    {u.id === user?.id || u.rol === 'master' || u.rol === 'principal' ? (
                       <span style={{ fontSize: 13, color: 'var(--text-muted)', textTransform: 'capitalize' }}>
                         {u.rol}
                       </span>
@@ -155,14 +155,13 @@ export default function Usuarios() {
                         value={u.rol}
                         onChange={(e) => cambiarRol(u.id, e.target.value)}
                       >
-                        <option value="master">Master</option>
                         <option value="admin">Admin</option>
                         <option value="vendedor">Vendedor</option>
                       </select>
                     )}
                   </td>
                   <td>
-                    {u.id !== user?.id && (
+                    {u.id !== user?.id && u.rol !== 'master' && u.rol !== 'principal' && (
                       <button
                         onClick={() => eliminar(u.id, u.nombre || u.email)}
                         style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', fontSize: 16, padding: '4px 8px' }}

@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
+import { useAuth } from '../../lib/AuthContext'
 
 const blankCat = { nombre: '', sku_prefijo: '', tipo_fabricacion: 'Melamina', rubro_id: '', es_mayorista: false }
 const blankSub = { nombre: '' }
 
 export default function Categorias() {
+  const { orgId } = useAuth()
   const [categorias, setCategorias] = useState([])
   const [rubros, setRubros]         = useState([])
   const [loading, setLoading]       = useState(true)
@@ -171,19 +173,25 @@ export default function Categorias() {
                           <span style={{ marginLeft: 6, fontSize: 11, fontWeight: 700, color: '#0f766e', background: 'rgba(15,118,110,0.12)', padding: '1px 6px', borderRadius: 4 }}>Mayorista</span>
                         )}
                       </div>
-                      <div style={{ display: 'flex', gap: 6 }}>
-                        <button className="btn btn-sm btn-ghost" onClick={() => setEditingCat({ ...cat, rubro_id: cat.rubro_id || '' })}>Editar</button>
-                        <button className="btn btn-sm btn-ghost" onClick={() => handleDeleteCat(cat.id)} style={{ color: 'var(--danger)' }}>Eliminar</button>
-                      </div>
+                      {cat.org_id !== orgId ? (
+                        <span title="Categoría activada por el Principal: se puede usar pero no editar" style={{ fontSize: 11, fontWeight: 700, color: '#6d28d9', background: 'rgba(109,40,217,0.1)', padding: '2px 8px', borderRadius: 4 }}>Compartida</span>
+                      ) : (
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          <button className="btn btn-sm btn-ghost" onClick={() => setEditingCat({ ...cat, rubro_id: cat.rubro_id || '' })}>Editar</button>
+                          <button className="btn btn-sm btn-ghost" onClick={() => handleDeleteCat(cat.id)} style={{ color: 'var(--danger)' }}>Eliminar</button>
+                        </div>
+                      )}
                     </div>
 
                     {expandedId === cat.id && (
                       <div style={{ padding: '12px 16px 16px 40px', borderTop: '1px solid var(--border)', background: 'var(--bg-muted)' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
                           <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>Subcategorías</span>
-                          <button className="btn btn-sm btn-ghost" onClick={() => setEditingSub({ ...blankSub, _catId: cat.id })}>
-                            + Agregar
-                          </button>
+                          {cat.org_id === orgId && (
+                            <button className="btn btn-sm btn-ghost" onClick={() => setEditingSub({ ...blankSub, _catId: cat.id })}>
+                              + Agregar
+                            </button>
+                          )}
                         </div>
                         {(subcats[cat.id] || []).length === 0 ? (
                           <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: 0 }}>Sin subcategorías.</p>
@@ -192,8 +200,10 @@ export default function Categorias() {
                             {(subcats[cat.id] || []).map((sub) => (
                               <div key={sub.id} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                                 <span style={{ flex: 1, fontSize: 14 }}>· {sub.nombre}</span>
-                                <button className="btn btn-sm btn-ghost" onClick={() => setEditingSub({ ...sub, _catId: cat.id })}>Editar</button>
-                                <button className="btn btn-sm btn-ghost" onClick={() => handleDeleteSub(sub.id, cat.id)} style={{ color: 'var(--danger)' }}>Eliminar</button>
+                                {cat.org_id === orgId && (<>
+                                  <button className="btn btn-sm btn-ghost" onClick={() => setEditingSub({ ...sub, _catId: cat.id })}>Editar</button>
+                                  <button className="btn btn-sm btn-ghost" onClick={() => handleDeleteSub(sub.id, cat.id)} style={{ color: 'var(--danger)' }}>Eliminar</button>
+                                </>)}
                               </div>
                             ))}
                           </div>

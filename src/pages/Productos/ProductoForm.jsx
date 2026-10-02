@@ -797,7 +797,7 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
                 <F label="Categoría">
                   <select className="select" style={si()} value={form.categoria_id} onChange={e=>handleCategoriaChange(e.target.value)}>
                     <option value="">— Seleccionar —</option>
-                    {(rubroFiltro?categorias.filter(c=>String(c.rubro_id)===rubroFiltro):categorias).map(c=><option key={c.id} value={c.id}>{c.nombre}</option>)}
+                    {(rubroFiltro?categorias.filter(c=>String(c.rubro_id)===rubroFiltro):categorias).filter(c=>c.org_id===orgId).map(c=><option key={c.id} value={c.id}>{c.nombre}</option>)}
                   </select>
                   {(()=>{ const cat=form.categoria_id?categorias.find(c=>c.id===Number(form.categoria_id)):null; const rub=cat?.rubro_id?rubros.find(r=>r.id===cat.rubro_id):null; return rub?<span style={{ fontSize:10, color:rub.color, marginTop:2 }}>{rub.emoji} {rub.nombre}</span>:null })()}
                 </F>
