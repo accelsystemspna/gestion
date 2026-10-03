@@ -23,6 +23,16 @@ async function procesar(admin: any, n: any) {
     return
   }
 
+  // El aviso de un envío trae el id del envío: se busca a qué orden pertenece y se actualiza esa venta.
+  if (n.topic === 'shipments') {
+    const e = await mlFetch(admin, cuenta.org_id, `/shipments/${id}`, { headers: { 'x-format-new': 'true' } })
+    const ordenId = e.data?.order_id ?? e.data?.source_id
+    if (!e.ok || !ordenId) return
+    const r = await procesarOrdenML(admin, cuenta, ordenId)
+    if (!r.ok) console.warn('[ml-webhook] envío', id, r.error)
+    return
+  }
+
   if (n.topic === 'questions') {
     const q = await mlFetch(admin, cuenta.org_id, `/questions/${id}?api_version=4`)
     if (!q.ok || q.data?.status !== 'UNANSWERED') return
