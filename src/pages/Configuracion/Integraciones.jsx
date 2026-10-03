@@ -4,6 +4,7 @@ import { useAuth } from '../../lib/AuthContext'
 import { syncManyToWoo, conCategoriasWeb } from '../../lib/wooSync'
 import { syncMayorista } from '../../lib/mayoristaSync'
 import ImagenesCompartidas from './ImagenesCompartidas'
+import MercadoLibreCard from './MercadoLibreCard'
 
 // ─── Helpers de UI ───────────────────────────────────────────────────────────
 
@@ -258,6 +259,8 @@ export default function Integraciones() {
         </div>
       )}
 
+      <MercadoLibreCard />
+
       {/* Imágenes compartidas: van en la web, por eso viven acá */}
       <div style={{ marginTop: 32, paddingTop: 20, borderTop: '1px solid var(--border)' }}>
         <h2 style={{ fontSize: 16, margin: '0 0 12px' }}>Imágenes compartidas</h2>
@@ -269,8 +272,6 @@ export default function Integraciones() {
         <p style={{ margin: 0, fontSize: 13, color: 'var(--text-muted)' }}>
           Los productos se sincronizan automáticamente a WooCommerce y al portal mayorista al guardarlos, y también cuando cambia el precio de un insumo, una tarifa o una lista de precios.
           Usá <strong>Sincronizar ahora</strong> en cada tienda para forzar una resincronización completa cuando quieras.
-          <br />
-          <strong style={{ color: 'var(--text)' }}>Próximamente:</strong> integración con Mercado Libre vía OAuth.
         </p>
       </div>
 
@@ -354,7 +355,6 @@ function TiendaForm({ initial, listas, categorias, subcategorias, onCancel, onSa
               <select className="select" value={form.tipo} onChange={(e) => set('tipo', e.target.value)}>
                 <option value="woocommerce">WooCommerce</option>
                 <option value="mayorista">Mayorista</option>
-                <option value="mercadolibre">Mercado Libre</option>
               </select>
             </div>
           </div>

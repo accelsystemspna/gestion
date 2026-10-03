@@ -27,7 +27,7 @@ const TABS = [
 export default function Configuracion() {
   const { isMaster, isPrincipal } = useAuth()
   const tabs = TABS.filter(t => (!t.soloMaster || isMaster) && (!t.soloPrincipal || isPrincipal))
-  const [tab, setTab] = useState('branding')
+  const [tab, setTab] = useState(() => (new URLSearchParams(window.location.search).get('ml') ? 'integraciones' : 'branding'))
 
   return (
     <div>
