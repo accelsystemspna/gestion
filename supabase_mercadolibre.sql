@@ -59,3 +59,7 @@ create policy ml_publicaciones_select on public.ml_publicaciones for select usin
 
 -- Las ventas de ML entran como ventas normales con canal 'mercadolibre' y origen_ref 'ML#<orden>'.
 create unique index if not exists ventas_origen_ref_ml_uniq on public.ventas (org_id, origen_ref) where canal = 'mercadolibre';
+alter table public.ml_publicaciones add column if not exists thumbnail text;
+alter table public.ml_publicaciones add column if not exists stock integer;
+alter table public.ml_publicaciones add column if not exists vendidos integer;
+alter table public.ml_publicaciones add column if not exists sku text;

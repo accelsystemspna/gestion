@@ -5,6 +5,7 @@ import { fmtMoney } from '../../lib/format'
 import VentaDetalle from '../Ventas/VentaDetalle'
 import ImageThumb from '../../components/ImageThumb'
 import WooPanel from './woo/WooPanel'
+import MercadoLibrePanel from './MercadoLibrePanel'
 import ClientesPortal from './ClientesPortal'
 import { portalApi, imprimirEtiqueta, ventanaPreparando, ventanaError } from '../../lib/portalApi'
 import {
@@ -199,6 +200,7 @@ export default function Tiendas() {
   const tiendaSel = sel === 'todas' ? null : tiendas.find(t => String(t.id) === String(sel))
   const tiendaDeVenta = (v) => tiendas.find(t => perteneceATienda(v, t)) || null
   // Tienda mayorista con la que se trabajan los clientes del portal: la elegida, o la primera activa
+  const tiendaML = tiendas.find(t => t.tipo === 'mercadolibre' && t.activa !== false) || null
   const tiendaPortal = tiendaSel?.tipo === 'mayorista' ? tiendaSel : (tiendas.find(t => t.tipo === 'mayorista' && t.activa !== false) || null)
 
   // Aviso de clientes del portal esperando aprobación (mejor esfuerzo: si falla, no se muestra nada)
@@ -532,7 +534,7 @@ export default function Tiendas() {
               const r = resumen(lista)
               const activa = String(sel) === String(t.id)
               const tipo = TIPOS[t.tipo]
-              const sinPedidos = t.tipo === 'mercadolibre'
+              const sinPedidos = false
               return (
                 <div key={t.id} onClick={() => { setSel(String(t.id)); setFiltro('todos') }}
                   style={{
@@ -561,7 +563,7 @@ export default function Tiendas() {
           </div>
 
           {/* KPIs */}
-          {tab !== 'woo' && tab !== 'portal' && <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 16 }}>
+          {tab !== 'woo' && tab !== 'portal' && tab !== 'ml' && <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 16 }}>
             <Kpi label="Esperando pago" value={kpi.esperando} sub={kpi.esperando ? fmtMoney(kpi.montoEsperando) : 'nada pendiente'} color={kpi.esperando ? '#b45309' : undefined} />
             <Kpi label="En preparación" value={kpi.enPrep} sub="pagados, por armar" color="#0e7490" />
             <Kpi label="Listos para despachar" value={kpi.listos} sub="para facturar y enviar" color="#6d28d9" />
@@ -571,7 +573,7 @@ export default function Tiendas() {
 
           {/* Pestañas */}
           <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', marginBottom: 14 }}>
-            {[['pedidos', 'Pedidos'], ['clientes', 'Clientes'], ...(tiendaPortal ? [['portal', 'Clientes del portal']] : []), ['woo', 'Panel WooCommerce']].map(([id, label]) => (
+            {[['pedidos', 'Pedidos'], ['clientes', 'Clientes'], ...(tiendaPortal ? [['portal', 'Clientes del portal']] : []), ...(tiendaML ? [['ml', 'Mercado Libre']] : []), ['woo', 'Panel WooCommerce']].map(([id, label]) => (
               <button key={id} onClick={() => setTab(id)} style={{
                 padding: '9px 20px', border: 'none', background: 'none', cursor: 'pointer', fontSize: 14,
                 fontWeight: tab === id ? 600 : 400, color: tab === id ? 'var(--primary)' : 'var(--text-muted)',
@@ -583,7 +585,7 @@ export default function Tiendas() {
           </div>
 
           {/* Filtros */}
-          {tab !== 'woo' && tab !== 'portal' && <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginBottom: 12 }}>
+          {tab !== 'woo' && tab !== 'portal' && tab !== 'ml' && <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginBottom: 12 }}>
             {tab === 'pedidos' && [['todos', 'Todos'], ...Object.entries(ESTADOS_WEB).map(([k, v]) => [k, v.label])].map(([k, label]) => (
               <button key={k} onClick={() => setFiltro(k)} className="btn btn-sm" style={{
                 background: filtro === k ? 'var(--primary)' : undefined, color: filtro === k ? '#fff' : undefined,
@@ -614,6 +616,8 @@ export default function Tiendas() {
           )}
 
           {/* ── PANEL WOOCOMMERCE ─────────────────────────────────────── */}
+          {tab === 'ml' && tiendaML && <MercadoLibrePanel />}
+
           {tab === 'woo' && (
             <WooPanel tiendas={tiendas} tiendaSelId={sel} ventas={ventas} onCambio={() => cargar(true)} />
           )}

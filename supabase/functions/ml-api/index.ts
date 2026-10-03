@@ -99,6 +99,57 @@ serve(async (req) => {
       return json({ ok: true, ...resumen })
     }
 
+    // ── Traer todas las publicaciones de ML y vincularlas a productos por SKU ──
+    if (action === 'sync_items') {
+      const c = await cuentaDe()
+      if (!c) return json({ error: 'Mercado Libre no está conectado' }, 400)
+
+      // 1) ids de todas las publicaciones (activas, pausadas, cerradas)
+      const ids: string[] = []
+      for (const status of ['active', 'paused', 'closed']) {
+        for (let offset = 0; offset < 1000; offset += 100) {
+          const r = await mlFetch(admin, org, `/users/${c.ml_user_id}/items/search?status=${status}&limit=100&offset=${offset}`)
+          if (!r.ok) return json({ error: r.error }, 502)
+          const res: string[] = r.data?.results ?? []
+          ids.push(...res)
+          if (res.length < 100) break
+        }
+      }
+
+      // 2) detalle de a 20 (límite de ML)
+      const items: any[] = []
+      for (let i = 0; i < ids.length; i += 20) {
+        const r = await mlFetch(admin, org, `/items?ids=${ids.slice(i, i + 20).join(',')}`)
+        if (!r.ok) return json({ error: r.error }, 502)
+        for (const e of r.data ?? []) if (e?.code === 200 && e.body) items.push(e.body)
+      }
+
+      // 3) vincular por SKU contra los productos del negocio
+      const skuDe = (it: any) =>
+        it.seller_custom_field || it.attributes?.find((a: any) => a.id === 'SELLER_SKU')?.value_name || null
+      const skus = [...new Set(items.map(skuDe).filter(Boolean))]
+      const { data: prods } = skus.length
+        ? await admin.from('productos').select('id, sku').eq('org_id', org).in('sku', skus)
+        : { data: [] as any[] }
+      const porSku = Object.fromEntries((prods ?? []).map((p: any) => [p.sku, p.id]))
+
+      const ahora = new Date().toISOString()
+      const filas = items.map((it) => {
+        const sku = skuDe(it)
+        return {
+          org_id: org, item_id: it.id, producto_id: sku ? porSku[sku] ?? null : null,
+          ml_categoria_id: it.category_id, titulo: it.title, precio: it.price, estado: it.status,
+          permalink: it.permalink, thumbnail: it.secure_thumbnail || it.thumbnail || null,
+          stock: it.available_quantity, vendidos: it.sold_quantity, sku, error: null, actualizada_en: ahora,
+        }
+      })
+      for (let i = 0; i < filas.length; i += 200) {
+        const { error } = await admin.from('ml_publicaciones').upsert(filas.slice(i, i + 200), { onConflict: 'item_id' })
+        if (error) return json({ error: error.message }, 500)
+      }
+      return json({ ok: true, total: filas.length, vinculadas: filas.filter((f) => f.producto_id).length })
+    }
+
     return json({ error: 'Acción desconocida' }, 400)
   } catch (e) {
     return json({ error: e instanceof Error ? e.message : String(e) }, 500)
