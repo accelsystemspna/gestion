@@ -6,6 +6,7 @@ import { recalcularCCPorProductos } from '../../lib/recalcularCC'
 import { syncToWoo, cargarImagenesCompartidas } from '../../lib/wooSync'
 import { syncMayorista } from '../../lib/mayoristaSync'
 import { useAuth } from '../../lib/AuthContext'
+import TabMercadoLibre from './TabMercadoLibre'
 
 const SKU_RE = /^[A-Z]{3}[0-9]{6}(-V\d+)?$/
 
@@ -75,6 +76,7 @@ const blank = {
   imagen_web_url: '',
   imagenes_web: [],
   video_url: '',
+  ml_titulo: '', ml_descripcion: '', ml_imagenes: [], ml_atributos: {}, ml_categoria_id: '', ml_precio: null,
   usar_imagenes_compartidas: true,
   categorias_web_ids: [],
   seo_titulo: '',
@@ -134,6 +136,12 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
         imagen_web_url: initial.imagen_web_url || '',
         imagenes_web: initial.imagenes_web || [],
         video_url: initial.video_url || '',
+        ml_titulo: initial.ml_titulo || '',
+        ml_descripcion: initial.ml_descripcion || '',
+        ml_imagenes: initial.ml_imagenes || [],
+        ml_atributos: initial.ml_atributos || {},
+        ml_categoria_id: initial.ml_categoria_id || '',
+        ml_precio: initial.ml_precio ?? null,
         usar_imagenes_compartidas: initial.usar_imagenes_compartidas !== false,
         categorias_web_ids: initial.categorias_web_ids || [],
         seo_titulo: initial.seo_titulo || '',
@@ -446,6 +454,12 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
       imagen_web_url: form.imagen_web_url || null,
       imagenes_web: form.imagenes_web || [],
       video_url: form.video_url?.trim() || null,
+      ml_titulo: form.ml_titulo?.trim() || null,
+      ml_descripcion: form.ml_descripcion?.trim() || null,
+      ml_imagenes: form.ml_imagenes || [],
+      ml_atributos: form.ml_atributos || {},
+      ml_categoria_id: form.ml_categoria_id?.trim() || null,
+      ml_precio: Number(form.ml_precio) > 0 ? Number(form.ml_precio) : null,
       usar_imagenes_compartidas: form.usar_imagenes_compartidas !== false,
       categorias_web_ids: form.categorias_web_ids || [],
       seo_titulo: form.seo_titulo || null,
@@ -599,6 +613,7 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
         imagen_web_url:   form.imagen_web_url ?? null,
         imagenes_web:     [],
         video_url:        '',
+        ml_titulo: '', ml_descripcion: '', ml_imagenes: [], ml_atributos: {}, ml_precio: null,
         usar_imagenes_compartidas: form.usar_imagenes_compartidas !== false,
         incremento:       form.incremento ?? 0,
         tiendas_ids:      form.tiendas_ids ?? [],
@@ -756,7 +771,8 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
           <h3>{form.id ? 'Editar producto' : 'Nuevo producto'}</h3>
           <div style={{ display:'flex', gap:4, marginLeft:'auto', marginRight:12 }}>
             <button type="button" onClick={()=>setTab('general')} className="btn btn-sm" style={{ background:tab==='general'?'var(--primary)':undefined, color:tab==='general'?'white':undefined, borderColor:tab==='general'?'var(--primary)':undefined }}>Producto</button>
-            <button type="button" onClick={()=>setTab('web')} className="btn btn-sm" style={{ background:tab==='web'?'var(--primary)':undefined, color:tab==='web'?'white':undefined, borderColor:tab==='web'?'var(--primary)':undefined }}>🌐 Web</button>
+            <button type="button" onClick={()=>setTab('web')} className="btn btn-sm" style={{ background:tab==='web'?'var(--primary)':undefined, color:tab==='web'?'white':undefined, borderColor:tab==='web'?'var(--primary)':undefined }}> 🌐 Web</button>
+            <button type="button" onClick={()=>setTab('ml')} className="btn btn-sm" style={{ background:tab==='ml'?'#d97706':undefined, color:tab==='ml'?'white':undefined, borderColor:tab==='ml'?'#d97706':undefined }}>🛒 Mercado Libre</button>
           </div>
           <button className="btn btn-ghost btn-sm" onClick={handleCancel}>✕</button>
         </div>
@@ -1248,6 +1264,7 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
 
             </div>
           )}
+          {tab === 'ml' && <TabMercadoLibre form={form} set={set} setForm={setForm} listas={listas} costoBase={costoBase} />}
         </div>
 
         {/* Footer fijo — siempre visible */}

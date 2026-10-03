@@ -11,8 +11,8 @@ const soloTexto = (html) => String(html || '').replace(/<\s*br\s*\/?>|<\/p>/gi, 
 export default function PublicarMLModal({ producto, listas, onClose }) {
   const lista = (listas || []).find((l) => /mercado\s*libre/i.test(l.nombre))
   const sugerido = lista ? Math.round(precioVenta(Number(producto.costo_base) || 0, lista)) : ''
-  const [titulo, setTitulo] = useState((String(producto.seo_titulo || '').split('|')[0] || producto.nombre || '').trim().slice(0, 60))
-  const [precio, setPrecio] = useState(sugerido)
+  const [titulo, setTitulo] = useState((producto.ml_titulo || String(producto.seo_titulo || '').split('|')[0] || producto.nombre || '').trim().slice(0, 60))
+  const [precio, setPrecio] = useState(producto.ml_precio || sugerido)
   const [stock, setStock]   = useState(Math.max(Number(producto.stock_actual) || 0, 0) || 10)
   const [existentes, setExistentes] = useState([])
   const [estado, setEstado] = useState(null)   // { tipo: 'ok'|'error', texto, avisos?, vista? }
@@ -86,12 +86,12 @@ export default function PublicarMLModal({ producto, listas, onClose }) {
               </label>
             </div>
             <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-              Fotos y descripción salen del producto ({[producto.imagen_web_url, ...(producto.imagenes_web || []), producto.imagen_url].filter(Boolean).length} foto(s)
-              {soloTexto(producto.descripcion) ? '' : ', sin descripción'}). Envío, garantía y marca se copian de una publicación tuya.
+              Fotos y descripción salen de la pestaña Mercado Libre del producto (si está vacía, de las generales: {(producto.ml_imagenes?.length ? producto.ml_imagenes : [producto.imagen_web_url, ...(producto.imagenes_web || []), producto.imagen_url].filter(Boolean)).length} foto(s)
+              {(producto.ml_descripcion || soloTexto(producto.descripcion)) ? '' : ', sin descripción'}). Envío, garantía y marca se copian de una publicación tuya.
             </div>
-            {soloTexto(producto.descripcion) && (
+            {(producto.ml_descripcion || soloTexto(producto.descripcion)) && (
               <div style={{ fontSize: 12, maxHeight: 90, overflow: 'auto', padding: 8, border: '1px solid var(--border)', borderRadius: 6, whiteSpace: 'pre-wrap' }}>
-                {soloTexto(producto.descripcion)}
+                {producto.ml_descripcion || soloTexto(producto.descripcion)}
               </div>
             )}
             {estado && (

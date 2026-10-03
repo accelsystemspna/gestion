@@ -53,5 +53,8 @@ y copia envío/garantía/marca de una publicación ya existente del negocio en e
 **Por defecto solo VALIDA** (ML revisa, no publica); para publicar de verdad el JSON tiene que
 llevar `"publicar": true` — confirmalo con el usuario antes. La forma del JSON está en el
 comentario del script. La cuenta de ML tiene que estar conectada (Configuración → Integraciones).
+Lo que le pases (título, descripción, fotos, atributos, categoría, precio) queda guardado en la
+pestaña **Mercado Libre** del producto (columnas `ml_*`), que es independiente de la configuración
+de la web: no mezcles los textos ni las fotos de una con la otra.
 La descripción se manda en texto plano (el HTML se convierte). Las fotos tienen que tener URL
 pública (las locales se suben solas).

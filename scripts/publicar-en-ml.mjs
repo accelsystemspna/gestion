@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // Publica (o valida) en Mercado Libre un producto YA EXISTENTE del programa.
-// Toma de ahí título, fotos, descripción, medidas y SKU; el resto de la publicación (envío,
+// Toma la configuración de la pestaña "Mercado Libre" del producto (y, si está vacía, título, fotos
+// y descripción generales), más medidas y SKU; el resto de la publicación (envío,
 // garantía, marca, material...) se copia de una publicación tuya de la misma categoría.
 //
 // POR DEFECTO SOLO VALIDA: Mercado Libre revisa el producto pero no se publica nada.
@@ -20,6 +21,8 @@
 //   "stock": 10,                       // si falta: stock del producto (o el de la publicación modelo)
 //   "titulo": "Cuadro Tríptico ...",   // máx. 60 caracteres (default: título web sin "| marca", o el nombre)
 //   "descripcion": "texto plano",      // default: la descripción del producto (el HTML se pasa a texto)
+//   (titulo, descripcion, imagenes, atributos, categoria_ml y precio, si los pasás, se GUARDAN en la
+//    pestaña Mercado Libre del producto: la configuración de la web no se toca)
 //   "imagenes": ["C:/fotos/a.jpg", "https://..."],  // rutas locales (se suben) o URLs públicas; default: las del producto
 //   "atributos": { "PAINTING_THEME": "Mandala", "COLOR": "Negro" },  // pisan lo copiado/calculado
 //   "categoria_ml": "MLA1635",         // default: la de la publicación modelo
@@ -87,6 +90,23 @@ if (pedido.imagenes?.length) {
     const { error } = await supabase.storage.from('productos').upload(destino, fs.readFileSync(ruta), { upsert: true, contentType: tipos[ext] || 'image/jpeg' })
     if (error) fallar(`No se pudo subir ${ruta}: ${error.message}`)
     imagenes.push(supabase.storage.from('productos').getPublicUrl(destino).data.publicUrl)
+  }
+}
+
+// Lo que se pasa por JSON queda guardado en la pestaña "Mercado Libre" del producto (separada de la web),
+// así se puede revisar y retocar desde el programa y no hay que repetirlo.
+{
+  const guardar = {}
+  if (pedido.titulo) guardar.ml_titulo = String(pedido.titulo).slice(0, 60)
+  if (pedido.descripcion) guardar.ml_descripcion = pedido.descripcion
+  if (imagenes) guardar.ml_imagenes = imagenes
+  if (pedido.atributos) guardar.ml_atributos = { ...(producto.ml_atributos || {}), ...pedido.atributos }
+  if (pedido.categoria_ml) guardar.ml_categoria_id = pedido.categoria_ml
+  if (Number(pedido.precio) > 0) guardar.ml_precio = Number(pedido.precio)
+  if (Object.keys(guardar).length) {
+    const { error } = await supabase.from('productos').update(guardar).eq('id', producto.id)
+    if (error) fallar('No se pudo guardar la configuración de Mercado Libre en el producto: ' + error.message)
+    console.log('· Guardado en la pestaña Mercado Libre del producto: ' + Object.keys(guardar).join(', '))
   }
 }
 

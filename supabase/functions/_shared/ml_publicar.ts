@@ -136,8 +136,19 @@ export function armarItem(producto: any, plantilla: any, pedido: PedidoPublicar)
 
 /** Valida (sin publicar) o publica. Devuelve el item creado y deja registrada la publicación. */
 export async function publicarItem(
-  admin: any, org: string, producto: any, pedido: PedidoPublicar, opts: { soloValidar?: boolean } = {},
+  admin: any, org: string, producto: any, pedidoCrudo: PedidoPublicar, opts: { soloValidar?: boolean } = {},
 ) {
+  // Lo que no venga en el pedido se toma de la pestaña "Mercado Libre" del producto (ml_*),
+  // que es independiente de la configuración de la web.
+  const pedido: PedidoPublicar = {
+    ...pedidoCrudo,
+    titulo: pedidoCrudo.titulo || producto.ml_titulo || undefined,
+    descripcion: pedidoCrudo.descripcion ?? producto.ml_descripcion ?? undefined,
+    imagenes: pedidoCrudo.imagenes?.length ? pedidoCrudo.imagenes : (producto.ml_imagenes?.length ? producto.ml_imagenes : undefined),
+    atributos: { ...(producto.ml_atributos ?? {}), ...(pedidoCrudo.atributos ?? {}) },
+    categoria_ml: pedidoCrudo.categoria_ml || producto.ml_categoria_id || undefined,
+    precio: Number(pedidoCrudo.precio) > 0 ? pedidoCrudo.precio : Number(producto.ml_precio),
+  }
   const cat = pedido.categoria_ml ?? null
   const { plantilla, error } = await cargarPlantilla(admin, org, cat, pedido.plantilla_item_id)
   if (error || !plantilla) return { ok: false, error }

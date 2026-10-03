@@ -63,3 +63,10 @@ alter table public.ml_publicaciones add column if not exists thumbnail text;
 alter table public.ml_publicaciones add column if not exists stock integer;
 alter table public.ml_publicaciones add column if not exists vendidos integer;
 alter table public.ml_publicaciones add column if not exists sku text;
+-- Configuración propia de Mercado Libre por producto (separada de la de la web)
+alter table public.productos add column if not exists ml_titulo text;
+alter table public.productos add column if not exists ml_descripcion text;      -- texto plano
+alter table public.productos add column if not exists ml_imagenes text[] not null default '{}';  -- la primera es la portada
+alter table public.productos add column if not exists ml_atributos jsonb not null default '{}'::jsonb;  -- { ATRIBUTO_ID: "valor" }
+alter table public.productos add column if not exists ml_categoria_id text;
+alter table public.productos add column if not exists ml_precio numeric;        -- si se completa, pisa el de la lista Mercado Libre
