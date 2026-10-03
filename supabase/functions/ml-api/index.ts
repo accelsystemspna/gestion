@@ -4,6 +4,7 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { ML_AUTH, credencialesApp, redirectUri, mlFetch } from '../_shared/ml.ts'
 import { procesarOrdenML } from '../_shared/ml_orders.ts'
+import { publicarItem, htmlATexto } from '../_shared/ml_publicar.ts'
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -148,6 +149,68 @@ serve(async (req) => {
         if (error) return json({ error: error.message }, 500)
       }
       return json({ ok: true, total: filas.length, vinculadas: filas.filter((f) => f.producto_id).length })
+    }
+
+    // ── Sugerir categoría de ML a partir de un título ───────────────────
+    if (action === 'predict_category') {
+      const r = await mlFetch(admin, org, `/sites/MLA/domain_discovery/search?limit=5&q=${encodeURIComponent(String(body.titulo ?? ''))}`)
+      if (!r.ok) return json({ error: r.error }, 502)
+      return json({ categorias: (r.data ?? []).map((d: any) => ({ id: d.category_id, nombre: d.category_name, dominio: d.domain_name })) })
+    }
+
+    // ── Atributos que pide una categoría (para saber qué completar) ─────
+    if (action === 'category_attributes') {
+      const r = await mlFetch(admin, org, `/categories/${encodeURIComponent(String(body.categoria_ml))}/attributes`)
+      if (!r.ok) return json({ error: r.error }, 502)
+      return json({
+        atributos: (r.data ?? []).filter((a: any) => !a.tags?.hidden && !a.tags?.read_only).map((a: any) => ({
+          id: a.id, nombre: a.name, tipo: a.value_type, hint: a.hint ?? null,
+          obligatorio: !!a.tags?.required, condicional: !!a.tags?.conditional_required,
+          valores: (a.values ?? []).slice(0, 40).map((v: any) => v.name),
+        })),
+      })
+    }
+
+    // ── Publicar un producto (o solo validarlo, sin publicar) ───────────
+    if (action === 'publish') {
+      const c = await cuentaDe()
+      if (!c) return json({ error: 'Mercado Libre no está conectado' }, 400)
+      let q = admin.from('productos').select('*').eq('org_id', org)
+      q = body.producto_id ? q.eq('id', body.producto_id) : q.eq('sku', String(body.sku ?? ''))
+      const { data: producto } = await q.maybeSingle()
+      if (!producto) return json({ error: 'Producto no encontrado en este negocio' }, 404)
+      const r = await publicarItem(admin, org, producto, body.pedido ?? body, { soloValidar: !!body.validar })
+      return json(r, r.ok ? 200 : 422)
+    }
+
+    // ── Cambiar precio / stock / estado / descripción de una publicación ─
+    if (action === 'update_item') {
+      const { item_id, precio, stock, estado, descripcion } = body
+      const { data: pub } = await admin.from('ml_publicaciones').select('id').eq('org_id', org).eq('item_id', item_id).maybeSingle()
+      if (!pub) return json({ error: 'Esa publicación no es de este negocio' }, 404)
+      const cambios: Record<string, unknown> = {}
+      if (precio !== undefined) cambios.price = Number(precio)
+      if (stock !== undefined) cambios.available_quantity = Math.max(0, Math.round(Number(stock)))
+      if (estado !== undefined) {
+        if (!['active', 'paused', 'closed'].includes(estado)) return json({ error: 'Estado inválido' }, 400)
+        cambios.status = estado
+      }
+      const errores: string[] = []
+      if (Object.keys(cambios).length) {
+        const r = await mlFetch(admin, org, `/items/${item_id}`, { method: 'PUT', body: cambios })
+        if (!r.ok) errores.push(r.error ?? 'No se pudo actualizar')
+        else await admin.from('ml_publicaciones').update({
+          precio: r.data.price, stock: r.data.available_quantity, estado: r.data.status, actualizada_en: new Date().toISOString(),
+        }).eq('id', pub.id)
+      }
+      if (descripcion !== undefined) {
+        const texto = htmlATexto(descripcion)
+        let d = await mlFetch(admin, org, `/items/${item_id}/description?api_version=2`, { method: 'PUT', body: { plain_text: texto } })
+        // Si la publicación todavía no tenía descripción, hay que crearla en vez de reemplazarla.
+        if (!d.ok && d.status === 404) d = await mlFetch(admin, org, `/items/${item_id}/description`, { method: 'POST', body: { plain_text: texto } })
+        if (!d.ok) errores.push('Descripción: ' + (d.error ?? 'no se pudo'))
+      }
+      return json({ ok: !errores.length, errores }, errores.length ? 422 : 200)
     }
 
     return json({ error: 'Acción desconocida' }, 400)

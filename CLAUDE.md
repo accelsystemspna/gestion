@@ -43,3 +43,15 @@ Si en algún momento hace falta ADEMÁS crear productos nuevos desde cero (SKU +
 costo por piezas de melamina o por gramos/tiempo de impresión 3D), avisá que ese
 flujo todavía no está armado — es más laborioso porque replica el asistente de
 costos del formulario (`src/pages/Productos/ProductoForm.jsx`).
+
+## Publicar en Mercado Libre
+
+Segundo paso del mismo flujo (después de `completar-producto-web.mjs`, que deja fotos y
+descripción en el producto): `scripts/publicar-en-ml.mjs ruta/al/pedido.json`. Lee título,
+fotos, descripción, medidas y SKU del producto, calcula el precio con la lista "Mercado Libre"
+y copia envío/garantía/marca de una publicación ya existente del negocio en esa categoría.
+**Por defecto solo VALIDA** (ML revisa, no publica); para publicar de verdad el JSON tiene que
+llevar `"publicar": true` — confirmalo con el usuario antes. La forma del JSON está en el
+comentario del script. La cuenta de ML tiene que estar conectada (Configuración → Integraciones).
+La descripción se manda en texto plano (el HTML se convierte). Las fotos tienen que tener URL
+pública (las locales se suben solas).

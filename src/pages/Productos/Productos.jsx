@@ -7,6 +7,7 @@ import ProductoForm, { nuevoProductoDraftKey } from './ProductoForm'
 import ComboForm from './ComboForm'
 import PromoModal from './PromoModal'
 import BarcodeModal from './BarcodeModal'
+import PublicarMLModal from './PublicarMLModal'
 import ImageThumb from '../../components/ImageThumb'
 import { exportCatalogoPDF } from '../../lib/pdf'
 import { exportCatalogoCSV } from '../../lib/csv'
@@ -75,6 +76,7 @@ El producto es de otro negocio: no se edita, pero el stock lo llevás vos.`, Str
   const [mostrarInactivos, setMostrarInactivos] = useState(false)
   const [barcodeProduct, setBarcodeProduct] = useState(null)
   const [promoProduct, setPromoProduct] = useState(null)
+  const [mlProduct, setMlProduct] = useState(null)
   const [tiendas, setTiendas] = useState([])
   const [exportingPDF, setExportingPDF] = useState(false)
   const [exportingCSV, setExportingCSV] = useState(false)
@@ -533,6 +535,7 @@ El producto es de otro negocio: no se edita, pero el stock lo llevás vos.`, Str
                         {activo ? '● Activo' : '● Inactivo'}
                       </button>
                       <button className="btn btn-sm btn-ghost" title="Generar etiqueta con código de barras" onClick={() => setBarcodeProduct(p)}>🏷️</button>
+                      {p.org_id === orgId && <button className="btn btn-sm btn-ghost" title="Publicar en Mercado Libre" onClick={() => setMlProduct(p)}>🛒</button>}
                       <button
                         className="btn btn-sm btn-ghost"
                         title="Configurar oferta"
@@ -607,6 +610,7 @@ El producto es de otro negocio: no se edita, pero el stock lo llevás vos.`, Str
                     {activo ? '● Activo' : '● Inactivo'}
                   </button>
                   <button className="btn btn-sm btn-ghost" onClick={() => setBarcodeProduct(p)}>🏷️</button>
+                  {p.org_id === orgId && <button className="btn btn-sm btn-ghost" title="Publicar en Mercado Libre" onClick={() => setMlProduct(p)}>🛒</button>}
                   <button
                     className="btn btn-sm btn-ghost"
                     onClick={() => setPromoProduct(p)}
@@ -630,6 +634,10 @@ El producto es de otro negocio: no se edita, pero el stock lo llevás vos.`, Str
           branding={branding}
           onClose={() => setBarcodeProduct(null)}
         />
+      )}
+
+      {mlProduct && (
+        <PublicarMLModal producto={mlProduct} listas={listas} onClose={() => setMlProduct(null)} />
       )}
 
       {promoProduct && (
