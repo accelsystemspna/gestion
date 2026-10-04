@@ -213,6 +213,50 @@ serve(async (req) => {
       return json({ ok: !errores.length, errores }, errores.length ? 422 : 200)
     }
 
+    // ── Leer el estado actual de una publicación (fotos, descripción) para respaldarla ──
+    if (action === 'ml_snapshot') {
+      const item_id = String(body.item_id ?? '')
+      const { data: pub } = await admin.from('ml_publicaciones').select('id').eq('org_id', org).eq('item_id', item_id).maybeSingle()
+      if (!pub) return json({ error: 'Esa publicación no es de este negocio' }, 404)
+      const it = await mlFetch(admin, org, `/items/${item_id}`)
+      if (!it.ok) return json({ error: it.error }, 502)
+      const d = await mlFetch(admin, org, `/items/${item_id}/description?api_version=2`)
+      return json({
+        ok: true, item_id, titulo: it.data.title, estado: it.data.status, vendidos: it.data.sold_quantity,
+        pictures: (it.data.pictures ?? []).map((p: any) => ({ id: p.id, url: p.secure_url || p.url, size: p.size })),
+        descripcion: d.ok ? (d.data?.plain_text ?? null) : null,
+      })
+    }
+
+    // ── Cambiar descripción (texto plano) y reemplazar UNA foto, sin tocar el resto ──
+    if (action === 'ml_set_ficha') {
+      const item_id = String(body.item_id ?? '')
+      const { descripcion, imagen_url, reemplazar_id, posicion } = body
+      const { data: pub } = await admin.from('ml_publicaciones').select('id').eq('org_id', org).eq('item_id', item_id).maybeSingle()
+      if (!pub) return json({ error: 'Esa publicación no es de este negocio' }, 404)
+      const errores: string[] = []
+      let pictures: string[] | undefined
+      if (imagen_url) {
+        const it = await mlFetch(admin, org, `/items/${item_id}`)
+        if (!it.ok) return json({ error: it.error }, 502)
+        const pics: any[] = (it.data.pictures ?? []).map((p: any) => ({ id: p.id }))
+        const nueva = { source: String(imagen_url) }
+        const idx = reemplazar_id ? pics.findIndex((p) => p.id === reemplazar_id) : -1
+        if (idx >= 0) pics[idx] = nueva
+        else pics.splice(Math.min(Math.max((Number(posicion) || 2) - 1, 0), pics.length), 0, nueva)
+        const r = await mlFetch(admin, org, `/items/${item_id}`, { method: 'PUT', body: { pictures: pics } })
+        if (!r.ok) errores.push('Imagen: ' + (r.error ?? 'no se pudo'))
+        else pictures = (r.data?.pictures ?? []).map((p: any) => p.id)
+      }
+      if (descripcion !== undefined) {
+        const texto = String(descripcion)
+        let d = await mlFetch(admin, org, `/items/${item_id}/description?api_version=2`, { method: 'PUT', body: { plain_text: texto } })
+        if (!d.ok && d.status === 404) d = await mlFetch(admin, org, `/items/${item_id}/description`, { method: 'POST', body: { plain_text: texto } })
+        if (!d.ok) errores.push('Descripción: ' + (d.error ?? 'no se pudo'))
+      }
+      return json({ ok: !errores.length, errores, pictures }, errores.length ? 422 : 200)
+    }
+
     return json({ error: 'Acción desconocida' }, 400)
   } catch (e) {
     return json({ error: e instanceof Error ? e.message : String(e) }, 500)
