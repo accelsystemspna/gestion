@@ -197,21 +197,30 @@ export default function Tiendas() {
     }
   }, [orgId])   // eslint-disable-line react-hooks/exhaustive-deps
 
-  const tiendaSel = sel === 'todas' ? null : tiendas.find(t => String(t.id) === String(sel))
+  // Las tiendas inactivas no se muestran. Si la elegida dejó de estar activa, se vuelve a "Todas".
+  const tiendasActivas = useMemo(() => tiendas.filter(t => t.activa !== false), [tiendas])
+  const tiendaSel = useMemo(
+    () => (sel === 'todas' ? null : tiendasActivas.find(t => String(t.id) === String(sel)) || null),
+    [sel, tiendasActivas],
+  )
+  const selActual = tiendaSel ? String(tiendaSel.id) : 'todas'
   const tiendaDeVenta = (v) => tiendas.find(t => perteneceATienda(v, t)) || null
-  // Tienda mayorista con la que se trabajan los clientes del portal: la elegida, o la primera activa
-  const tiendaML = tiendas.find(t => t.tipo === 'mercadolibre' && t.activa !== false) || null
-  const tiendaPortal = tiendaSel?.tipo === 'mayorista' ? tiendaSel : (tiendas.find(t => t.tipo === 'mayorista' && t.activa !== false) || null)
+  // Cada panel solo existe cuando está elegida SU tienda (con "Todas" quedan Pedidos y Clientes).
+  const tiendaML = tiendaSel?.tipo === 'mercadolibre' ? tiendaSel : null
+  const tiendaPortal = tiendaSel?.tipo === 'mayorista' ? tiendaSel : null
+  const tiendaWoo = tiendaSel?.tipo === 'woocommerce' ? tiendaSel : null
+  // El aviso de clientes del portal esperando aprobación se ve en la tarjeta de la tienda mayorista, esté elegida o no.
+  const tiendaPortalAviso = tiendasActivas.find(t => t.tipo === 'mayorista') || null
 
   // Aviso de clientes del portal esperando aprobación (mejor esfuerzo: si falla, no se muestra nada)
   useEffect(() => {
-    if (!tiendaPortal) return
+    if (!tiendaPortalAviso) return
     let vivo = true
-    portalApi('leads', { tienda_id: tiendaPortal.id, status: 'pendiente' }).then(r => {
+    portalApi('leads', { tienda_id: tiendaPortalAviso.id, status: 'pendiente' }).then(r => {
       if (vivo && r.ok) setPendientesPortal(Number(r.conteos?.pendiente ?? r.leads?.length ?? 0))
     })
     return () => { vivo = false }
-  }, [tiendaPortal?.id])   // eslint-disable-line react-hooks/exhaustive-deps
+  }, [tiendaPortalAviso?.id])   // eslint-disable-line react-hooks/exhaustive-deps
 
   // Seguimiento que se está editando en el detalle: arranca con el que ya tiene el pedido
   const textoTrack  = (v) => (edicionTrack.id === v.id ? edicionTrack.texto : (v.origen_tracking || ''))
@@ -529,14 +538,15 @@ export default function Tiendas() {
         <>
           {/* Selector de tienda */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 10, marginBottom: 18 }}>
-            {[{ id: 'todas', nombre: 'Todas las tiendas', tipo: null }, ...tiendas].map(t => {
+            {[{ id: 'todas', nombre: 'Todas las tiendas', tipo: null }, ...tiendasActivas].map(t => {
               const lista = t.id === 'todas' ? ventas : ventas.filter(v => perteneceATienda(v, t))
               const r = resumen(lista)
-              const activa = String(sel) === String(t.id)
+              const activa = selActual === String(t.id)
+              const avisoPortal = tiendaPortalAviso && t.id === tiendaPortalAviso.id && pendientesPortal > 0
               const tipo = TIPOS[t.tipo]
               const sinPedidos = false
               return (
-                <div key={t.id} onClick={() => { setSel(String(t.id)); setFiltro('todos') }}
+                <div key={t.id} onClick={() => { setSel(String(t.id)); setFiltro('todos'); setTab('pedidos') }}
                   style={{
                     cursor: 'pointer', padding: '12px 14px', borderRadius: 10, background: 'var(--surface)',
                     border: `2px solid ${activa ? 'var(--primary)' : 'var(--border)'}`,
@@ -545,7 +555,7 @@ export default function Tiendas() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
                     <strong style={{ fontSize: 14 }}>{t.nombre}</strong>
                     {tipo && <Badge color={tipo.color} bg={tipo.bg}>{tipo.sigla}</Badge>}
-                    {t.activa === false && <Badge color="var(--text-muted)" bg="var(--bg-muted)">Inactiva</Badge>}
+                    {avisoPortal && <Badge color="#fff" bg="#dc2626">{pendientesPortal} por aprobar</Badge>}
                   </div>
                   {sinPedidos ? (
                     <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Esta plataforma todavía no envía pedidos al programa.</div>
@@ -573,7 +583,7 @@ export default function Tiendas() {
 
           {/* Pestañas */}
           <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', marginBottom: 14 }}>
-            {[['pedidos', 'Pedidos'], ['clientes', 'Clientes'], ...(tiendaPortal ? [['portal', 'Clientes del portal']] : []), ...(tiendaML ? [['ml', 'Mercado Libre']] : []), ['woo', 'Panel WooCommerce']].map(([id, label]) => (
+            {[['pedidos', 'Pedidos'], ['clientes', 'Clientes'], ...(tiendaPortal ? [['portal', 'Clientes del portal']] : []), ...(tiendaML ? [['ml', 'Publicaciones']] : []), ...(tiendaWoo ? [['woo', 'Panel WooCommerce']] : [])].map(([id, label]) => (
               <button key={id} onClick={() => setTab(id)} style={{
                 padding: '9px 20px', border: 'none', background: 'none', cursor: 'pointer', fontSize: 14,
                 fontWeight: tab === id ? 600 : 400, color: tab === id ? 'var(--primary)' : 'var(--text-muted)',
@@ -618,7 +628,7 @@ export default function Tiendas() {
           {/* ── PANEL WOOCOMMERCE ─────────────────────────────────────── */}
           {tab === 'ml' && tiendaML && <MercadoLibrePanel />}
 
-          {tab === 'woo' && (
+          {tab === 'woo' && tiendaWoo && (
             <WooPanel tiendas={tiendas} tiendaSelId={sel} ventas={ventas} onCambio={() => cargar(true)} />
           )}
 

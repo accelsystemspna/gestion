@@ -21,6 +21,7 @@ export default function MercadoLibrePanel() {
   const [msg, setMsg]         = useState(null)
   const [filtro, setFiltro]   = useState('todas')
   const [q, setQ]             = useState('')
+  const [orden, setOrden]     = useState({ col: 'recientes', dir: 'desc' })
 
   const cargar = async () => {
     const { data } = await supabase.from('ml_publicaciones').select('*').order('actualizada_en', { ascending: false })
@@ -52,11 +53,28 @@ export default function MercadoLibrePanel() {
 
   const visibles = useMemo(() => {
     const t = q.trim().toLowerCase()
-    return pubs.filter((p) => {
+    const lista = pubs.filter((p) => {
       if (filtro === 'sin_vincular' ? !!p.producto_id : filtro !== 'todas' && p.estado !== filtro) return false
       return !t || (p.titulo || '').toLowerCase().includes(t) || (p.sku || '').toLowerCase().includes(t) || (p.item_id || '').toLowerCase().includes(t)
     })
-  }, [pubs, filtro, q])
+    const num = (v) => Number(v) || 0
+    const clave = {
+      precio: (p) => num(p.precio), stock: (p) => num(p.stock), vendidos: (p) => num(p.vendidos),
+      titulo: (p) => (p.titulo || '').toLowerCase(), sku: (p) => (p.sku || '').toLowerCase(), estado: (p) => p.estado || '',
+      recientes: (p) => new Date(p.actualizada_en || 0).getTime(),
+    }[orden.col]
+    const signo = orden.dir === 'asc' ? 1 : -1
+    // Desempate por título para que el orden no "salte" entre publicaciones con el mismo valor.
+    return [...lista].sort((a, b) => {
+      const x = clave(a), y = clave(b)
+      return (x < y ? -1 : x > y ? 1 : (a.titulo || '').localeCompare(b.titulo || '')) * signo
+    })
+  }, [pubs, filtro, q, orden])
+
+  // Tocar un encabezado ordena por esa columna; tocarlo de nuevo invierte el sentido.
+  const ordenarPor = (col) => setOrden((o) => o.col === col ? { col, dir: o.dir === 'asc' ? 'desc' : 'asc' } : { col, dir: ['precio', 'stock', 'vendidos'].includes(col) ? 'desc' : 'asc' })
+  const flecha = (col) => orden.col === col ? (orden.dir === 'asc' ? ' ▲' : ' ▼') : ''
+  const PRESETS = [['recientes|desc', 'Más recientes'], ['vendidos|desc', 'Más vendidos'], ['precio|desc', 'Precio: mayor a menor'], ['precio|asc', 'Precio: menor a mayor'], ['stock|asc', 'Stock: menor a mayor'], ['stock|desc', 'Stock: mayor a menor'], ['titulo|asc', 'Título A-Z']]
 
   const filtros = [['todas', 'Todas'], ['active', 'Activas'], ['paused', 'Pausadas'], ['closed', 'Cerradas'], ['sin_vincular', 'Sin vincular']]
 
@@ -88,6 +106,11 @@ export default function MercadoLibrePanel() {
         ))}
         <input className="input" style={{ flex: '1 1 200px', maxWidth: 320, padding: '6px 10px', fontSize: 13 }}
           placeholder="Buscar por título, SKU o código MLA…" value={q} onChange={(e) => setQ(e.target.value)} />
+        <select className="select" style={{ width: 'auto', fontSize: 13, padding: '6px 10px' }} value={PRESETS.some(([k]) => k === orden.col + '|' + orden.dir) ? orden.col + '|' + orden.dir : ''}
+          onChange={(e) => { const [col, dir] = e.target.value.split('|'); if (col) setOrden({ col, dir }) }} title="Ordenar publicaciones">
+          <option value="" disabled>Ordenar por…</option>
+          {PRESETS.map(([k, label]) => <option key={k} value={k}>{label}</option>)}
+        </select>
       </div>
 
       {loading ? (
@@ -101,9 +124,13 @@ export default function MercadoLibrePanel() {
           <table className="table">
             <thead>
               <tr>
-                <th style={{ width: 56 }}></th><th>Publicación</th><th>Producto del programa</th>
-                <th style={{ textAlign: 'right' }}>Precio</th><th style={{ textAlign: 'right' }}>Stock</th>
-                <th style={{ textAlign: 'right' }}>Vendidos</th><th>Estado</th>
+                <th style={{ width: 56 }}></th>
+                <th style={{ cursor: 'pointer' }} onClick={() => ordenarPor('titulo')}>Publicación{flecha('titulo')}</th>
+                <th style={{ cursor: 'pointer' }} onClick={() => ordenarPor('sku')}>Producto del programa{flecha('sku')}</th>
+                <th style={{ textAlign: 'right', cursor: 'pointer' }} onClick={() => ordenarPor('precio')}>Precio{flecha('precio')}</th>
+                <th style={{ textAlign: 'right', cursor: 'pointer' }} onClick={() => ordenarPor('stock')}>Stock{flecha('stock')}</th>
+                <th style={{ textAlign: 'right', cursor: 'pointer' }} onClick={() => ordenarPor('vendidos')}>Vendidos{flecha('vendidos')}</th>
+                <th style={{ cursor: 'pointer' }} onClick={() => ordenarPor('estado')}>Estado{flecha('estado')}</th>
               </tr>
             </thead>
             <tbody>
