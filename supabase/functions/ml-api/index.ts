@@ -257,6 +257,33 @@ serve(async (req) => {
       return json({ ok: !errores.length, errores, pictures }, errores.length ? 422 : 200)
     }
 
+    // ── Cambiar SOLO el título (ML lo permite únicamente sin ventas y con la publicación activa) ──
+    if (action === 'ml_set_titulo') {
+      const item_id = String(body.item_id ?? '')
+      const titulo = String(body.titulo ?? '').trim()
+      if (!titulo || titulo.length > 60) return json({ error: 'El título debe tener entre 1 y 60 caracteres' }, 400)
+      const { data: pub } = await admin.from('ml_publicaciones').select('id').eq('org_id', org).eq('item_id', item_id).maybeSingle()
+      if (!pub) return json({ error: 'Esa publicación no es de este negocio' }, 404)
+      const it = await mlFetch(admin, org, `/items/${item_id}`)
+      if (!it.ok) return json({ error: it.error }, 502)
+      // Publicaciones del modelo "producto de usuario" (tienen family_name): el título lo arma ML a partir de
+      // family_name + color y la API NO deja cambiarlo (PUT title → "You cannot modify the title if the item has a
+      // family_name"; PUT family_name → "The field family name is invalid"; /user-products no tiene PUT).
+      // Se avisa en vez de intentar un PUT que ML siempre rechaza.
+      if (it.data.family_name || (it.data.tags ?? []).includes('user_product_listing')) {
+        return json({
+          ok: false, omitida: 'no editable por API (producto de usuario)', titulo_actual: it.data.title,
+          family_name: it.data.family_name ?? null, user_product_id: it.data.user_product_id ?? null,
+        }, 409)
+      }
+      if (Number(it.data.sold_quantity) > 0) return json({ ok: false, omitida: 'tiene ventas', vendidos: it.data.sold_quantity, titulo_actual: it.data.title }, 409)
+      if (it.data.status !== 'active') return json({ ok: false, omitida: 'no está activa', estado: it.data.status, titulo_actual: it.data.title }, 409)
+      const r = await mlFetch(admin, org, `/items/${item_id}`, { method: 'PUT', body: { title: titulo } })
+      if (!r.ok) return json({ ok: false, error: r.error, titulo_actual: it.data.title }, 422)
+      await admin.from('ml_publicaciones').update({ titulo: r.data?.title ?? titulo, actualizada_en: new Date().toISOString() }).eq('id', pub.id)
+      return json({ ok: true, titulo_anterior: it.data.title, titulo_nuevo: r.data?.title ?? titulo })
+    }
+
     return json({ error: 'Acción desconocida' }, 400)
   } catch (e) {
     return json({ error: e instanceof Error ? e.message : String(e) }, 500)
