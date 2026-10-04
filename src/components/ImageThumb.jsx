@@ -15,7 +15,9 @@ export default function ImageThumb({ src, size = 36, radius = 4, alt = '' }) {
 
   const overlay = open && createPortal(
     <div
-      onClick={() => setOpen(false)}
+      // Los eventos de React suben por el portal hasta el componente padre aunque el DOM esté en <body>:
+      // sin frenarlos, cerrar la foto también disparaba el clic de la fila del producto (ej. agregar al carrito).
+      onClick={(e) => { e.stopPropagation(); setOpen(false) }}
       style={{
         position: 'fixed', inset: 0, zIndex: 99999,
         background: 'rgba(0,0,0,0.82)',
@@ -48,7 +50,7 @@ export default function ImageThumb({ src, size = 36, radius = 4, alt = '' }) {
         />
       </div>
       <button
-        onClick={() => setOpen(false)}
+        onClick={(e) => { e.stopPropagation(); setOpen(false) }}
         style={{
           position: 'absolute', top: 18, right: 22,
           background: 'rgba(255,255,255,0.15)',
