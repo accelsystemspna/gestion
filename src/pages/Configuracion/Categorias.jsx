@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../lib/AuthContext'
 
-const blankCat = { nombre: '', sku_prefijo: '', tipo_fabricacion: 'Melamina', rubro_id: '', es_mayorista: false }
+const blankCat = { nombre: '', sku_prefijo: '', tipo_fabricacion: 'Melamina', rubro_id: '', es_mayorista: false, mostrar_en_catalogo: true }
 const blankSub = { nombre: '' }
 
 export default function Categorias() {
@@ -48,6 +48,7 @@ export default function Categorias() {
       tipo_fabricacion: form.tipo_fabricacion,
       rubro_id:         form.rubro_id ? Number(form.rubro_id) : null,
       es_mayorista:     !!form.es_mayorista,
+      mostrar_en_catalogo: form.mostrar_en_catalogo !== false,
     }
     const res = form.id
       ? await supabase.from('categorias').update(payload).eq('id', form.id)
@@ -169,6 +170,9 @@ export default function Categorias() {
                           {cat.sku_prefijo}
                         </span>
                         <span style={{ marginLeft: 8, fontSize: 12, color: 'var(--text-muted)' }}>{cat.tipo_fabricacion}</span>
+                        {cat.mostrar_en_catalogo === false && (
+                          <span title="Los productos de esta categoría no salen en el catálogo público" style={{ marginLeft: 6, fontSize: 11, fontWeight: 700, color: '#b45309', background: 'rgba(217,119,6,0.14)', padding: '1px 6px', borderRadius: 4 }}>Oculta en catálogo</span>
+                        )}
                         {cat.es_mayorista && (
                           <span style={{ marginLeft: 6, fontSize: 11, fontWeight: 700, color: '#0f766e', background: 'rgba(15,118,110,0.12)', padding: '1px 6px', borderRadius: 4 }}>Mayorista</span>
                         )}
@@ -291,6 +295,14 @@ function CategoriaForm({ initial, rubros, onCancel, onSave }) {
             Es para mayoristas
             <span style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 400 }}>
               — al armar un combo acá, sugiere las cantidades según el múltiplo mayorista de cada producto
+            </span>
+          </label>
+
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', userSelect: 'none', fontSize: 14 }}>
+            <input type="checkbox" checked={form.mostrar_en_catalogo !== false} onChange={(e) => set('mostrar_en_catalogo', e.target.checked)} />
+            Mostrar en el catálogo público
+            <span style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 400 }}>
+              — destildada, ningún producto de esta categoría sale en el catálogo
             </span>
           </label>
 

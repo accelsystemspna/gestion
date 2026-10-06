@@ -37,6 +37,7 @@ export default function ComboForm({ initial, onCancel, onSaved, onAvanzado }) {
   const [imagenUrl, setImagenUrl] = useState(initial?.imagen_url || '')
   const [tiendasIds, setTiendasIds] = useState(initial?.tiendas_ids || [])
   const [activo, setActivo] = useState(initial?.activo !== false)
+  const [enCatalogo, setEnCatalogo] = useState(initial?.mostrar_en_catalogo !== false)
   const [items, setItems] = useState(initial?.combo_items || [])
 
   // Buscador de productos para agregar al combo
@@ -146,7 +147,7 @@ export default function ComboForm({ initial, onCancel, onSaved, onAvanzado }) {
       nombre: nombre.trim(), sku, categoria: 'Combo', categoria_id: Number(categoriaId),
       subcategoria_id: subcategoriaId ? Number(subcategoriaId) : null,
       imagen_url: imagenUrl || null, combo_items: items, costo_base: costoBase,
-      tiendas_ids: tiendasIds, activo, stock_actual: 0, usar_imagenes_compartidas: true,
+      tiendas_ids: tiendasIds, activo, mostrar_en_catalogo: enCatalogo, stock_actual: 0, usar_imagenes_compartidas: true,
     }
     const res = initial?.id
       ? await supabase.from('productos').update(payload).eq('id', initial.id)
@@ -233,6 +234,10 @@ export default function ComboForm({ initial, onCancel, onSaved, onAvanzado }) {
             <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13 }}>
               <input type="checkbox" checked={activo} onChange={(e) => setActivo(e.target.checked)} />
               Activo
+            </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13 }}>
+              <input type="checkbox" checked={enCatalogo} onChange={(e) => setEnCatalogo(e.target.checked)} />
+              Mostrar en el catálogo público
             </label>
 
             {!esNuevo && (

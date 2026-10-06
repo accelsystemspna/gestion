@@ -76,6 +76,7 @@ const blank = {
   imagen_web_url: '',
   imagenes_web: [],
   video_url: '',
+  mostrar_en_catalogo: true,
   ml_titulo: '', ml_descripcion: '', ml_imagenes: [], ml_atributos: {}, ml_categoria_id: '', ml_precio: null,
   usar_imagenes_compartidas: true,
   categorias_web_ids: [],
@@ -136,6 +137,7 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
         imagen_web_url: initial.imagen_web_url || '',
         imagenes_web: initial.imagenes_web || [],
         video_url: initial.video_url || '',
+        mostrar_en_catalogo: initial.mostrar_en_catalogo !== false,
         ml_titulo: initial.ml_titulo || '',
         ml_descripcion: initial.ml_descripcion || '',
         ml_imagenes: initial.ml_imagenes || [],
@@ -454,6 +456,7 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
       imagen_web_url: form.imagen_web_url || null,
       imagenes_web: form.imagenes_web || [],
       video_url: form.video_url?.trim() || null,
+      mostrar_en_catalogo: form.mostrar_en_catalogo !== false,
       ml_titulo: form.ml_titulo?.trim() || null,
       ml_descripcion: form.ml_descripcion?.trim() || null,
       ml_imagenes: form.ml_imagenes || [],
@@ -1007,6 +1010,13 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
 
           {tab === 'web' && (
             <div style={{ padding:'18px 20px', display:'flex', flexDirection:'column', gap:20, maxWidth:900 }}>
+
+              {/* Catálogo público */}
+              <label style={{ display:'flex', alignItems:'center', gap:8, cursor:'pointer', userSelect:'none' }}>
+                <input type="checkbox" checked={form.mostrar_en_catalogo !== false} onChange={e=>set('mostrar_en_catalogo', e.target.checked)} />
+                <span style={{ fontSize:13, fontWeight:600 }}>Mostrar en el catálogo público</span>
+                <span style={{ fontSize:12, color:'var(--text-muted)' }}>— destildado, este producto no sale en el catálogo (aunque esté activo)</span>
+              </label>
 
               {/* Fotos */}
               <div>
