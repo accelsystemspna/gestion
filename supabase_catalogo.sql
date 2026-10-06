@@ -5,7 +5,7 @@
 --   Un producto sale en el catálogo si está activo, su casilla está tildada y la de su categoría también.
 -- · catalogo_publico.imagenes (text[]): URLs públicas del bucket, en orden.
 --     producto común → [imagen_url]
---     combo → las fotos de la web del combo si las tiene; si no, las de los productos que lo forman.
+--     combo → la imagen principal (imagen_url) de cada producto que lo forma, en orden; nunca las fotos web del combo.
 -- · Solo productos del negocio Principal (el catálogo público es el de CC Design; la vista corre con
 --   permisos del dueño y se saltea la separación por negocio, así que se filtra acá).
 -- · Solo lectura para anon/authenticated (antes tenía permisos de escritura y llegaba a la tabla productos).
@@ -27,17 +27,12 @@ language sql stable security definer set search_path = public as $$
      and org_id in (select org_id from profiles where rol = 'principal')
   ),
   cand as (
-    -- 1) fotos de la web del combo
-    select t.u, 1 as grp, t.o::bigint as o
-      from p, unnest(array_prepend(p.imagen_web_url, p.imagenes_web)) with ordinality t(u, o)
-     where jsonb_array_length(p.combo_items) > 0
-    union all
-    -- 2) fotos de los productos que forman el combo
-    select c.imagen_url, 2, ci.o::bigint
+    -- 1) imagen principal de cada producto que forma el combo (las fotos web del combo NO se usan)
+    select c.imagen_url as u, 2 as grp, ci.o::bigint as o
       from p, jsonb_array_elements(p.combo_items) with ordinality ci(e, o)
       join productos c on c.id = (ci.e->>'producto_id')::uuid
     union all
-    -- 3) la foto del producto
+    -- 2) la foto del producto (producto común; o combo cuyos componentes no tienen foto)
     select imagen_url, 3, 1 from p
   ),
   ok as (
