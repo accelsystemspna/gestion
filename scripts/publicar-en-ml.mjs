@@ -116,7 +116,7 @@ const cuerpo = {
   pedido: {
     precio, stock: pedido.stock, titulo: pedido.titulo, descripcion: pedido.descripcion, imagenes,
     atributos: pedido.atributos, categoria_ml: pedido.categoria_ml, plantilla_item_id: pedido.plantilla_item_id,
-    listing_type_id: pedido.listing_type_id,
+    listing_type_id: pedido.listing_type_id, demora_dias: pedido.demora_dias,
   },
 }
 const res = await fetch(`${process.env.VITE_SUPABASE_URL}/functions/v1/ml-api`, {
@@ -128,6 +128,7 @@ const r = await res.json().catch(() => ({}))
 
 if (r.vista) {
   console.log(`· "${r.vista.titulo}" · ${r.vista.categoria} · $${r.vista.precio} · stock ${r.vista.stock} · ${r.vista.fotos} foto(s) · modelo ${r.vista.plantilla}`)
+  if (r.vista.condiciones) console.log('· condiciones de venta: ' + JSON.stringify(r.vista.condiciones) + ' · tipo ' + r.vista.listing_type_id + ' · envío ' + JSON.stringify(r.vista.shipping))
 }
 if (!r.ok) {
   console.error('✕ ' + (r.error || 'Error desconocido'))

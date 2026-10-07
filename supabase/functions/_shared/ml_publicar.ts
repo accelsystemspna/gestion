@@ -94,6 +94,7 @@ export type PedidoPublicar = {
   categoria_ml?: string
   plantilla_item_id?: string
   listing_type_id?: string
+  demora_dias?: number          // tiempo de fabricación/despacho (MANUFACTURING_TIME); pisa el de la plantilla
 }
 
 /** Arma el cuerpo de POST /items a partir del producto + la plantilla. */
@@ -128,6 +129,13 @@ export function armarItem(producto: any, plantilla: any, pedido: PedidoPublicar)
       local_pick_up: plantilla.shipping?.local_pick_up ?? false,
     },
   }
+  if (Number(pedido.demora_dias) > 0) {
+    const dias = Math.round(Number(pedido.demora_dias))
+    item.sale_terms = [
+      ...(item.sale_terms as any[]).filter((t) => t.id !== 'MANUFACTURING_TIME'),
+      { id: 'MANUFACTURING_TIME', value_name: `${dias} días` },
+    ]
+  }
   // Modelo nuevo de ML (productos de usuario): en vez de título se manda el "nombre de familia".
   if (usaFamilia) item.family_name = titulo
   else item.title = titulo
@@ -157,7 +165,7 @@ export async function publicarItem(
   if (!fotos.length) return { ok: false, error: 'El producto no tiene fotos con URL pública. Cargale una imagen antes de publicar.' }
   if (!(Number(pedido.precio) > 0)) return { ok: false, error: 'Falta el precio.' }
 
-  const vista = { titulo, categoria: item.category_id, precio: item.price, stock: item.available_quantity, fotos: fotos.length, atributos, plantilla: plantilla.id }
+  const vista = { titulo, categoria: item.category_id, precio: item.price, stock: item.available_quantity, fotos: fotos.length, atributos, plantilla: plantilla.id, condiciones: item.sale_terms, listing_type_id: item.listing_type_id, shipping: item.shipping }
 
   if (opts.soloValidar) {
     const v = await mlFetch(admin, org, '/items/validate', { method: 'POST', body: item })
