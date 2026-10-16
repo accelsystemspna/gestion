@@ -234,15 +234,16 @@ export default function Tiendas() {
   // ── KPIs y conteos ────────────────────────────────────────────────────────
   const resumen = (lista) => {
     const mes = new Date().toISOString().slice(0, 7)
-    let esperando = 0, montoEsperando = 0, enPrep = 0, listos = 0, pedidosMes = 0, factMes = 0
+    let esperando = 0, montoEsperando = 0, enPrep = 0, listos = 0, porDespachar = 0, pedidosMes = 0, factMes = 0
     for (const v of lista) {
       const e = estadoWebDe(v)
       if (e === 'esperando_pago') { esperando++; montoEsperando += Number(v.total) || 0 }
       if (e === 'en_preparacion') enPrep++
       if (e === 'listo') listos++
+      if (v.canal === 'mercadolibre' && (e === 'en_preparacion' || e === 'listo')) porDespachar++
       if (e !== 'cancelado' && (v.fecha || '').startsWith(mes)) { pedidosMes++; factMes += Number(v.total) || 0 }
     }
-    return { esperando, montoEsperando, enPrep, listos, pedidosMes, factMes }
+    return { esperando, montoEsperando, enPrep, listos, porDespachar, pedidosMes, factMes }
   }
   const kpi = useMemo(() => resumen(ventasSel), [ventasSel])
 
@@ -562,8 +563,10 @@ export default function Tiendas() {
                   ) : (
                     <div style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.6 }}>
                       <div>{r.pedidosMes} pedido{r.pedidosMes !== 1 ? 's' : ''} este mes · {fmtMoney(r.factMes)}</div>
-                      <div style={{ color: r.esperando ? '#b45309' : 'var(--text-muted)', fontWeight: r.esperando ? 700 : 400 }}>
-                        {r.esperando ? `${r.esperando} esperando pago` : 'Sin pagos pendientes'}
+                      <div style={{ color: (t.tipo === 'mercadolibre' ? r.porDespachar : r.esperando) ? '#b45309' : 'var(--text-muted)', fontWeight: (t.tipo === 'mercadolibre' ? r.porDespachar : r.esperando) ? 700 : 400 }}>
+                        {t.tipo === 'mercadolibre'
+                          ? (r.porDespachar ? `${r.porDespachar} por preparar o despachar` : 'Nada por despachar')
+                          : (r.esperando ? `${r.esperando} esperando pago` : 'Sin pagos pendientes')}
                       </div>
                     </div>
                   )}

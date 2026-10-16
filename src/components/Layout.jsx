@@ -58,12 +58,14 @@ export default function Layout() {
     return () => window.removeEventListener('pointerdown', handler)
   }, [])
 
-  // ── Aviso de pedidos web abiertos (esperando pago o por completar) → menú Tiendas ──
+  // ── Aviso de pedidos web abiertos → menú Tiendas ──
+  // Web: los que esperan pago o están por completar. Mercado Libre: las ventas ya pagas que faltan
+  // preparar o despachar (en ML nunca hay "esperando pago": la venta entra cuando se acredita).
   useEffect(() => {
     const cargar = async () => {
       let r = await supabase.from('ventas').select('id', { count: 'exact', head: true })
         .not('origen_ref', 'is', null)
-        .in('estado_web', ['esperando_pago', 'procesado'])
+        .or('estado_web.in.(esperando_pago,procesado),and(canal.eq.mercadolibre,estado_web.in.(en_preparacion,listo))')
       // Si todavía no se corrió el SQL de Tiendas (no existe estado_web), se cuentan los pedidos por revisar.
       if (r.error) {
         r = await supabase.from('ventas').select('id', { count: 'exact', head: true })
