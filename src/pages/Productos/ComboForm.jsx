@@ -6,6 +6,7 @@ import { syncToWoo } from '../../lib/wooSync'
 import { syncMayorista, traerMultiplosPortal } from '../../lib/mayoristaSync'
 import ImageThumb from '../../components/ImageThumb'
 import { useAuth } from '../../lib/AuthContext'
+import { armarCollage } from '../../lib/collage'
 
 const SKU_RE = /^[A-Z]{3}[0-9]{6}(-V\d+)?$/
 
@@ -129,6 +130,24 @@ export default function ComboForm({ initial, onCancel, onSaved, onAvanzado }) {
     [detalle],
   )
 
+  // Miniatura del combo = todos los cuadros que lo forman, más chicos, en una sola imagen.
+  const [armando, setArmando] = useState(false)
+  const armarMiniatura = async () => {
+    if (fotosDisponibles.length < 2) return alert('Agregá al menos dos productos con foto para armar la miniatura.')
+    setArmando(true)
+    try {
+      const { blob, usadas } = await armarCollage(fotosDisponibles)
+      const path = `combos/${Date.now()}.jpg`
+      const { error } = await supabase.storage.from('productos').upload(path, blob, { upsert: true, contentType: 'image/jpeg' })
+      if (error) throw error
+      setImagenUrl(supabase.storage.from('productos').getPublicUrl(path).data.publicUrl)
+      if (usadas < fotosDisponibles.length) alert(`Se armó con ${usadas} de ${fotosDisponibles.length} fotos: las demás no se pudieron cargar.`)
+    } catch (err) {
+      alert('No se pudo armar la miniatura: ' + (err.message || err))
+    }
+    setArmando(false)
+  }
+
   const subirImagen = async (e) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -227,6 +246,10 @@ export default function ComboForm({ initial, onCancel, onSaved, onAvanzado }) {
                 {uploading ? 'Subiendo...' : '📷 Subir otra foto'}
                 <input type="file" accept="image/*" style={{ display: 'none' }} disabled={uploading} onChange={subirImagen} />
               </label>
+              <button type="button" className="btn btn-sm" style={{ width: 'fit-content' }} disabled={armando || fotosDisponibles.length < 2} onClick={armarMiniatura}
+                title="Junta las fotos de todos los productos del combo, más chicas, en una sola imagen">
+                {armando ? 'Armando...' : '🧩 Armar miniatura con todos los cuadros'}
+              </button>
             </div>
 
             <div style={field}>
