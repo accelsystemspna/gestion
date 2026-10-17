@@ -53,13 +53,22 @@ export async function syncMayorista({ ids, skus, tienda } = {}) {
     const [productos, { data: listas }, { data: categorias }, { data: subcategorias }] = await Promise.all([
       cargarProductos({ ids, skus }),
       supabase.from('listas_precios').select('*'),
-      supabase.from('categorias').select('id, nombre'),
+      supabase.from('categorias').select('id, nombre, es_mayorista'),
       supabase.from('subcategorias').select('id, nombre'),
     ])
     if (!productos.length) return { total: 0, enviados: 0, errores: 0 }
 
     const nombreCat = new Map((categorias || []).map(c => [String(c.id), c.nombre]))
     const nombreSub = new Map((subcategorias || []).map(s => [String(s.id), s.nombre]))
+    const catMayorista = new Set((categorias || []).filter(c => c.es_mayorista).map(c => String(c.id)))
+
+    // Composición de los combos: sku y nombre de cada producto componente (el portal la muestra al entrar al combo).
+    const idsComp = [...new Set(productos.flatMap(p => (p.combo_items || []).map(i => i.producto_id)).filter(Boolean))]
+    const compPorId = new Map()
+    for (let i = 0; i < idsComp.length; i += 200) {
+      const { data } = await supabase.from('productos').select('id, sku, nombre').in('id', idsComp.slice(i, i + 200))
+      for (const c of data || []) compPorId.set(String(c.id), c)
+    }
     const round2 = (n) => Math.round(n * 100) / 100
 
     let total = 0, enviados = 0, errores = 0
@@ -73,7 +82,12 @@ export async function syncMayorista({ ids, skus, tienda } = {}) {
         .filter(p => p.sku)
         .map(p => {
           const costo = Number(p.costo_base) || 0
-          const enSeleccion = !seleccion.length || seleccion.includes(String(p.subcategoria_id))
+          const esCombo = Array.isArray(p.combo_items) && p.combo_items.length > 0
+          // Un combo no pertenece a una subcategoría de las que se eligen para la tienda: va si se lo asignó a
+          // esta tienda (casilla de tiendas del combo) o si su categoría es mayorista. Lo demás, por subcategoría.
+          const enSeleccion = esCombo
+            ? (p.tiendas_ids || []).map(String).includes(String(t.id)) || catMayorista.has(String(p.categoria_id))
+            : (!seleccion.length || seleccion.includes(String(p.subcategoria_id)))
           const normal = p.imagen_url || ''
           const web    = p.imagen_web_url || ''
           return {
@@ -91,6 +105,13 @@ export async function syncMayorista({ ids, skus, tienda } = {}) {
             imagen:       normal || web,
             imagen_alt:   normal && web && normal !== web ? web : '',
             activo:       p.activo !== false && enSeleccion && costo > 0,
+            // Solo los combos llevan composición: [{ sku, cantidad, nombre }] en el orden del combo.
+            ...(esCombo ? {
+              combo: p.combo_items
+                .map(i => ({ c: compPorId.get(String(i.producto_id)), cantidad: Number(i.cantidad) || 0 }))
+                .filter(x => x.c?.sku && x.cantidad > 0)
+                .map(x => ({ sku: x.c.sku, cantidad: x.cantidad, nombre: x.c.nombre })),
+            } : {}),
           }
         })
 
@@ -193,7 +214,7 @@ export async function ocultarEnMayorista(skus) {
 
 // Trae los productos en páginas de 1000 (límite por consulta de PostgREST).
 async function cargarProductos({ ids, skus }, conMultiplo = true) {
-  const base = 'id, sku, nombre, costo_base, imagen_url, imagen_web_url, alto_producto, ancho_producto, categoria_id, subcategoria_id, activo'
+  const base = 'id, sku, nombre, costo_base, imagen_url, imagen_web_url, alto_producto, ancho_producto, categoria_id, subcategoria_id, activo, combo_items, tiendas_ids'
   const cols = conMultiplo ? base + ', multiplo_mayorista' : base
   const out = []
   for (let desde = 0; ; desde += 1000) {
