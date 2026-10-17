@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { fmtMoney } from '../../lib/format'
 import { precioVenta } from '../../lib/pricing'
-import { syncToWoo } from '../../lib/wooSync'
+import { syncToWoo, conCategoriasWeb } from '../../lib/wooSync'
 import { syncMayorista, traerMultiplosPortal } from '../../lib/mayoristaSync'
 import ImageThumb from '../../components/ImageThumb'
 import { useAuth } from '../../lib/AuthContext'
@@ -180,12 +180,16 @@ export default function ComboForm({ initial, onCancel, onSaved, onAvanzado }) {
       tiendas_ids: tiendasIds, activo, mostrar_en_catalogo: enCatalogo, stock_actual: 0, usar_imagenes_compartidas: true,
     }
     const res = initial?.id
-      ? await supabase.from('productos').update(payload).eq('id', initial.id)
-      : await supabase.from('productos').insert(payload)
+      ? await supabase.from('productos').update(payload).eq('id', initial.id).select('*').single()
+      : await supabase.from('productos').insert(payload).select('*').single()
     setSaving(false)
     if (res.error) return alert('Error: ' + res.error.message)
 
-    syncToWoo({ tiendas, listas, producto: { id: initial?.id, ...payload, categorias_web: [] } }).catch((err) => console.error('[wooSync]', err))
+    // A la tienda web se le manda el producto COMPLETO tal como quedó guardado (con la foto principal, la
+    // galería, los textos y el envío que se cargaron en la pestaña Web). Antes se mandaba solo lo del formulario
+    // del combo: la miniatura pasaba a ser la foto principal de la web y se borraban las demás fotos.
+    // La miniatura (imagen_url) es solo para Gestión y el portal mayorista.
+    syncToWoo({ tiendas, listas, producto: conCategoriasWeb(res.data, subcategorias) }).catch((err) => console.error('[wooSync]', err))
     syncMayorista({ skus: [sku] }).catch((err) => console.error('[mayoristaSync]', err))
     onSaved?.()
   }

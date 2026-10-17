@@ -112,7 +112,9 @@ export async function syncToWoo({ tiendas, listas, producto, compartidas }) {
         discount_percent: pctOff,
         oferta:           ofertaCantidad,
         oferta_badge:     etiquetaOferta(promo),
-        image_url:        producto.imagen_web_url || producto.imagen_url || '',
+        // La foto principal de la web es SOLO la de la pestaña Web. La miniatura del producto (imagen_url) es
+        // para Gestión y el portal mayorista: no se usa de respaldo acá.
+        image_url:        producto.imagen_web_url || '',
         gallery_urls:     producto.imagenes_web || [],
         video_url:        producto.video_url || '',
         shared_gallery:   sharedGallery,
