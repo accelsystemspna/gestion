@@ -85,7 +85,7 @@ export async function syncMayorista({ ids, skus, tienda } = {}) {
             alto:         Number(p.alto_producto) || 0,
             ancho:        Number(p.ancho_producto) || 0,
             // Múltiplo de compra cargado en el producto (2 o 3). 0 = automático: el portal lo
-            // define según el alto.
+            // define según el alto (entre 24 y 36 cm → 3; el resto → 2).
             multiplo:     [2, 3].includes(Number(p.multiplo_mayorista)) ? Number(p.multiplo_mayorista) : 0,
             // Para el catálogo mayorista manda la foto de catálogo; la "web" queda de respaldo.
             imagen:       normal || web,
@@ -127,6 +127,43 @@ export async function syncMayorista({ ids, skus, tienda } = {}) {
   } catch (err) {
     console.warn('[mayoristaSync]', err)
     return { total: 0, enviados: 0, errores: 1, detalle: err.message }
+  }
+}
+
+/**
+ * Trae del portal mayorista el múltiplo (= cantidad mínima) REAL de cada producto, tal como lo ve el
+ * cliente: el portal respeta lo que se mandó explícito desde acá, las ediciones manuales en WordPress
+ * y, si no hay nada, su propia regla por alto. Así el armado de combos usa el mismo número que la web.
+ * Solo lectura (no modifica nada en el sitio). Nunca lanza: si el sitio no responde, o todavía no tiene
+ * el endpoint (plugin anterior a 1.5.5 → 404), devuelve { mapa: null, motivo }.
+ *
+ * @param {string[]} [skus] - si falta, trae todos los productos publicados
+ * @returns {Promise<{ mapa: Map<string, number> | null, motivo?: string, tienda?: string }>}
+ */
+export async function traerMultiplosPortal(skus) {
+  try {
+    const { data } = await supabase.from('tiendas').select('*').eq('activa', true)
+    const t = (data || []).find(x => x.tipo === 'mayorista' && x.url && x.webhook_secret)
+    if (!t) return { mapa: null, motivo: 'No hay una tienda mayorista activa configurada.' }
+    const endpoint = endpointSync(t.url).replace(/\/sync$/, '/multiplos')
+    const lista = [...new Set((skus || []).filter(Boolean))]
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-webhook-secret': t.webhook_secret },
+      body: JSON.stringify(lista.length && lista.length <= 1000 ? { skus: lista } : {}),
+      signal: AbortSignal.timeout(20000),
+    })
+    if (res.status === 404) return { mapa: null, tienda: t.nombre, motivo: 'El portal todavía no tiene la versión del plugin que informa los múltiplos.' }
+    if (!res.ok) return { mapa: null, tienda: t.nombre, motivo: `El portal respondió HTTP ${res.status}.` }
+    const json = await res.json()
+    const mapa = new Map()
+    for (const p of json.productos || []) {
+      const m = Number(p.multiplo ?? p.minimo)
+      if (p.sku && m > 0) mapa.set(p.sku, m)
+    }
+    return { mapa, tienda: t.nombre }
+  } catch (err) {
+    return { mapa: null, motivo: 'No se pudo consultar el portal: ' + err.message }
   }
 }
 

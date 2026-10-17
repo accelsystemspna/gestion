@@ -842,7 +842,7 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
                     <option value="2">2</option>
                     <option value="3">3</option>
                   </select>
-                  <span style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>Unidades por modelo en el portal mayorista. Auto = según el alto (30 cm → 3, resto → 2).</span>
+                  <span style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>Unidades por modelo en el portal mayorista. Auto = lo define el portal según el alto (entre 24 y 36 cm → 3, resto → 2) o lo que se haya editado allá.</span>
                 </F>
               </div>
 

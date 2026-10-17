@@ -3,17 +3,18 @@ import { supabase } from '../../lib/supabase'
 import { fmtMoney } from '../../lib/format'
 import { precioVenta } from '../../lib/pricing'
 import { syncToWoo } from '../../lib/wooSync'
-import { syncMayorista } from '../../lib/mayoristaSync'
+import { syncMayorista, traerMultiplosPortal } from '../../lib/mayoristaSync'
 import ImageThumb from '../../components/ImageThumb'
 import { useAuth } from '../../lib/AuthContext'
 
 const SKU_RE = /^[A-Z]{3}[0-9]{6}(-V\d+)?$/
 
-// Múltiplo mayorista sugerido para un producto: el que tiene cargado, o si está en
-// "Auto" la misma regla que usa el portal (alto ≥ 30 cm → 3, el resto → 2).
+// Múltiplo mayorista de un producto cuando NO se pudo consultar el portal: el que tiene cargado, o si está
+// en "Auto" la misma regla que usa el portal (alto entre 24 y 36 cm → 3; el resto, 45 cm incluido → 2).
 function multiploDe(producto) {
   if (producto?.multiplo_mayorista) return Number(producto.multiplo_mayorista)
-  return (Number(producto?.alto_producto) || 0) >= 30 ? 3 : 2
+  const alto = Number(producto?.alto_producto) || 0
+  return alto > 24 && alto < 36 ? 3 : 2
 }
 
 const field = { display: 'flex', flexDirection: 'column', gap: 4 }
@@ -65,6 +66,16 @@ export default function ComboForm({ initial, onCancel, onSaved, onAvanzado }) {
   const categoriasCombo = useMemo(() => categorias.filter((c) => c.tipo_fabricacion === 'Combo' && c.org_id === orgId), [categorias, orgId])
   const catSel = useMemo(() => categorias.find((c) => c.id === Number(categoriaId)), [categorias, categoriaId])
   const esMayorista = !!catSel?.es_mayorista
+
+  // Múltiplos reales del portal mayorista (lo que ve el cliente). Si no se pueden traer, se usa el cálculo local.
+  const [portal, setPortal] = useState(null)   // null = sin consultar | { mapa, motivo, tienda }
+  useEffect(() => {
+    if (!esMayorista) return
+    let vivo = true
+    traerMultiplosPortal().then((r) => { if (vivo) setPortal(r) })
+    return () => { vivo = false }
+  }, [esMayorista])
+  const multiplo = (p) => portal?.mapa?.get(p?.sku) ?? multiploDe(p)
   const subOpciones = useMemo(() => subcategorias.filter((s) => s.categoria_id === Number(categoriaId)), [subcategorias, categoriaId])
 
   // SKU automático al elegir categoría (si todavía no se tocó a mano)
@@ -104,7 +115,7 @@ export default function ComboForm({ initial, onCancel, onSaved, onAvanzado }) {
     setImagenUrl((prev) => prev || producto.imagen_url || '')
     setItems((prev) => {
       if (prev.find((it) => it.producto_id === producto.id)) return prev
-      const cantidad = esMayorista ? multiploDe(producto) : 1
+      const cantidad = esMayorista ? multiplo(producto) : 1
       return [...prev, { producto_id: producto.id, cantidad }]
     })
   }
@@ -288,6 +299,14 @@ export default function ComboForm({ initial, onCancel, onSaved, onAvanzado }) {
 
             <div style={{ height: 1, background: 'var(--border)' }} />
 
+            {esMayorista && portal && (
+              <div style={{ fontSize: 11, color: portal.mapa ? '#0f766e' : '#92400e' }}>
+                {portal.mapa
+                  ? '✓ Los múltiplos son los del portal mayorista (lo que ve el cliente).'
+                  : `Múltiplos calculados por el programa (alto entre 24 y 36 cm → 3, resto → 2). ${portal.motivo || ''}`}
+              </div>
+            )}
+
             {detalle.length === 0 ? (
               <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: 13, padding: '14px 0' }}>Todavía no agregaste productos.</div>
             ) : (
@@ -295,7 +314,7 @@ export default function ComboForm({ initial, onCancel, onSaved, onAvanzado }) {
                 <thead><tr><th>Producto</th><th style={{ textAlign: 'right' }}>Cant.</th><th style={{ textAlign: 'right' }}>Costo</th><th></th></tr></thead>
                 <tbody>
                   {detalle.map((d) => {
-                    const opciones = esMayorista ? (() => { const m = multiploDe(d.prod); return [m, m * 2] })() : null
+                    const opciones = esMayorista ? (() => { const m = multiplo(d.prod); return [m, m * 2] })() : null
                     return (
                       <tr key={d.producto_id}>
                         <td style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
