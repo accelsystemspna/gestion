@@ -59,13 +59,19 @@ export default function Layout() {
   }, [])
 
   // ── Aviso de pedidos web abiertos → menú Tiendas ──
-  // Web: los que esperan pago o están por completar. Mercado Libre: las ventas ya pagas que faltan
-  // preparar o despachar (en ML nunca hay "esperando pago": la venta entra cuando se acredita).
+  // Todo pedido de tienda (web, mayorista, Mercado Libre) que todavía necesita atención: esperando pago,
+  // pagado por preparar, o listo para despachar. Cuando se despacha/completa o se cancela, deja de contar.
   useEffect(() => {
     const cargar = async () => {
-      let r = await supabase.from('ventas').select('id', { count: 'exact', head: true })
+      // Los pedidos de tiendas inactivas no cuentan (esas tiendas ni se muestran en Tiendas).
+      const { data: inactivas } = await supabase.from('tiendas').select('id').eq('activa', false)
+      const idsInactivas = (inactivas || []).map((t) => t.id)
+      let q = supabase.from('ventas').select('id', { count: 'exact', head: true })
         .not('origen_ref', 'is', null)
-        .or('estado_web.in.(esperando_pago,procesado),and(canal.eq.mercadolibre,estado_web.in.(en_preparacion,listo))')
+        .neq('estado', 'anulado')
+        .in('estado_web', ['esperando_pago', 'procesado', 'en_preparacion', 'listo'])
+      if (idsInactivas.length) q = q.or(`tienda_id.is.null,tienda_id.not.in.(${idsInactivas.join(',')})`)
+      let r = await q
       // Si todavía no se corrió el SQL de Tiendas (no existe estado_web), se cuentan los pedidos por revisar.
       if (r.error) {
         r = await supabase.from('ventas').select('id', { count: 'exact', head: true })

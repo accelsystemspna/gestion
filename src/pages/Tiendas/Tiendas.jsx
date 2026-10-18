@@ -234,16 +234,17 @@ export default function Tiendas() {
   // ── KPIs y conteos ────────────────────────────────────────────────────────
   const resumen = (lista) => {
     const mes = new Date().toISOString().slice(0, 7)
-    let esperando = 0, montoEsperando = 0, enPrep = 0, listos = 0, porDespachar = 0, pedidosMes = 0, factMes = 0
+    let esperando = 0, montoEsperando = 0, enPrep = 0, listos = 0, pedidosMes = 0, factMes = 0
     for (const v of lista) {
       const e = estadoWebDe(v)
       if (e === 'esperando_pago') { esperando++; montoEsperando += Number(v.total) || 0 }
       if (e === 'en_preparacion') enPrep++
       if (e === 'listo') listos++
-      if (v.canal === 'mercadolibre' && (e === 'en_preparacion' || e === 'listo')) porDespachar++
       if (e !== 'cancelado' && (v.fecha || '').startsWith(mes)) { pedidosMes++; factMes += Number(v.total) || 0 }
     }
-    return { esperando, montoEsperando, enPrep, listos, porDespachar, pedidosMes, factMes }
+    // Pendientes = lo que todavía necesita atención: esperando pago + por preparar + listos para despachar.
+    // (Las ventas anuladas ya vienen como 'cancelado' y no suman.)
+    return { esperando, montoEsperando, enPrep, listos, pendientes: esperando + enPrep + listos, pedidosMes, factMes }
   }
   const kpi = useMemo(() => resumen(ventasSel), [ventasSel])
 
@@ -540,7 +541,8 @@ export default function Tiendas() {
           {/* Selector de tienda */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 10, marginBottom: 18 }}>
             {[{ id: 'todas', nombre: 'Todas las tiendas', tipo: null }, ...tiendasActivas].map(t => {
-              const lista = t.id === 'todas' ? ventas : ventas.filter(v => perteneceATienda(v, t))
+              // "Todas" suma solo lo de las tiendas que se muestran (no los pedidos de tiendas inactivas).
+              const lista = t.id === 'todas' ? ventas.filter(v => !tiendas.some(x => x.activa === false && perteneceATienda(v, x))) : ventas.filter(v => perteneceATienda(v, t))
               const r = resumen(lista)
               const activa = selActual === String(t.id)
               const avisoPortal = tiendaPortalAviso && t.id === tiendaPortalAviso.id && pendientesPortal > 0
@@ -555,6 +557,12 @@ export default function Tiendas() {
                   }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
                     <strong style={{ fontSize: 14 }}>{t.nombre}</strong>
+                    {r.pendientes > 0 && (
+                      <span title={`${r.pendientes} venta${r.pendientes !== 1 ? 's' : ''} pendiente${r.pendientes !== 1 ? 's' : ''}`}
+                        style={{ marginLeft: 'auto', background: '#dc2626', color: '#fff', borderRadius: 999, minWidth: 22, height: 22, padding: '0 7px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700 }}>
+                        {r.pendientes}
+                      </span>
+                    )}
                     {tipo && <Badge color={tipo.color} bg={tipo.bg}>{tipo.sigla}</Badge>}
                     {avisoPortal && <Badge color="#fff" bg="#dc2626">{pendientesPortal} por aprobar</Badge>}
                   </div>
@@ -563,10 +571,10 @@ export default function Tiendas() {
                   ) : (
                     <div style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.6 }}>
                       <div>{r.pedidosMes} pedido{r.pedidosMes !== 1 ? 's' : ''} este mes · {fmtMoney(r.factMes)}</div>
-                      <div style={{ color: (t.tipo === 'mercadolibre' ? r.porDespachar : r.esperando) ? '#b45309' : 'var(--text-muted)', fontWeight: (t.tipo === 'mercadolibre' ? r.porDespachar : r.esperando) ? 700 : 400 }}>
-                        {t.tipo === 'mercadolibre'
-                          ? (r.porDespachar ? `${r.porDespachar} por preparar o despachar` : 'Nada por despachar')
-                          : (r.esperando ? `${r.esperando} esperando pago` : 'Sin pagos pendientes')}
+                      <div style={{ color: r.pendientes ? '#b45309' : 'var(--text-muted)', fontWeight: r.pendientes ? 700 : 400 }}>
+                        {r.pendientes
+                          ? [r.esperando ? `${r.esperando} esperando pago` : '', (r.enPrep + r.listos) ? `${r.enPrep + r.listos} por preparar o despachar` : ''].filter(Boolean).join(' · ')
+                          : 'Todo al día'}
                       </div>
                     </div>
                   )}
