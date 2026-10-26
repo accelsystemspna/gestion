@@ -71,6 +71,8 @@ export default function ImageThumb({ src, size = 36, radius = 4, alt = '' }) {
       <img
         src={src}
         alt={alt}
+        loading="lazy"
+        decoding="async"
         onClick={(e) => { e.stopPropagation(); setOpen(true) }}
         style={{
           width: size, height: size,

@@ -150,7 +150,7 @@ export default function ImagenesCompartidas() {
                 border: '1px solid var(--border)', borderRadius: 8, background: 'var(--bg-card)',
                 opacity: it.activa ? 1 : 0.5, flexWrap: 'wrap',
               }}>
-                <img src={it.url} alt="" style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: 6, border: '1px solid var(--border)', flexShrink: 0 }} />
+                <img loading="lazy" decoding="async" src={it.url} alt="" style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: 6, border: '1px solid var(--border)', flexShrink: 0 }} />
                 <input
                   className="input"
                   defaultValue={it.nombre || ''}

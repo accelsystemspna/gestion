@@ -241,7 +241,7 @@ export default function ComboForm({ initial, onCancel, onSaved, onAvanzado }) {
                   {fotosDisponibles.map((url) => (
                     <button key={url} onClick={() => setImagenUrl(url)}
                       style={{ padding: 0, border: url === imagenUrl ? '2px solid var(--primary)' : '2px solid transparent', borderRadius: 6, cursor: 'pointer', background: 'none' }}>
-                      <img src={url} alt="" style={{ width: 44, height: 44, objectFit: 'contain', borderRadius: 4, background: '#fff', display: 'block' }} />
+                      <img loading="lazy" decoding="async" src={url} alt="" style={{ width: 44, height: 44, objectFit: 'contain', borderRadius: 4, background: '#fff', display: 'block' }} />
                     </button>
                   ))}
                 </div>
@@ -312,7 +312,7 @@ export default function ComboForm({ initial, onCancel, onSaved, onAvanzado }) {
                       border: yaAgregado ? '2px solid var(--primary)' : '1px solid var(--border)', background: yaAgregado ? 'var(--bg-highlight)' : 'var(--bg-card)', opacity: yaAgregado ? 0.7 : 1,
                     }}>
                     {p.imagen_url
-                      ? <img src={p.imagen_url} alt="" style={{ width: 56, height: 56, objectFit: 'contain', borderRadius: 6, background: '#fff', border: '1px solid var(--border)', display: 'block' }} />
+                      ? <img loading="lazy" decoding="async" src={p.imagen_url} alt="" style={{ width: 56, height: 56, objectFit: 'contain', borderRadius: 6, background: '#fff', border: '1px solid var(--border)', display: 'block' }} />
                       : <div style={{ width: 56, height: 56, borderRadius: 6, background: 'var(--bg-muted)' }} />}
                     <div style={{ fontSize: 11, textAlign: 'center', lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', width: '100%' }}>{p.nombre}</div>
                     <code style={{ fontSize: 10, color: 'var(--text-muted)' }}>{p.sku}</code>

@@ -1052,7 +1052,7 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
                     <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
                       {(form.imagenes_web || []).map(url => (
                         <div key={url} style={{ position:'relative' }}>
-                          <img src={url} alt="" style={{ width:70, height:70, objectFit:'cover', borderRadius:6, border:'1px solid var(--border)', display:'block' }} />
+                          <img loading="lazy" decoding="async" src={url} alt="" style={{ width:70, height:70, objectFit:'cover', borderRadius:6, border:'1px solid var(--border)', display:'block' }} />
                           <button onClick={()=>quitarImagenGaleria(url)} style={{ position:'absolute', top:-5, right:-5, background:'var(--danger)', color:'#fff', border:'none', borderRadius:'50%', width:16, height:16, fontSize:10, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>✕</button>
                         </div>
                       ))}
@@ -1110,7 +1110,7 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
                       </div>
                       <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
                         {compartidas.map(im => (
-                          <img key={im.id} src={im.url} alt="" style={{ width:44, height:44, objectFit:'cover', borderRadius:5, border:'1px solid var(--border)' }} />
+                          <img loading="lazy" decoding="async" key={im.id} src={im.url} alt="" style={{ width:44, height:44, objectFit:'cover', borderRadius:5, border:'1px solid var(--border)' }} />
                         ))}
                       </div>
                     </div>

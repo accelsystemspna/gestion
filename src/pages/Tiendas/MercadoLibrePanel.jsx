@@ -139,7 +139,7 @@ export default function MercadoLibrePanel() {
                 const prod = p.producto_id ? prods[p.producto_id] : null
                 return (
                   <tr key={p.id}>
-                    <td>{p.thumbnail && <img src={p.thumbnail} alt="" style={{ width: 44, height: 44, objectFit: 'cover', borderRadius: 6 }} />}</td>
+                    <td>{p.thumbnail && <img loading="lazy" decoding="async" src={p.thumbnail} alt="" style={{ width: 44, height: 44, objectFit: 'cover', borderRadius: 6 }} />}</td>
                     <td>
                       <a href={p.permalink} target="_blank" rel="noreferrer" style={{ fontWeight: 600, color: 'var(--text)' }}>{p.titulo}</a>
                       <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{p.item_id}{p.sku ? ` · SKU ${p.sku}` : ' · sin SKU'}</div>

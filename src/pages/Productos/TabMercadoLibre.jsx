@@ -178,7 +178,7 @@ export default function TabMercadoLibre({ form, set, setForm, listas, costoBase 
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           {imagenes.map((url, i) => (
             <div key={url} style={{ position: 'relative' }}>
-              <img src={url} alt="" style={{ width: i === 0 ? 120 : 84, height: i === 0 ? 120 : 84, objectFit: 'cover', borderRadius: 8, border: i === 0 ? '2px solid var(--primary)' : '1px solid var(--border)', display: 'block' }} />
+              <img loading="lazy" decoding="async" src={url} alt="" style={{ width: i === 0 ? 120 : 84, height: i === 0 ? 120 : 84, objectFit: 'cover', borderRadius: 8, border: i === 0 ? '2px solid var(--primary)' : '1px solid var(--border)', display: 'block' }} />
               {i === 0 && <span style={{ position: 'absolute', bottom: 4, left: 4, fontSize: 10, fontWeight: 700, background: 'var(--primary)', color: '#fff', padding: '1px 6px', borderRadius: 4 }}>Portada</span>}
               {i > 0 && <button type="button" onClick={() => comoPortada(url)} title="Usar de portada" style={{ position: 'absolute', bottom: 3, left: 3, fontSize: 10, border: 'none', borderRadius: 4, padding: '1px 5px', cursor: 'pointer' }}>★</button>}
               <button type="button" onClick={() => quitar(url)} style={{ position: 'absolute', top: -6, right: -6, background: 'var(--danger)', color: '#fff', border: 'none', borderRadius: '50%', width: 18, height: 18, fontSize: 11, cursor: 'pointer' }}>✕</button>
