@@ -1,8 +1,12 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { urlLiviana } from '../lib/imagenes'
 
-export default function ImageThumb({ src, size = 36, radius = 4, alt = '' }) {
+// `src` = foto ORIGINAL (es la que se ve al ampliar). Si se pasa `sku`, la miniatura usa la versión liviana de esa foto
+// (mucho más chica: ahorra ancho de banda) y, si todavía no existe o falla, cae a la original.
+export default function ImageThumb({ src, sku, size = 36, radius = 4, alt = '' }) {
   const [open, setOpen] = useState(false)
+  const [sinLiviana, setSinLiviana] = useState(false)
 
   useEffect(() => {
     if (!open) return
@@ -12,6 +16,9 @@ export default function ImageThumb({ src, size = 36, radius = 4, alt = '' }) {
   }, [open])
 
   if (!src) return null
+
+  // Miniatura: la liviana (si hay código y no falló) o, si no, la original.
+  const mini = (sku && !sinLiviana && urlLiviana(sku, src)) || src
 
   const overlay = open && createPortal(
     <div
@@ -69,10 +76,11 @@ export default function ImageThumb({ src, size = 36, radius = 4, alt = '' }) {
   return (
     <>
       <img
-        src={src}
+        src={mini}
         alt={alt}
         loading="lazy"
         decoding="async"
+        onError={() => setSinLiviana(true)}
         onClick={(e) => { e.stopPropagation(); setOpen(true) }}
         style={{
           width: size, height: size,

@@ -719,7 +719,7 @@ export default function Presupuesto() {
                             onMouseLeave={e => e.currentTarget.style.background='var(--bg-card)'}
                           >
                             {p.imagen_url
-                              ? <ImageThumb src={p.imagen_url} size={36} />
+                              ? <ImageThumb src={p.imagen_url} sku={p.sku} size={36} />
                               : <div style={{ width:36, height:36, borderRadius:4, background:'var(--bg-muted)', flexShrink:0 }} />
                             }
                             <div style={{ flex:1, minWidth:0 }}>
@@ -763,7 +763,7 @@ export default function Presupuesto() {
                   {extrasConPrecio.map(it => (
                     <tr key={it._key}>
                       <td style={{ width:44, padding:'5px 6px' }}>
-                        <ImageThumb src={it.producto.imagen_url} size={34} />
+                        <ImageThumb src={it.producto.imagen_url} sku={it.producto.sku} size={34} />
                       </td>
                       <td>
                         <strong style={{ fontSize:13 }}>{it.producto.nombre}</strong>

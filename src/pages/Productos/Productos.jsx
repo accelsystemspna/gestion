@@ -465,7 +465,7 @@ El producto es de otro negocio: no se edita, pero el stock lo llevás vos.`, Str
                 return (
                   <tr key={p.id} style={activo ? undefined : { opacity: 0.55, background: '#fafafa' }}>
                     <td style={{ padding: '6px 8px', width: 48 }}>
-                      <ImageThumb src={p.imagen_url} size={40} />
+                      <ImageThumb src={p.imagen_url} sku={p.sku} size={40} />
                     </td>
                     <td><code style={{ fontSize: 12 }}>{p.sku}</code></td>
                     <td>
@@ -566,7 +566,7 @@ El producto es de otro negocio: no se edita, pero el stock lo llevás vos.`, Str
             return (
               <div key={p.id} className="producto-card-mobile" style={activo ? undefined : { opacity: 0.55 }}>
                 <div className="producto-card-mobile-top">
-                  <ImageThumb src={p.imagen_url} size={48} />
+                  <ImageThumb src={p.imagen_url} sku={p.sku} size={48} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontWeight: 600, fontSize: 14 }}>
                       {p.nombre}<OfertaBadge producto={p} />

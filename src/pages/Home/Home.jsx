@@ -462,7 +462,7 @@ export default function Dashboard() {
                     <td style={{ padding: '8px 16px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                         {p.imagen_url
-                          ? <ImageThumb src={p.imagen_url} size={32} radius={5} />
+                          ? <ImageThumb src={p.imagen_url} sku={p.sku} size={32} radius={5} />
                           : <div style={{ width: 32, height: 32, borderRadius: 5, background: 'var(--bg)', flexShrink: 0 }} />}
                         <div>
                           <div style={{ fontWeight: 600 }}>{p.nombre}</div>

@@ -7,6 +7,7 @@ import { syncMayorista, traerMultiplosPortal } from '../../lib/mayoristaSync'
 import ImageThumb from '../../components/ImageThumb'
 import { useAuth } from '../../lib/AuthContext'
 import { armarCollage } from '../../lib/collage'
+import { urlLiviana } from '../../lib/imagenes'
 
 const SKU_RE = /^[A-Z]{3}[0-9]{6}(-V\d+)?$/
 
@@ -312,7 +313,7 @@ export default function ComboForm({ initial, onCancel, onSaved, onAvanzado }) {
                       border: yaAgregado ? '2px solid var(--primary)' : '1px solid var(--border)', background: yaAgregado ? 'var(--bg-highlight)' : 'var(--bg-card)', opacity: yaAgregado ? 0.7 : 1,
                     }}>
                     {p.imagen_url
-                      ? <img loading="lazy" decoding="async" src={p.imagen_url} alt="" style={{ width: 56, height: 56, objectFit: 'contain', borderRadius: 6, background: '#fff', border: '1px solid var(--border)', display: 'block' }} />
+                      ? <img loading="lazy" decoding="async" src={urlLiviana(p.sku, p.imagen_url) || p.imagen_url} onError={(e) => { if (e.currentTarget.src !== p.imagen_url) e.currentTarget.src = p.imagen_url }} alt="" style={{ width: 56, height: 56, objectFit: 'contain', borderRadius: 6, background: '#fff', border: '1px solid var(--border)', display: 'block' }} />
                       : <div style={{ width: 56, height: 56, borderRadius: 6, background: 'var(--bg-muted)' }} />}
                     <div style={{ fontSize: 11, textAlign: 'center', lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', width: '100%' }}>{p.nombre}</div>
                     <code style={{ fontSize: 10, color: 'var(--text-muted)' }}>{p.sku}</code>
@@ -345,7 +346,7 @@ export default function ComboForm({ initial, onCancel, onSaved, onAvanzado }) {
                     return (
                       <tr key={d.producto_id}>
                         <td style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          {d.prod?.imagen_url ? <ImageThumb src={d.prod.imagen_url} size={30} /> : <div style={{ width: 30, height: 30, borderRadius: 4, background: 'var(--bg-muted)' }} />}
+                          {d.prod?.imagen_url ? <ImageThumb src={d.prod.imagen_url} sku={d.prod.sku} size={30} /> : <div style={{ width: 30, height: 30, borderRadius: 4, background: 'var(--bg-muted)' }} />}
                           <div>
                             <strong style={{ fontSize: 13 }}>{d.prod?.nombre || '(producto eliminado)'}</strong>
                             <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{d.prod?.sku}</div>

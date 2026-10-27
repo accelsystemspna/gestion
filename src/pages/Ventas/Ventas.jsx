@@ -949,7 +949,7 @@ export default function Ventas() {
                         onMouseEnter={e => { if (listaSel) e.currentTarget.style.background = 'var(--primary-faint)' }}
                         onMouseLeave={e => { e.currentTarget.style.background = inCart ? 'var(--bg-highlight)' : idx % 2 === 1 ? 'var(--surface)' : 'transparent' }}
                       >
-                        <ImageThumb src={p.imagen_url} size={34} />
+                        <ImageThumb src={p.imagen_url} sku={p.sku} size={34} />
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ fontSize: 13, fontWeight: inCart ? 700 : 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: inCart ? 'var(--primary)' : 'var(--text)' }}>
                             {p.nombre}{ofertaTexto && (
@@ -1051,7 +1051,7 @@ export default function Ventas() {
                   )}
                   {item.imagen_url && (
                     <span className="pos-cart-thumb" style={{ display: 'flex', flexShrink: 0 }}>
-                      <ImageThumb src={item.imagen_url} size={38} radius={5} />
+                      <ImageThumb src={item.imagen_url} sku={item.sku} size={38} radius={5} />
                     </span>
                   )}
                   <div className="pos-cart-info" style={{ flex: 1, minWidth: 0 }}>

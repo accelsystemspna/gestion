@@ -361,7 +361,7 @@ export default function NuevaVenta({ venta, onClose, onSaved }) {
                           onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                         >
                           {p.imagen_url
-                            ? <ImageThumb src={p.imagen_url} size={36} />
+                            ? <ImageThumb src={p.imagen_url} sku={p.sku} size={36} />
                             : <div style={{ width: 36, height: 36, borderRadius: 4, background: 'var(--bg-muted)', flexShrink: 0 }} />
                           }
                           <div style={{ flex: 1, minWidth: 0 }}>
