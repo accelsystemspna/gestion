@@ -34,7 +34,14 @@ node "C:/Proyectos/gestion-app/scripts/buscar-original.mjs" CUA000123
 ```
 
 - Imprime la ruta del archivo (PNG de preferencia). Con `--json` devuelve JSON con `mejor` y `candidatos`.
+- **Hoy la carpeta de originales es** `G:/Mi unidad/Creativos/cuadros-png` (Google Drive; los archivos se llaman como el código:
+  `CUA000123.png`). Ya está configurada en `.env.local`: no hace falta que la pases.
 - Busca primero por el código en el nombre del archivo y, si no lo encuentra, por el nombre del producto en Gestión.
+- **Variantes** (`CUA000153-V1`): comparten el dibujo del producto base, así que devuelve el original del base.
+- **Combos** (`COM…`, `MAY…`): no tienen imagen propia; devuelve la lista de los productos que los forman, con la cantidad
+  de cada uno y la ruta del original de cada cuadro. Con `--json` viene en `componentes`.
+- Si dice que la carpeta no existe o no es accesible, puede ser que Google Drive no esté abierto/sincronizado en la compu:
+  avisale al usuario en vez de buscar la imagen por otro lado.
 - `--estructura` muestra qué hay en la carpeta (útil para ver cómo están nombrados los archivos).
 - **Si no la encuentra** (código de salida 1): no inventes ni uses otra imagen. Avisale al usuario y pedile que indique
   dónde está el archivo.

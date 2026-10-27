@@ -85,19 +85,39 @@ if (!/^[A-Z]{3}\d{6}(-V\d+)?$/.test(sku)) salir(2, 'Pasame el código del produc
 const puntaje = (p) => (/\.png$/i.test(p) ? 2 : /\.webp$/i.test(p) ? 0 : 1)
 const ordenar = (lista) => [...lista].sort((a, b) => puntaje(b) - puntaje(a) || fs.statSync(b).size - fs.statSync(a).size)
 
-// 1) por SKU en el nombre del archivo (no confundir CUA000012 con CUA000123: se pide que no haya un dígito pegado)
-const reSku = new RegExp(`(^|[^A-Za-z0-9])${sku}(?![0-9])`, 'i')
-let coincidencias = archivos.filter((a) => reSku.test(path.basename(a)))
+// Por SKU en el nombre del archivo (no confundir CUA000012 con CUA000123: se pide que no haya un dígito pegado)
+const porSku = (codigo) => {
+  const re = new RegExp(`(^|[^A-Za-z0-9])${codigo}(?![0-9])`, 'i')
+  return archivos.filter((a) => re.test(path.basename(a)))
+}
+let coincidencias = porSku(sku)
 let criterio = 'sku'
 
-// 2) por nombre del producto (consulta a Gestión) si el SKU no aparece en ningún archivo
+// Variante (CUA000153-V1): comparte el dibujo con el producto base (CUA000153)
+if (!coincidencias.length && /-V\d+$/.test(sku)) {
+  coincidencias = porSku(sku.replace(/-V\d+$/, ''))
+  if (coincidencias.length) criterio = `sku base ${sku.replace(/-V\d+$/, '')} (${sku} es una variante)`
+}
+
+// Por nombre del producto (consulta a Gestión) si el SKU no aparece en ningún archivo.
+// Si el producto es un combo no tiene imagen propia: se devuelven las originales de los productos que lo forman.
+let esCombo = false, componentes = []
 if (!coincidencias.length) {
   try {
     const { supabase } = await import('../src/lib/supabase.js')
     if (process.env.GESTION_EMAIL && process.env.GESTION_PASSWORD) {
       await supabase.auth.signInWithPassword({ email: process.env.GESTION_EMAIL, password: process.env.GESTION_PASSWORD })
-      const { data } = await supabase.from('productos').select('nombre').eq('sku', sku).maybeSingle()
-      if (data?.nombre) {
+      const { data } = await supabase.from('productos').select('nombre, combo_items').eq('sku', sku).maybeSingle()
+      if (Array.isArray(data?.combo_items) && data.combo_items.length) {
+        esCombo = true
+        const ids = data.combo_items.map((i) => i.producto_id)
+        const { data: comp } = await supabase.from('productos').select('id, sku, nombre').in('id', ids)
+        componentes = data.combo_items.map((i) => {
+          const c = (comp || []).find((x) => x.id === i.producto_id)
+          const f = c ? ordenar(porSku(c.sku))[0] : null
+          return { sku: c?.sku || '?', nombre: c?.nombre || '', cantidad: i.cantidad, ruta: f ? f.replace(/\\/g, '/') : null }
+        })
+      } else if (data?.nombre) {
         const nombre = normalizar(data.nombre)
         coincidencias = archivos.filter((a) => normalizar(path.parse(a).name) === nombre)
         if (!coincidencias.length) {
@@ -108,6 +128,17 @@ if (!coincidencias.length) {
       }
     }
   } catch { /* sin conexión a Gestión: solo se usa el SKU */ }
+}
+
+if (esCombo) {
+  const faltan = componentes.filter((c) => !c.ruta)
+  if (comoJson) console.log(JSON.stringify({ ok: true, sku, combo: true, mensaje: 'Es un combo: no tiene imagen propia; estas son las originales de los productos que lo forman.', componentes }))
+  else {
+    console.log(`${sku} es un combo: no tiene imagen propia. Originales de los ${componentes.length} productos que lo forman:`)
+    for (const c of componentes) console.log(`  ${c.sku}  x${c.cantidad}  ${c.nombre}  →  ${c.ruta || '(sin archivo original)'}`)
+    if (faltan.length) console.error(`(Faltan los originales de: ${faltan.map((c) => c.sku).join(', ')})`)
+  }
+  process.exit(faltan.length === componentes.length ? 1 : 0)
 }
 
 if (!coincidencias.length) {
