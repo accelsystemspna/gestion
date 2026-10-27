@@ -9,6 +9,43 @@ pida "cargalo en Gestión" (o "activalo en tal tienda"), usá el script que ya
 existe en el otro proyecto — no reimplementes nada de esto ni llames a
 Supabase directo.
 
+## Imágenes: la ORIGINAL es para crear, la liviana es solo para mostrar
+
+Cada producto tiene su foto en dos versiones:
+
+- **La original** (calidad completa): es la que se usa para **producir cualquier creativo**. En Gestión es el campo
+  `imagen_url` del producto y, en la computadora, el archivo PNG original.
+- **La liviana** (unos 20 KB, para pantallas): la usan Gestión, el catálogo público y el portal mayorista para no gastar
+  ancho de banda. **Nunca la uses para hacer un creativo** — está comprimida y de menor tamaño a propósito.
+
+Reglas:
+1. Para un creativo, **no bajes la imagen desde el Storage de Supabase ni desde la web**: buscá el archivo original en la
+   computadora (siguiente sección). Si el usuario te pasa solo el código del producto, eso alcanza.
+2. Si hace falta mirar una foto solo para identificar el producto, cualquier versión sirve; para **producir**, la original.
+3. Nunca reemplaces ni comprimas una imagen original.
+
+## Cómo encontrar la imagen original de un producto (solo con el código)
+
+El usuario te va a pasar **solamente el código (SKU)**, por ejemplo `CUA000123`. El script lo busca en la carpeta de
+originales de la computadora:
+
+```bash
+node "C:/Proyectos/gestion-app/scripts/buscar-original.mjs" CUA000123
+```
+
+- Imprime la ruta del archivo (PNG de preferencia). Con `--json` devuelve JSON con `mejor` y `candidatos`.
+- Busca primero por el código en el nombre del archivo y, si no lo encuentra, por el nombre del producto en Gestión.
+- `--estructura` muestra qué hay en la carpeta (útil para ver cómo están nombrados los archivos).
+- **Si no la encuentra** (código de salida 1): no inventes ni uses otra imagen. Avisale al usuario y pedile que indique
+  dónde está el archivo.
+- **Si dice que falta configurar la carpeta** (código de salida 2): pedile al usuario la ruta de la carpeta donde tiene los
+  PNG originales y agregá en `C:/Proyectos/gestion-app/.env.local` una línea nueva (sin tocar las demás):
+  `GESTION_ORIGINALES_DIR=C:/ruta/a/la/carpeta`. Es una sola vez.
+
+Flujo completo de un producto: **código → buscar-original → producir el creativo con la original → cargarlo en Gestión
+(`completar-producto-web.mjs`)**. Más adelante, al cargar una foto, Gestión guardará solo la original intacta y creará sola
+la versión liviana; vos no tenés que hacer nada distinto.
+
 ## Cómo llamarlo
 
 ```bash
