@@ -19,6 +19,7 @@
     "react-dom": "^19.2.5",
     "react-router-dom": "^7.14.2",
     "serve": "^14.2.6",
+    "upng-js": "^2.1.0",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {

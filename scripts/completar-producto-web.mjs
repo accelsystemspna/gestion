@@ -171,6 +171,25 @@ if (errUpd) fallar('No se pudo guardar: ' + errUpd.message)
 
 console.log(`✓ ${actualizado.sku} — ${actualizado.nombre}: actualicé ${resumen.join(', ')}.`)
 
+// ── Versión LIVIANA de la foto principal (la que usan las pantallas y el catálogo) ──────────────────────
+// La original (la que acabás de subir) no se toca; la liviana se genera sola desde el mismo archivo local.
+if (cambios.imagen_url) {
+  try {
+    const sharp = (await import('sharp')).default
+    const { nombreLiviana } = await import('../src/lib/imagenes.js')
+    const orig = fs.readFileSync(pedido.imagen_principal)
+    const liviana = await sharp(orig).resize({ width: 1200, height: 1200, fit: 'inside', withoutEnlargement: true })
+      .png({ palette: true, quality: 90, effort: 10, compressionLevel: 9 }).toBuffer()
+    const cuerpo = liviana.length < orig.length ? liviana : orig
+    const { error } = await supabase.storage.from('productos').upload(`lite/v1/${nombreLiviana(actualizado.sku, actualizado.imagen_url)}`, cuerpo, {
+      upsert: true, contentType: 'image/png', cacheControl: '31536000',
+    })
+    console.log(error ? `  ⚠ No se pudo guardar la versión liviana (${error.message}); las pantallas usarán la original.` : `  ✓ Versión liviana de la foto principal creada (${Math.round(cuerpo.length / 1024)} KB).`)
+  } catch (err) {
+    console.log(`  ⚠ No se pudo crear la versión liviana (${err.message}); las pantallas usarán la original.`)
+  }
+}
+
 // ── Sincronizar con las tiendas (igual que el botón Guardar) ────────────────
 if (pedido.sincronizar === false) {
   console.log('  (sincronizar:false → no se avisó a ninguna tienda; usá "Sincronizar ahora" en Integraciones cuando quieras.)')

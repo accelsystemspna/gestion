@@ -50,8 +50,9 @@ node "C:/Proyectos/gestion-app/scripts/buscar-original.mjs" CUA000123
   `GESTION_ORIGINALES_DIR=C:/ruta/a/la/carpeta`. Es una sola vez.
 
 Flujo completo de un producto: **código → buscar-original → producir el creativo con la original → cargarlo en Gestión
-(`completar-producto-web.mjs`)**. Más adelante, al cargar una foto, Gestión guardará solo la original intacta y creará sola
-la versión liviana; vos no tenés que hacer nada distinto.
+(`completar-producto-web.mjs`)**. Al cargar una foto principal con `imagen_principal`, el script guarda la original intacta y **crea sola la versión
+liviana** (también lo hace el programa cuando se sube una foto desde la pantalla de Productos o de Combos). Vos no
+tenés que hacer nada distinto. Si algún día falta alguna liviana, `node scripts/generar-livianas.mjs` crea las que falten.
 
 ## Cómo llamarlo
 

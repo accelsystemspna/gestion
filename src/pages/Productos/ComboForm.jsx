@@ -7,7 +7,7 @@ import { syncMayorista, traerMultiplosPortal } from '../../lib/mayoristaSync'
 import ImageThumb from '../../components/ImageThumb'
 import { useAuth } from '../../lib/AuthContext'
 import { armarCollage } from '../../lib/collage'
-import { urlLiviana } from '../../lib/imagenes'
+import { urlLiviana, asegurarLiviana } from '../../lib/imagenes'
 
 const SKU_RE = /^[A-Z]{3}[0-9]{6}(-V\d+)?$/
 
@@ -185,6 +185,9 @@ export default function ComboForm({ initial, onCancel, onSaved, onAvanzado }) {
       : await supabase.from('productos').insert(payload).select('*').single()
     setSaving(false)
     if (res.error) return alert('Error: ' + res.error.message)
+
+    // Versión liviana de la foto del combo (la que usan las pantallas), si es nueva o cambió. La original no se toca.
+    if (imagenUrl && (imagenUrl !== (initial?.imagen_url || '') || sku !== initial?.sku)) asegurarLiviana(sku, imagenUrl)
 
     // A la tienda web se le manda el producto COMPLETO tal como quedó guardado (con la foto principal, la
     // galería, los textos y el envío que se cargaron en la pestaña Web). Antes se mandaba solo lo del formulario

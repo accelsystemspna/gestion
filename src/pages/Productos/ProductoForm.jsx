@@ -7,6 +7,7 @@ import { syncToWoo, cargarImagenesCompartidas } from '../../lib/wooSync'
 import { syncMayorista } from '../../lib/mayoristaSync'
 import { useAuth } from '../../lib/AuthContext'
 import TabMercadoLibre from './TabMercadoLibre'
+import { asegurarLiviana } from '../../lib/imagenes'
 
 const SKU_RE = /^[A-Z]{3}[0-9]{6}(-V\d+)?$/
 
@@ -505,6 +506,12 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
     setSaving(false)
     if (res.error) return alert('Error: ' + res.error.message)
     limpiarDraft()
+
+    // Versión liviana de la foto principal (la que usan las pantallas): si es nueva o cambió, se genera en segundo
+    // plano. La original no se toca. Si falla, las pantallas usan la original.
+    if (payload.imagen_url && (payload.imagen_url !== (initial?.imagen_url || '') || payload.sku !== initial?.sku)) {
+      asegurarLiviana(payload.sku, payload.imagen_url)
+    }
 
     // Sincronizar en background con tiendas WooCommerce asignadas
     syncToWoo({
