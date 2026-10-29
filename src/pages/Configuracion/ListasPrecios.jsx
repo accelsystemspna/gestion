@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { fmtMoney } from '../../lib/format'
 import { resyncProductosPorLista } from '../../lib/recalcularCC'
+import { recalcularPedidosAbiertos } from '../../lib/pedidos'
 
 const blank = {
   nombre: '',
@@ -60,6 +61,8 @@ export default function ListasPrecios() {
             console.log(`[CC Auto] Lista de precios actualizada: ${sincronizados}/${total} producto(s) re-sincronizados a la web.`)
           }
         })
+        // Cuando termina el recálculo de costos, los pedidos sin seña toman el precio de hoy.
+        .then(() => recalcularPedidosAbiertos())
         .catch(err => console.error('[CC Auto] Error al re-sincronizar por lista:', err))
     }
   }

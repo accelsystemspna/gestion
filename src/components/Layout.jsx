@@ -13,6 +13,7 @@ const navItems = [
   { to: '/tiendas',       label: 'Tiendas',       icon: '🌐', minAdmin: true },
   { to: '/productos',     label: 'Productos',     icon: '📦', minAdmin: true },
   { to: '/presupuesto',   label: 'Presupuestos',  icon: '📄' },
+  { to: '/pedidos',       label: 'Pedidos',       icon: '📋' },
   { to: '/clientes',      label: 'Clientes',      icon: '👥' },
   { to: '/materiales',    label: 'Materiales',    icon: '🪵', minAdmin: true },
   { to: '/facturas',      label: 'Facturas',      icon: '🏛️', minAdmin: true },

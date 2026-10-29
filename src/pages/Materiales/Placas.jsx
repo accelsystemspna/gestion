@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { fmtMoney, padId } from '../../lib/format'
 import { recalcularProductosPorMaterial } from '../../lib/recalcularCC'
+import { recalcularPedidosAbiertos } from '../../lib/pedidos'
 
 const TIPOS = {
   placa:    { label: 'Placa (ancho × alto)', unidad: 'placa' },
@@ -74,6 +75,8 @@ export default function Insumos() {
             )
           }
         })
+        // Cuando termina el recálculo de costos, los pedidos sin seña toman el precio de hoy.
+        .then(() => recalcularPedidosAbiertos())
         .catch(err => console.error('[CC Auto] Error al recalcular por material:', err))
     }
   }

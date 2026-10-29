@@ -7,6 +7,7 @@ import { promoDeProducto, etiquetaOferta, precioConPromoProducto } from '../../l
 import ImageThumb from '../../components/ImageThumb'
 import { exportPresupuestoPDF } from '../../lib/pdf'
 import { useAuth } from '../../lib/AuthContext'
+import { crearPedidoDesdePresupuesto } from '../../lib/pedidos'
 
 const blankPieza = { material_id: '', ancho: '', alto: '', cantidad: 1, gramos: '', metros: '', incremento: '' }
 const blankTarifaSel = { tarifa_id: '', fab_minutos: '', fab_segundos: '', incremento: '' }
@@ -329,10 +330,28 @@ export default function Presupuesto() {
       items: [itemsMedida, ...itemsExtras], notas: notas || null,
       org_id: orgId,
     }
-    const { error } = await supabase.from('presupuestos').insert(payload)
+    const { data: guardado, error } = await supabase.from('presupuestos').insert(payload).select('*').single()
     setSaving(false)
-    if (error) alert('Error: ' + error.message)
-    else alert('Presupuesto guardado')
+    if (error) return alert('Error: ' + error.message)
+    // El presupuesto pasa a Pedidos (con código de seguimiento, seña y saldo).
+    if (window.confirm('Presupuesto guardado.\n\n¿Pasarlo a Pedidos ahora? Se crea el pedido con su código de seguimiento y el precio se mantiene al día hasta que el cliente dé la seña.')) {
+      await pasarAPedido(guardado, cliSeleccionado)
+    }
+  }
+
+  // Crea el pedido a partir de un presupuesto guardado y lo abre en la sección Pedidos.
+  const pasarAPedido = async (presupuesto, cli = null) => {
+    try {
+      let c = cli
+      if (!c && presupuesto.cliente) c = clientes.find((x) => (x.nombre || '').trim().toLowerCase() === presupuesto.cliente.trim().toLowerCase()) || null
+      const pedido = await crearPedidoDesdePresupuesto(presupuesto, { telefono: c?.telefono || '', email: c?.email || '', clienteId: c?.id || null })
+      setShowHistorial(false)
+      navigate(`/pedidos?abrir=${pedido.id}`)
+    } catch (err) {
+      alert(/relation|does not exist|schema cache/i.test(err.message)
+        ? 'Todavía falta crear las tablas de Pedidos en Supabase (supabase_pedidos.sql).'
+        : 'No se pudo crear el pedido: ' + err.message)
+    }
   }
 
   const loadHistorial = async () => {
@@ -956,6 +975,11 @@ export default function Presupuesto() {
                       </div>
                     </div>
                     <div style={{ display:'flex', flexDirection:'column', gap:5, flexShrink:0 }}>
+                      <button
+                        onClick={() => pasarAPedido(p)}
+                        style={{ background:'#0e7490', border:'none', color:'white', borderRadius:6, padding:'6px 12px', cursor:'pointer', fontSize:12, fontWeight:700 }}>
+                        📋 Pasar a pedido
+                      </button>
                       <button
                         onClick={() => convertirEnVenta(p)}
                         style={{ background:'#16a34a', border:'none', color:'white', borderRadius:6, padding:'6px 12px', cursor:'pointer', fontSize:12, fontWeight:700, display:'flex', alignItems:'center', gap:5 }}>

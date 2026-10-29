@@ -7,6 +7,7 @@ import Dashboard from './pages/Home/Home'
 import Productos from './pages/Productos/Productos'
 import Materiales from './pages/Materiales/Materiales'
 import Presupuesto from './pages/Presupuesto/Presupuesto'
+import Pedidos from './pages/Pedidos/Pedidos'
 import Configuracion from './pages/Configuracion/Configuracion'
 import Clientes from './pages/Clientes/Clientes'
 import Ventas from './pages/Ventas/Ventas'
@@ -32,6 +33,7 @@ export default function App() {
             <Route path="/productos" element={<Productos />} />
             <Route path="/materiales" element={<Materiales />} />
             <Route path="/presupuesto" element={<Presupuesto />} />
+            <Route path="/pedidos" element={<Pedidos />} />
             <Route path="/clientes" element={<Clientes />} />
             <Route path="/ventas" element={<Ventas />} />
             <Route path="/tiendas" element={<ProtectedRoute nivel="admin"><Tiendas /></ProtectedRoute>} />

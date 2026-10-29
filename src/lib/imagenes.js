@@ -80,3 +80,24 @@ export async function asegurarLiviana(sku, urlOriginal) {
     return false
   }
 }
+
+/**
+ * Achica una foto (por ejemplo, las que manda un cliente por WhatsApp, de 3-5 MB) a un JPG de hasta `lado` px.
+ * Si la imagen no se puede leer, devuelve el archivo tal cual.
+ */
+export async function optimizarFoto(archivo, lado = 1600, calidad = 0.85) {
+  try {
+    const img = await cargarImagen(archivo)
+    const k = Math.min(1, lado / Math.max(img.naturalWidth, img.naturalHeight))
+    const w = Math.max(1, Math.round(img.naturalWidth * k)), h = Math.max(1, Math.round(img.naturalHeight * k))
+    const canvas = document.createElement('canvas')
+    canvas.width = w; canvas.height = h
+    const ctx = canvas.getContext('2d')
+    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, w, h)        // el JPG no tiene transparencia: fondo blanco
+    ctx.drawImage(img, 0, 0, w, h)
+    const blob = await new Promise((res) => canvas.toBlob(res, 'image/jpeg', calidad))
+    return blob && blob.size < archivo.size ? blob : archivo
+  } catch {
+    return archivo
+  }
+}
