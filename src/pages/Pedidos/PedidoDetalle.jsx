@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { fmtMoney } from '../../lib/format'
 import { optimizarFoto } from '../../lib/imagenes'
-import { cargarDatosDePrecio, precioActual, pinDeTelefono, subirImagenPedido } from '../../lib/pedidos'
+import { cargarDatosDePrecio, precioActual, pinDeTelefono, subirImagenPedido, urlSeguimiento, mensajeSeguimiento } from '../../lib/pedidos'
 import EstadoBadge from './EstadoBadge'
 
 const FORMAS_PAGO = ['Efectivo', 'Transferencia', 'Mercado Pago', 'Tarjeta', 'Otro']
@@ -115,8 +115,19 @@ export default function PedidoDetalle({ pedido, onCambio, onCerrar, onEliminado 
   }
 
   const copiarDatos = async () => {
-    const texto = `Hola ${p.cliente_nombre}! Tu pedido "${p.titulo}" ya está registrado.\nCódigo de seguimiento: ${p.codigo}\nPIN: ${p.pin || '—'}`
+    const texto = mensajeSeguimiento(p)
     try { await navigator.clipboard.writeText(texto); setCopiado(true); setTimeout(() => setCopiado(false), 2000) } catch { prompt('Copiá este mensaje:', texto) }
+  }
+
+  const copiarLink = async () => {
+    const url = urlSeguimiento(p)
+    try { await navigator.clipboard.writeText(url); setCopiado('link'); setTimeout(() => setCopiado(false), 2000) } catch { prompt('Copiá este link:', url) }
+  }
+
+  // Cerrar con la ✕ (no al hacer clic afuera): si hay cambios sin guardar, se pregunta.
+  const cerrar = () => {
+    if (Object.keys(edit).length && !confirm('Tenés cambios sin guardar. ¿Cerrar igual y perderlos?')) return
+    onCerrar()
   }
 
   const eliminar = async () => {
@@ -128,7 +139,13 @@ export default function PedidoDetalle({ pedido, onCambio, onCerrar, onEliminado 
 
   const fotos = (campo, titulo, ayuda) => (
     <div style={caja} key={campo}>
-      <div style={sec}>{titulo}</div>
+      <div style={{ ...sec, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+        <span>{titulo}</span>
+        <label className="btn btn-sm btn-primary" style={{ textTransform: 'none', letterSpacing: 0, cursor: ocupado ? 'not-allowed' : 'pointer', opacity: ocupado ? 0.5 : 1 }}>
+          {ocupado === campo ? 'Subiendo...' : '📷 Agregar fotos'}
+          <input type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={(e) => subirFotos(e, campo)} disabled={!!ocupado} />
+        </label>
+      </div>
       {ayuda && <p style={{ margin: '0 0 8px', fontSize: 12, color: 'var(--text-muted)' }}>{ayuda}</p>}
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         {(p[campo] || []).map((url) => (
@@ -149,7 +166,7 @@ export default function PedidoDetalle({ pedido, onCambio, onCerrar, onEliminado 
 
   const avance = AVANCE[p.estado]
   return (
-    <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) onCerrar() }}>
+    <div className="modal-overlay">
       <div className="modal" style={{ maxWidth: 1000, width: '97vw', display: 'flex', flexDirection: 'column', maxHeight: '94vh' }}>
         <div className="modal-header">
           <div style={{ minWidth: 0 }}>
@@ -157,11 +174,11 @@ export default function PedidoDetalle({ pedido, onCambio, onCerrar, onEliminado 
               {p.cliente_nombre} <EstadoBadge estado={p.estado} />
             </h3>
             <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
-              Código <code style={{ fontWeight: 700 }}>{p.codigo}</code> · PIN <code style={{ fontWeight: 700 }}>{p.pin || '—'}</code>
-              <button type="button" className="btn btn-sm btn-ghost" style={{ marginLeft: 8 }} onClick={copiarDatos}>{copiado ? '✓ Copiado' : '📋 Copiar para el cliente'}</button>
+              Pedido <code style={{ fontWeight: 700 }}>{p.codigo}</code> · PIN <code style={{ fontWeight: 700 }}>{p.pin_requerido === false ? 'sin PIN' : (p.pin || '—')}</code>
+              <button type="button" className="btn btn-sm btn-ghost" style={{ marginLeft: 8 }} onClick={copiarDatos}>{copiado === true ? '✓ Copiado' : '📋 Copiar mensaje para el cliente'}</button>
             </div>
           </div>
-          <button className="btn btn-ghost btn-sm" onClick={onCerrar}>✕</button>
+          <button className="btn btn-ghost btn-sm" onClick={cerrar} title="Cerrar">✕</button>
         </div>
 
         <div className="modal-body" style={{ overflowY: 'auto', flex: 1, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: 16, alignItems: 'start' }}>
@@ -176,6 +193,27 @@ export default function PedidoDetalle({ pedido, onCambio, onCerrar, onEliminado 
                   <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Por defecto, últimos 3 del celular.</span></div>
                 <div style={{ gridColumn: '1/-1' }}><label style={lbl}>Email</label><input className="input" value={valor('cliente_email')} onChange={(e) => setCampo('cliente_email', e.target.value)} /></div>
               </div>
+            </div>
+
+            <div style={caja}>
+              <div style={sec}>Seguimiento para el cliente</div>
+              {urlSeguimiento(p) ? (
+                <>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <input className="input" readOnly value={urlSeguimiento(p)} onFocus={(e) => e.target.select()} style={{ fontSize: 12 }} />
+                    <button type="button" className="btn btn-sm" onClick={copiarLink}>{copiado === 'link' ? '✓ Copiado' : 'Copiar link'}</button>
+                  </div>
+                  <p style={{ margin: '6px 0 0', fontSize: 11, color: 'var(--text-muted)' }}>
+                    El cliente abre el link y pone el PIN (últimos 3 números de su celular). El sitio de seguimiento se activa en la próxima etapa: hasta entonces el link todavía no abre nada.
+                  </p>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, marginTop: 8, cursor: 'pointer' }}>
+                    <input type="checkbox" checked={(('pin_requerido' in edit) ? edit.pin_requerido : p.pin_requerido) !== false} onChange={(e) => setCampo('pin_requerido', e.target.checked)} />
+                    Pedir el PIN para entrar (si lo destildás, el link entra directo)
+                  </label>
+                </>
+              ) : (
+                <p style={{ margin: 0, fontSize: 12, color: 'var(--text-muted)' }}>Falta correr <strong>supabase_pedidos_2.sql</strong> en Supabase para generar el link de seguimiento.</p>
+              )}
             </div>
 
             <div style={caja}>

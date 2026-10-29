@@ -541,3 +541,7 @@ h1, h2, h3, h4 {
     order: 6 !important;
   }
 }
+
+/* Botón deshabilitado: que se vea apagado (antes se veía igual de activo y parecía que no respondía). */
+.btn:disabled, .btn[disabled] { opacity: 0.5; cursor: not-allowed; }
+.btn:disabled:hover, .btn[disabled]:hover { filter: none; }

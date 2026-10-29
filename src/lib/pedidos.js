@@ -135,3 +135,25 @@ export async function subirImagenPedido(codigo, tipo, archivo, optimizar) {
   if (error) throw new Error(error.message)
   return supabase.storage.from('productos').getPublicUrl(ruta).data.publicUrl
 }
+
+// ── Link de seguimiento ─────────────────────────────────────────────────────────────────────────
+// El cliente entra con un link único (token largo) y el sitio le pide solo el PIN.
+// La dirección del sitio se puede cambiar con VITE_URL_SEGUIMIENTO (sin tocar el código).
+const BASE_SEGUIMIENTO = (import.meta.env?.VITE_URL_SEGUIMIENTO || 'https://seguimiento.ccdesign.com.ar').replace(/\/+$/, '')
+
+/** URL del seguimiento de un pedido (o null si el pedido todavía no tiene token). */
+export function urlSeguimiento(pedido) {
+  return pedido?.token ? `${BASE_SEGUIMIENTO}/?p=${pedido.token}` : null
+}
+
+/** Mensaje listo para mandar al cliente por WhatsApp. */
+export function mensajeSeguimiento(pedido) {
+  const url = urlSeguimiento(pedido)
+  const lineas = [`Hola ${pedido.cliente_nombre}! Tu pedido "${pedido.titulo}" ya está registrado.`]
+  if (url) {
+    lineas.push(`Podés seguirlo desde este link: ${url}`)
+    if (pedido.pin_requerido !== false) lineas.push('Para entrar te pide un PIN: los últimos 3 números de tu celular.')
+  }
+  lineas.push(`Código de pedido: ${pedido.codigo}`)
+  return lineas.join('\n')
+}

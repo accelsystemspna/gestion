@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { fmtMoney } from '../../lib/format'
-import { ESTADOS, ESTADOS_ABIERTOS, pinDeTelefono, recalcularPedidosAbiertos } from '../../lib/pedidos'
+import { ESTADOS, ESTADOS_ABIERTOS, pinDeTelefono, recalcularPedidosAbiertos, subirImagenPedido } from '../../lib/pedidos'
+import { optimizarFoto } from '../../lib/imagenes'
 import PedidoDetalle from './PedidoDetalle'
 import EstadoBadge from './EstadoBadge'
 
@@ -10,6 +11,7 @@ const FILTROS = [['abiertos', 'Abiertos'], ...Object.entries(ESTADOS).map(([k, v
 
 export default function Pedidos() {
   const [params, setParams] = useSearchParams()
+  const [idAAbrir] = useState(() => params.get('abrir'))   // se lee una sola vez, al entrar
   const [pedidos, setPedidos] = useState([])
   const [loading, setLoading] = useState(true)
   const [filtro, setFiltro]   = useState('abiertos')
@@ -34,8 +36,7 @@ export default function Pedidos() {
       const cambiados = await recalcularPedidosAbiertos()
       if (cambiados) { lista = await cargar(); setAviso(`Se actualizó el precio de ${cambiados} pedido${cambiados !== 1 ? 's' : ''} sin seña porque cambiaron los costos.`) }
       // Si venimos de un presupuesto: se abre el pedido recién creado.
-      const id = params.get('abrir')
-      if (id) { const p = lista.find((x) => x.id === id); if (p) setAbierto(p); setParams({}, { replace: true }) }
+      if (idAAbrir) { const p = lista.find((x) => x.id === idAAbrir); if (p) setAbierto(p); setParams({}, { replace: true }) }
     })()
   }, [])   // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -135,7 +136,16 @@ function NuevoPedido({ onCancelar, onCreado }) {
   const [clientes, setClientes] = useState([])
   const [f, setF] = useState({ cliente_id: '', cliente_nombre: '', cliente_telefono: '', titulo: '', descripcion: '', total: '' })
   const [guardando, setGuardando] = useState(false)
+  const [fotos, setFotos] = useState({ imagenes_referencia: [], imagenes_resultado: [] })   // [{ file, url }] hasta que se crea el pedido
   const set = (k, v) => setF((x) => ({ ...x, [k]: v }))
+  const sucio = Object.values(f).some(Boolean) || fotos.imagenes_referencia.length > 0 || fotos.imagenes_resultado.length > 0
+  const cancelar = () => { if (sucio && !confirm('Tenés datos cargados sin guardar. ¿Cerrar igual y perderlos?')) return; onCancelar() }
+  const agregarFotos = (campo, e) => {
+    const nuevas = [...(e.target.files || [])].map((file) => ({ file, url: URL.createObjectURL(file) }))
+    e.target.value = ''
+    setFotos((x) => ({ ...x, [campo]: [...x[campo], ...nuevas] }))
+  }
+  const quitarFoto = (campo, url) => setFotos((x) => ({ ...x, [campo]: x[campo].filter((y) => y.url !== url) }))
 
   useEffect(() => { supabase.from('clientes').select('id, nombre, telefono, email').order('nombre').then(({ data }) => setClientes(data || [])) }, [])
 
@@ -151,17 +161,31 @@ function NuevoPedido({ onCancelar, onCreado }) {
       cliente_id: f.cliente_id || null, cliente_nombre: f.cliente_nombre.trim(), cliente_telefono: f.cliente_telefono.trim() || null,
       titulo: f.titulo.trim(), descripcion: f.descripcion.trim() || null, total: Number(f.total) || 0,
     }).select('*').single()
+    if (error) { setGuardando(false); return alert('Error: ' + error.message) }
+    // Las fotos se suben recién ahora, porque la carpeta lleva el código del pedido (que se genera al crearlo).
+    let final = data
+    const cambios = {}
+    for (const campo of ['imagenes_referencia', 'imagenes_resultado']) {
+      const urls = []
+      for (const { file } of fotos[campo]) {
+        try { urls.push(await subirImagenPedido(data.codigo, campo, file, optimizarFoto)) } catch (err) { alert('No se pudo subir una imagen: ' + err.message) }
+      }
+      if (urls.length) cambios[campo] = urls
+    }
+    if (Object.keys(cambios).length) {
+      const r = await supabase.from('pedidos').update(cambios).eq('id', data.id).select('*').single()
+      if (r.data) final = r.data
+    }
     setGuardando(false)
-    if (error) return alert('Error: ' + error.message)
-    onCreado(data)
+    onCreado(final)
   }
 
   const lbl = { fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }
   return (
-    <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) onCancelar() }}>
-      <form className="modal" style={{ maxWidth: 520 }} onSubmit={crear}>
-        <div className="modal-header"><h3 style={{ margin: 0 }}>Nuevo pedido</h3><button type="button" className="btn btn-ghost btn-sm" onClick={onCancelar}>✕</button></div>
-        <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <div className="modal-overlay">
+      <form className="modal" style={{ maxWidth: 560, maxHeight: '94vh', display: 'flex', flexDirection: 'column' }} onSubmit={crear}>
+        <div className="modal-header"><h3 style={{ margin: 0 }}>Nuevo pedido</h3><button type="button" className="btn btn-ghost btn-sm" onClick={cancelar} title="Cerrar">✕</button></div>
+        <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 12, overflowY: 'auto' }}>
           <div>
             <label style={lbl}>Cliente existente (opcional)</label>
             <select className="select" value={f.cliente_id} onChange={(e) => elegirCliente(e.target.value)}>
@@ -180,10 +204,27 @@ function NuevoPedido({ onCancelar, onCreado }) {
           <div><label style={lbl}>¿De qué se trata? *</label><input className="input" value={f.titulo} onChange={(e) => set('titulo', e.target.value)} required placeholder="Ej. Cuadro de Messi en MDF 45x60" /></div>
           <div><label style={lbl}>Detalle</label><textarea className="input" rows={3} value={f.descripcion} onChange={(e) => set('descripcion', e.target.value)} style={{ resize: 'vertical' }} /></div>
           <div><label style={lbl}>Precio ($)</label><input className="input" type="number" value={f.total} onChange={(e) => set('total', e.target.value)} placeholder="Podés dejarlo vacío y cargarlo después" /></div>
+          {[['imagenes_referencia', '📷 Imágenes de referencia (las que mandó el cliente)'], ['imagenes_resultado', '🎨 Cómo quedaría (imágenes nuestras)']].map(([campo, titulo]) => (
+            <div key={campo}>
+              <label style={lbl}>{titulo}</label>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+                {fotos[campo].map(({ url }) => (
+                  <div key={url} style={{ position: 'relative' }}>
+                    <img src={url} alt="" style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: 8, border: '1px solid var(--border)', display: 'block' }} />
+                    <button type="button" onClick={() => quitarFoto(campo, url)} style={{ position: 'absolute', top: -6, right: -6, background: 'var(--danger)', color: '#fff', border: 'none', borderRadius: '50%', width: 18, height: 18, fontSize: 11, cursor: 'pointer' }}>✕</button>
+                  </div>
+                ))}
+                <label className="btn btn-sm" style={{ cursor: 'pointer' }}>
+                  + Agregar fotos
+                  <input type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={(e) => agregarFotos(campo, e)} />
+                </label>
+              </div>
+            </div>
+          ))}
         </div>
         <div className="modal-footer" style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-          <button type="button" className="btn" onClick={onCancelar}>Cancelar</button>
-          <button type="submit" className="btn btn-primary" disabled={guardando}>{guardando ? 'Creando...' : 'Crear pedido'}</button>
+          <button type="button" className="btn" onClick={cancelar}>Cancelar</button>
+          <button type="submit" className="btn btn-primary" disabled={guardando}>{guardando ? 'Creando y subiendo fotos...' : 'Crear pedido'}</button>
         </div>
       </form>
     </div>
