@@ -126,7 +126,7 @@ function pantallaCodigo(error = '') {
       <p class="sub">Escribí el código de tu pedido y los últimos 3 números de tu celular.</p>
       ${error ? `<div class="aviso bad" style="margin-top:14px">${esc(error)}</div>` : ''}
       <form id="f" style="margin-top:16px">
-        <input class="cod" id="cod" placeholder="CC-XXXX-XXXX" autocomplete="off" aria-label="Código del pedido" maxlength="12">
+        <input class="cod" id="cod" placeholder="CC-482-731" autocomplete="off" aria-label="Código del pedido" maxlength="12">
         <input class="pin" id="pin" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="off" placeholder="• • •" aria-label="PIN">
         <button class="principal" type="submit">Entrar</button>
       </form>

@@ -3,7 +3,8 @@
 //
 // Seguridad:
 //   · El token del link es largo e imposible de adivinar. El PIN (últimos 3 del celular) es el segundo paso.
-//   · Máx. 5 PIN equivocados por pedido cada 15 minutos (después, bloqueo temporal) y límite por IP.
+//   · Máx. 5 PIN equivocados cada 15 minutos y 15 por día, por pedido, y límite por IP.
+//   · Los errores con el código no bloquean a quien entra por su link (se cuentan por separado).
 //   · Cada negocio tiene su propio sitio (branding.url_seguimiento): un pedido solo se abre desde el sitio de su negocio.
 //   · Respuestas genéricas: nunca se confirma si un token/código existe a quien no tiene el PIN.
 //   · Solo se devuelve lo que el cliente puede ver (nada de teléfono, email, notas internas, costos ni ids).
@@ -19,12 +20,22 @@ const json = (data: unknown, status = 200) =>
   new Response(JSON.stringify(data), { status, headers: { ...cors, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } })
 
 const MAX_FALLOS_PEDIDO = 5
+const MAX_FALLOS_DIA = 15
 const MAX_FALLOS_IP = 25
 const VENTANA_MIN = 15
 
 const ETIQUETAS: Record<string, string> = {
   presupuestado: 'Presupuestado', aceptado: 'Aceptado', en_produccion: 'En producción', listo: 'Listo para entregar',
   entregado: 'Entregado', rechazado: 'Rechazado', cancelado: 'Cancelado',
+}
+
+// Acepta el código como lo escriba el cliente (cc482731, CC 482 731). Nuevo: CC-482-731. Viejo: CC-XXXX-XXXX.
+function normalizarCodigo(valor: unknown) {
+  const c = typeof valor === 'string' ? valor.toUpperCase().replace(/[^A-Z0-9]/g, '') : ''
+  const viejo = /^CC([0-9A-F]{4})([0-9A-F]{4})$/.exec(c)
+  if (viejo) return `CC-${viejo[1]}-${viejo[2]}`
+  const nuevo = /^([A-Z]{2,4})(\d{3})(\d{3})$/.exec(c)
+  return nuevo ? `${nuevo[1]}-${nuevo[2]}-${nuevo[3]}` : ''
 }
 
 serve(async (req) => {
@@ -34,12 +45,12 @@ serve(async (req) => {
   let body: any
   try { body = await req.json() } catch { return json({ error: 'Pedido inválido' }, 400) }
   const token = typeof body.token === 'string' ? body.token.trim().toLowerCase() : ''
-  const codigo = typeof body.codigo === 'string' ? body.codigo.trim().toUpperCase() : ''
+  const codigo = normalizarCodigo(body.codigo)
   const pin = typeof body.pin === 'string' ? body.pin.trim() : ''
   const sitio = typeof body.sitio === 'string' ? body.sitio.trim().toLowerCase().slice(0, 200) : ''
-  if (!token && !codigo) return json({ error: 'Falta el link o el código del pedido' }, 400)
+  if (!token && !body.codigo) return json({ error: 'Falta el link o el código del pedido' }, 400)
   if (token && !/^[a-f0-9]{32}$/.test(token)) return json({ error: 'El link no es válido' }, 404)
-  if (codigo && !/^CC-[0-9A-F]{4}-[0-9A-F]{4}$/.test(codigo)) return json({ error: 'No encontramos ese pedido' }, 404)
+  if (!token && !codigo) return json({ error: 'No encontramos ese pedido' }, 404)
 
   const admin = createClient(
     Deno.env.get('SUPABASE_URL')!,
@@ -48,6 +59,8 @@ serve(async (req) => {
   )
   const ip = (req.headers.get('x-forwarded-for') || '').split(',')[0].trim() || 'desconocida'
   const desde = new Date(Date.now() - VENTANA_MIN * 60_000).toISOString()
+  const desdeDia = new Date(Date.now() - 86400_000).toISOString()
+  const via = token ? 'link' : 'codigo'
 
   // Límite por IP (quien barre muchos links/códigos distintos)
   const { count: fallosIp } = await admin.from('pedido_intentos').select('id', { count: 'exact', head: true })
@@ -59,7 +72,7 @@ serve(async (req) => {
     : await admin.from('pedidos').select('*').eq('codigo', codigo).maybeSingle()
 
   if (!pedido) {
-    await admin.from('pedido_intentos').insert({ pedido_id: null, ip, ok: false })
+    await admin.from('pedido_intentos').insert({ pedido_id: null, ip, ok: false, via })
     return json({ error: token ? 'El link no es válido o venció' : 'No encontramos ese pedido' }, 404)
   }
 
@@ -69,14 +82,19 @@ serve(async (req) => {
     const host = (u: string) => { try { return new URL(/^https?:\/\//i.test(u) ? u : `https://${u}`).hostname.toLowerCase() } catch { return '' } }
     const duenio = (marcas || []).find((m: any) => host(String(m.url_seguimiento)) === sitio)
     if (duenio && duenio.user_id !== pedido.org_id) {
-      await admin.from('pedido_intentos').insert({ pedido_id: null, ip, ok: false })
+      await admin.from('pedido_intentos').insert({ pedido_id: null, ip, ok: false, via })
       return json({ error: token ? 'El link no es válido o venció' : 'No encontramos ese pedido' }, 404)
     }
   }
 
   // Límite por pedido
   const { count: fallos } = await admin.from('pedido_intentos').select('id', { count: 'exact', head: true })
-    .eq('pedido_id', pedido.id).eq('ok', false).gte('creado', desde)
+    .eq('pedido_id', pedido.id).eq('ok', false).eq('via', via).gte('creado', desde)
+  const { count: fallosDia } = await admin.from('pedido_intentos').select('id', { count: 'exact', head: true })
+    .eq('pedido_id', pedido.id).eq('ok', false).eq('via', via).gte('creado', desdeDia)
+  if ((fallosDia ?? 0) >= MAX_FALLOS_DIA) {
+    return json({ error: 'Se bloqueó el acceso por varios intentos. Probá de nuevo mañana o escribinos.', bloqueado: true }, 429)
+  }
   if ((fallos ?? 0) >= MAX_FALLOS_PEDIDO) {
     return json({ error: `Se bloqueó el acceso por varios intentos. Probá de nuevo en ${VENTANA_MIN} minutos.`, bloqueado: true }, 429)
   }
@@ -92,12 +110,12 @@ serve(async (req) => {
   if (!sinPin) {
     if (!pin) return json({ requiere_pin: true, negocio: marca })
     if (pin !== pedido.pin) {
-      await admin.from('pedido_intentos').insert({ pedido_id: pedido.id, ip, ok: false })
-      const restantes = Math.max(0, MAX_FALLOS_PEDIDO - (fallos ?? 0) - 1)
+      await admin.from('pedido_intentos').insert({ pedido_id: pedido.id, ip, ok: false, via })
+      const restantes = Math.max(0, Math.min(MAX_FALLOS_PEDIDO - (fallos ?? 0), MAX_FALLOS_DIA - (fallosDia ?? 0)) - 1)
       return json({ error: 'El PIN no es correcto.', requiere_pin: true, intentos_restantes: restantes, negocio: marca }, 401)
     }
   }
-  await admin.from('pedido_intentos').insert({ pedido_id: pedido.id, ip, ok: true })
+  await admin.from('pedido_intentos').insert({ pedido_id: pedido.id, ip, ok: true, via })
   // Limpieza de intentos viejos (best-effort)
   admin.from('pedido_intentos').delete().lt('creado', new Date(Date.now() - 2 * 86400_000).toISOString()).then(() => {}, () => {})
 
