@@ -4,6 +4,7 @@
 // Seguridad:
 //   · El token del link es largo e imposible de adivinar. El PIN (últimos 3 del celular) es el segundo paso.
 //   · Máx. 5 PIN equivocados por pedido cada 15 minutos (después, bloqueo temporal) y límite por IP.
+//   · Cada negocio tiene su propio sitio (branding.url_seguimiento): un pedido solo se abre desde el sitio de su negocio.
 //   · Respuestas genéricas: nunca se confirma si un token/código existe a quien no tiene el PIN.
 //   · Solo se devuelve lo que el cliente puede ver (nada de teléfono, email, notas internas, costos ni ids).
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
@@ -35,6 +36,7 @@ serve(async (req) => {
   const token = typeof body.token === 'string' ? body.token.trim().toLowerCase() : ''
   const codigo = typeof body.codigo === 'string' ? body.codigo.trim().toUpperCase() : ''
   const pin = typeof body.pin === 'string' ? body.pin.trim() : ''
+  const sitio = typeof body.sitio === 'string' ? body.sitio.trim().toLowerCase().slice(0, 200) : ''
   if (!token && !codigo) return json({ error: 'Falta el link o el código del pedido' }, 400)
   if (token && !/^[a-f0-9]{32}$/.test(token)) return json({ error: 'El link no es válido' }, 404)
   if (codigo && !/^CC-[0-9A-F]{4}-[0-9A-F]{4}$/.test(codigo)) return json({ error: 'No encontramos ese pedido' }, 404)
@@ -59,6 +61,17 @@ serve(async (req) => {
   if (!pedido) {
     await admin.from('pedido_intentos').insert({ pedido_id: null, ip, ok: false })
     return json({ error: token ? 'El link no es válido o venció' : 'No encontramos ese pedido' }, 404)
+  }
+
+  // Sitio de otro negocio: si el sitio desde donde se pide está registrado para OTRO negocio, es como si el pedido no existiera.
+  if (sitio) {
+    const { data: marcas } = await admin.from('branding').select('user_id, url_seguimiento').not('url_seguimiento', 'is', null)
+    const host = (u: string) => { try { return new URL(/^https?:\/\//i.test(u) ? u : `https://${u}`).hostname.toLowerCase() } catch { return '' } }
+    const duenio = (marcas || []).find((m: any) => host(String(m.url_seguimiento)) === sitio)
+    if (duenio && duenio.user_id !== pedido.org_id) {
+      await admin.from('pedido_intentos').insert({ pedido_id: null, ip, ok: false })
+      return json({ error: token ? 'El link no es válido o venció' : 'No encontramos ese pedido' }, 404)
+    }
   }
 
   // Límite por pedido

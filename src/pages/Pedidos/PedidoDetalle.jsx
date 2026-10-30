@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
+import { useAuth } from '../../lib/AuthContext'
 import { fmtMoney } from '../../lib/format'
 import { optimizarFoto } from '../../lib/imagenes'
 import { cargarDatosDePrecio, precioActual, pinDeTelefono, subirImagenPedido, urlSeguimiento, mensajeSeguimiento } from '../../lib/pedidos'
@@ -18,6 +19,12 @@ const AVANCE = {
 }
 
 export default function PedidoDetalle({ pedido, onCambio, onCerrar, onEliminado }) {
+  const { orgId } = useAuth()
+  const [marca, setMarca] = useState(null)
+  useEffect(() => {
+    if (!orgId) return
+    supabase.from('branding').select('nombre, url_seguimiento').eq('user_id', orgId).maybeSingle().then(({ data }) => setMarca(data || {}))
+  }, [orgId])
   const [p, setP] = useState(pedido)
   const [eventos, setEventos] = useState([])
   const [edit, setEdit] = useState({})          // campos de texto en edición
@@ -115,12 +122,12 @@ export default function PedidoDetalle({ pedido, onCambio, onCerrar, onEliminado 
   }
 
   const copiarDatos = async () => {
-    const texto = mensajeSeguimiento(p)
+    const texto = mensajeSeguimiento(p, marca)
     try { await navigator.clipboard.writeText(texto); setCopiado(true); setTimeout(() => setCopiado(false), 2000) } catch { prompt('Copiá este mensaje:', texto) }
   }
 
   const copiarLink = async () => {
-    const url = urlSeguimiento(p)
+    const url = urlSeguimiento(p, marca)
     try { await navigator.clipboard.writeText(url); setCopiado('link'); setTimeout(() => setCopiado(false), 2000) } catch { prompt('Copiá este link:', url) }
   }
 
@@ -197,10 +204,10 @@ export default function PedidoDetalle({ pedido, onCambio, onCerrar, onEliminado 
 
             <div style={caja}>
               <div style={sec}>Seguimiento para el cliente</div>
-              {urlSeguimiento(p) ? (
+              {urlSeguimiento(p, marca) ? (
                 <>
                   <div style={{ display: 'flex', gap: 8 }}>
-                    <input className="input" readOnly value={urlSeguimiento(p)} onFocus={(e) => e.target.select()} style={{ fontSize: 12 }} />
+                    <input className="input" readOnly value={urlSeguimiento(p, marca)} onFocus={(e) => e.target.select()} style={{ fontSize: 12 }} />
                     <button type="button" className="btn btn-sm" onClick={copiarLink}>{copiado === 'link' ? '✓ Copiado' : 'Copiar link'}</button>
                   </div>
                   <p style={{ margin: '6px 0 0', fontSize: 11, color: 'var(--text-muted)' }}>
@@ -212,7 +219,9 @@ export default function PedidoDetalle({ pedido, onCambio, onCerrar, onEliminado 
                   </label>
                 </>
               ) : (
-                <p style={{ margin: 0, fontSize: 12, color: 'var(--text-muted)' }}>Falta correr <strong>supabase_pedidos_2.sql</strong> en Supabase para generar el link de seguimiento.</p>
+                <p style={{ margin: 0, fontSize: 12, color: 'var(--text-muted)' }}>{marca && !marca.url_seguimiento
+                  ? <>Este negocio todavía no tiene su sitio de seguimiento. Cargá la dirección en <strong>Configuración → Marca → Sitio de seguimiento de pedidos</strong>.</>
+                  : 'Generando el link…'}</p>
               )}
             </div>
 

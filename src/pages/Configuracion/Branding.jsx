@@ -10,6 +10,7 @@ const FIELDS = [
   { key: 'email', label: 'Email', type: 'email' },
   { key: 'web_mayorista', label: 'Web mayorista' },
   { key: 'web_minorista', label: 'Web minorista' },
+  { key: 'url_seguimiento', label: 'Sitio de seguimiento de pedidos', ayuda: 'Dirección del sitio donde tus clientes siguen su pedido, ej: seguimiento.tunegocio.com.ar. Cada negocio tiene el suyo.' },
 ]
 
 const SOCIAL = [
@@ -107,6 +108,7 @@ export default function Branding() {
               value={data[f.key] || ''}
               onChange={(e) => set(f.key, e.target.value)}
             />
+            {f.ayuda && <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{f.ayuda}</span>}
           </div>
         ))}
       </div>

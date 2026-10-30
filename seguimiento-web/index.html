@@ -84,13 +84,14 @@ function olvidarPin() { try { localStorage.removeItem(clave()) } catch {} }
 
 async function pedir(cuerpo) {
   try {
-    const r = await fetch(API, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(cuerpo) })
+    const r = await fetch(API, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...cuerpo, sitio: location.hostname }) })
     return { status: r.status, data: await r.json().catch(() => ({})) }
   } catch { return { status: 0, data: { error: 'No pudimos conectarnos. Revisá tu internet y probá de nuevo.' } } }
 }
 
 function cabecera(n) {
   if (!n) return ''
+  if (n.nombre) document.title = `Tu pedido · ${n.nombre}`
   return `<header class="marca">${n.logo_url ? `<img src="${esc(n.logo_url)}" alt="">` : ''}<div><b>${esc(n.nombre || 'Seguimiento de pedido')}</b>${n.slogan ? `<span>${esc(n.slogan)}</span>` : ''}</div></header>`
 }
 

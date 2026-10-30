@@ -138,17 +138,25 @@ export async function subirImagenPedido(codigo, tipo, archivo, optimizar) {
 
 // ── Link de seguimiento ─────────────────────────────────────────────────────────────────────────
 // El cliente entra con un link único (token largo) y el sitio le pide solo el PIN.
-// La dirección del sitio se puede cambiar con VITE_URL_SEGUIMIENTO (sin tocar el código).
-const BASE_SEGUIMIENTO = (import.meta.env?.VITE_URL_SEGUIMIENTO || 'https://seguimiento.ccdesign.com.ar').replace(/\/+$/, '')
+// Cada negocio tiene su propio sitio (su dominio y su marca): la dirección vive en la marca del negocio
+// (branding.url_seguimiento, se carga en Configuración → Marca). Si no está cargada, no hay link.
 
-/** URL del seguimiento de un pedido (o null si el pedido todavía no tiene token). */
-export function urlSeguimiento(pedido) {
-  return pedido?.token ? `${BASE_SEGUIMIENTO}/?p=${pedido.token}` : null
+/** Dirección base del sitio de seguimiento de un negocio, sin barra final (o null si no la cargó). */
+export function baseSeguimiento(branding) {
+  const b = String(branding?.url_seguimiento || '').trim().replace(/\/+$/, '')
+  if (!b) return null
+  return /^https?:\/\//i.test(b) ? b : `https://${b}`
+}
+
+/** URL del seguimiento de un pedido (o null si falta el token o el negocio no cargó su sitio). */
+export function urlSeguimiento(pedido, branding) {
+  const base = baseSeguimiento(branding)
+  return pedido?.token && base ? `${base}/?p=${pedido.token}` : null
 }
 
 /** Mensaje listo para mandar al cliente por WhatsApp. */
-export function mensajeSeguimiento(pedido) {
-  const url = urlSeguimiento(pedido)
+export function mensajeSeguimiento(pedido, branding) {
+  const url = urlSeguimiento(pedido, branding)
   const lineas = [`Hola ${pedido.cliente_nombre}! Tu pedido "${pedido.titulo}" ya está registrado.`]
   if (url) {
     lineas.push(`Podés seguirlo desde este link: ${url}`)
