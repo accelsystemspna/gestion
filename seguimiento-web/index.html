@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<title>Seguimiento de tu pedido</title>
+<style>
+  :root { --bg:#f4f6f9; --card:#fff; --text:#1b2330; --muted:#5f6b7d; --line:#e4e8ef; --accent:#0e7490; --accent-2:#0ea5c6; --ok:#15803d; --warn:#b45309; --bad:#b91c1c; --soft:#eef6f8; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#10151c; --card:#18202a; --text:#e9edf3; --muted:#9aa7b9; --line:#283243; --accent:#38bdf8; --accent-2:#38bdf8; --ok:#4ade80; --warn:#fbbf24; --bad:#f87171; --soft:#16303a; } }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:16px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
+  main { max-width:640px; margin:0 auto; padding:16px 16px 48px; }
+  header.marca { display:flex; align-items:center; gap:12px; padding:12px 0 18px; }
+  header.marca img { height:44px; width:auto; max-width:120px; object-fit:contain; border-radius:6px; }
+  header.marca b { font-size:18px; display:block; line-height:1.2; }
+  header.marca span { font-size:13px; color:var(--muted); }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px 18px; margin:0 0 14px; }
+  h1 { font-size:22px; margin:0 0 4px; line-height:1.25; }
+  h2 { font-size:13px; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); margin:0 0 10px; }
+  .sub { color:var(--muted); margin:0; font-size:15px; }
+  .chip { display:inline-block; font-size:12px; font-weight:700; padding:3px 10px; border-radius:999px; background:var(--soft); color:var(--accent); }
+  .estado { font-weight:700; }
+  .pasos { display:flex; margin:14px 0 4px; }
+  .paso { flex:1; text-align:center; position:relative; font-size:11px; color:var(--muted); }
+  .paso i { display:block; width:22px; height:22px; border-radius:50%; margin:0 auto 6px; background:var(--line); position:relative; z-index:1; }
+  .paso.hecho i { background:var(--accent); }
+  .paso.actual i { background:var(--accent); box-shadow:0 0 0 4px color-mix(in srgb, var(--accent) 25%, transparent); }
+  .paso.actual { color:var(--text); font-weight:700; }
+  .paso::before { content:""; position:absolute; top:10px; left:-50%; width:100%; height:2px; background:var(--line); }
+  .paso:first-child::before { display:none; }
+  .paso.hecho::before, .paso.actual::before { background:var(--accent); }
+  .aviso { padding:10px 14px; border-radius:10px; font-size:14px; margin:0 0 14px; }
+  .aviso.bad { background:color-mix(in srgb, var(--bad) 12%, transparent); color:var(--bad); }
+  .aviso.info { background:var(--soft); color:var(--text); }
+  .precio { display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; text-align:center; }
+  .precio div { background:var(--soft); border-radius:10px; padding:10px 6px; }
+  .precio small { display:block; color:var(--muted); font-size:12px; }
+  .precio strong { font-size:18px; }
+  .nota-precio { font-size:13px; margin:10px 0 0; color:var(--muted); }
+  .fotos { display:grid; grid-template-columns:repeat(auto-fill, minmax(120px, 1fr)); gap:8px; }
+  .fotos img { width:100%; aspect-ratio:1; object-fit:cover; border-radius:10px; border:1px solid var(--line); cursor:zoom-in; background:#fff; }
+  .linea { list-style:none; margin:0; padding:0; }
+  .linea li { display:flex; gap:10px; padding:7px 0; border-top:1px solid var(--line); font-size:14px; }
+  .linea li:first-child { border-top:0; }
+  .linea time { color:var(--muted); min-width:84px; font-size:13px; }
+  input.pin { width:100%; font-size:30px; letter-spacing:.35em; text-align:center; padding:14px; border-radius:12px; border:2px solid var(--line); background:var(--card); color:var(--text); }
+  input.pin:focus, input.cod:focus { outline:none; border-color:var(--accent); }
+  input.cod { width:100%; font-size:18px; text-align:center; text-transform:uppercase; padding:12px; border-radius:12px; border:2px solid var(--line); background:var(--card); color:var(--text); margin-bottom:10px; }
+  button.principal { width:100%; margin-top:12px; font-size:17px; font-weight:700; padding:14px; border:0; border-radius:12px; background:var(--accent-2); color:#06222b; cursor:pointer; }
+  button.principal:disabled { opacity:.5; cursor:wait; }
+  .btns { display:flex; gap:8px; flex-wrap:wrap; }
+  a.btn, button.sec { display:inline-flex; align-items:center; gap:6px; padding:10px 14px; border-radius:10px; border:1px solid var(--line); background:var(--card); color:var(--text); text-decoration:none; font-size:14px; font-weight:600; cursor:pointer; }
+  a.btn.wa { background:#25d366; border-color:#25d366; color:#06331a; }
+  .centro { text-align:center; }
+  .muted { color:var(--muted); font-size:13px; }
+  #zoom { position:fixed; inset:0; background:rgba(0,0,0,.88); display:none; align-items:center; justify-content:center; z-index:50; padding:16px; cursor:zoom-out; }
+  #zoom img { max-width:100%; max-height:100%; border-radius:8px; background:#fff; }
+</style>
+</head>
+<body>
+<main id="app"><div class="card centro muted">Cargando…</div></main>
+<div id="zoom"><img alt=""></div>
+
+<script>
+// Dirección de la función del servidor que entrega el pedido (no hace falta cambiarla).
+const API = 'https://uoyyiiggfcswvllwchsx.supabase.co/functions/v1/pedido-publico'
+const PASOS = [['presupuestado', 'Presupuesto'], ['aceptado', 'Aceptado'], ['en_produccion', 'En producción'], ['listo', 'Listo'], ['entregado', 'Entregado']]
+const $app = document.getElementById('app')
+const token = new URLSearchParams(location.search).get('p') || ''
+const GUARDA_DIAS = 30
+
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
+const pesos = (n) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(n || 0)
+const fecha = (iso) => iso ? new Date(iso).toLocaleDateString('es-AR', { day: 'numeric', month: 'short' }) : ''
+const hora = (iso) => new Date(iso).toLocaleString('es-AR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+
+// El PIN se recuerda en este dispositivo para no pedirlo cada vez (solo para este link).
+const clave = () => 'seg:' + token
+function pinGuardado() { try { const x = JSON.parse(localStorage.getItem(clave()) || 'null'); return x && Date.now() - x.ts < GUARDA_DIAS * 864e5 ? x.pin : '' } catch { return '' } }
+function guardarPin(pin) { try { localStorage.setItem(clave(), JSON.stringify({ pin, ts: Date.now() })) } catch {} }
+function olvidarPin() { try { localStorage.removeItem(clave()) } catch {} }
+
+async function pedir(cuerpo) {
+  try {
+    const r = await fetch(API, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(cuerpo) })
+    return { status: r.status, data: await r.json().catch(() => ({})) }
+  } catch { return { status: 0, data: { error: 'No pudimos conectarnos. Revisá tu internet y probá de nuevo.' } } }
+}
+
+function cabecera(n) {
+  if (!n) return ''
+  return `<header class="marca">${n.logo_url ? `<img src="${esc(n.logo_url)}" alt="">` : ''}<div><b>${esc(n.nombre || 'Seguimiento de pedido')}</b>${n.slogan ? `<span>${esc(n.slogan)}</span>` : ''}</div></header>`
+}
+
+// ── Pantalla del PIN ────────────────────────────────────────────────────────────────────────────────
+function pantallaPin(negocio, error = '', restantes = null) {
+  $app.innerHTML = cabecera(negocio) + `
+    <div class="card centro">
+      <h1>Seguí tu pedido</h1>
+      <p class="sub">Para entrar, escribí los <b>últimos 3 números de tu celular</b>.</p>
+      ${error ? `<div class="aviso bad" style="margin-top:14px">${esc(error)}${restantes != null && restantes > 0 ? ` Te quedan ${restantes} intento${restantes !== 1 ? 's' : ''}.` : ''}</div>` : ''}
+      <form id="f" style="margin-top:16px">
+        <input class="pin" id="pin" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="off" placeholder="• • •" aria-label="PIN" autofocus>
+        <button class="principal" type="submit">Entrar</button>
+      </form>
+    </div>`
+  const f = document.getElementById('f')
+  f.onsubmit = async (e) => {
+    e.preventDefault()
+    const pin = document.getElementById('pin').value.trim()
+    if (!pin) return
+    f.querySelector('button').disabled = true
+    cargar(pin)
+  }
+}
+
+// ── Pantalla sin link: código + PIN ──────────────────────────────────────────────────────────────────
+function pantallaCodigo(error = '') {
+  $app.innerHTML = `
+    <header class="marca"><div><b>Seguimiento de pedido</b><span>Ingresá los datos que te pasamos</span></div></header>
+    <div class="card centro">
+      <h1>Seguí tu pedido</h1>
+      <p class="sub">Escribí el código de tu pedido y los últimos 3 números de tu celular.</p>
+      ${error ? `<div class="aviso bad" style="margin-top:14px">${esc(error)}</div>` : ''}
+      <form id="f" style="margin-top:16px">
+        <input class="cod" id="cod" placeholder="CC-XXXX-XXXX" autocomplete="off" aria-label="Código del pedido" maxlength="12">
+        <input class="pin" id="pin" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="off" placeholder="• • •" aria-label="PIN">
+        <button class="principal" type="submit">Entrar</button>
+      </form>
+    </div>`
+  document.getElementById('f').onsubmit = async (e) => {
+    e.preventDefault()
+    const codigo = document.getElementById('cod').value.trim(), pin = document.getElementById('pin').value.trim()
+    if (!codigo || !pin) return
+    const { status, data } = await pedir({ codigo, pin })
+    if (data.ok) return mostrar(data)
+    pantallaCodigo(status === 429 ? data.error : data.requiere_pin ? 'El código o el PIN no son correctos.' : (data.error || 'No pudimos encontrar ese pedido.'))
+  }
+}
+
+// ── Carga con link ────────────────────────────────────────────────────────────────────────────────────
+async function cargar(pinManual) {
+  const pin = pinManual ?? pinGuardado()
+  const { status, data } = await pedir(pin ? { token, pin } : { token })
+  if (data.ok) { if (pinManual) guardarPin(pinManual); return mostrar(data) }
+  if (data.requiere_pin) {
+    if (status === 401) olvidarPin()
+    return pantallaPin(data.negocio, status === 401 ? 'El PIN no es correcto.' : '', data.intentos_restantes)
+  }
+  if (status === 429) return $app.innerHTML = `<div class="card centro"><h1>Acceso bloqueado un momento</h1><p class="sub">${esc(data.error)}</p></div>`
+  $app.innerHTML = `<div class="card centro"><h1>No pudimos abrir el pedido</h1><p class="sub">${esc(data.error || 'Revisá que el link esté completo.')}</p><p class="muted">Si el problema sigue, escribinos y te lo reenviamos.</p></div>`
+}
+
+// ── El pedido ───────────────────────────────────────────────────────────────────────────────────────
+function whatsapp(tel, texto) {
+  const d = String(tel || '').replace(/\D/g, '')
+  if (d.length < 8) return ''
+  const num = d.startsWith('54') ? d : (d.length === 10 ? '549' + d : d)
+  return `https://wa.me/${num}?text=${encodeURIComponent(texto)}`
+}
+
+function mostrar({ negocio, pedido: p, eventos }) {
+  const idx = PASOS.findIndex(([k]) => k === p.estado)
+  const cerrado = p.estado === 'rechazado' || p.estado === 'cancelado'
+  const pasos = cerrado ? '' : `<div class="pasos">${PASOS.map(([k, t], i) => `<div class="paso ${i < idx ? 'hecho' : i === idx ? 'actual' : ''}"><i></i>${t}</div>`).join('')}</div>`
+  const foto = (urls) => urls.length ? `<div class="fotos">${urls.map((u) => `<img loading="lazy" src="${esc(u)}" alt="">`).join('')}</div>` : ''
+  const wa = whatsapp(negocio.telefono, `Hola! Te escribo por mi pedido ${p.codigo} (${p.titulo}).`)
+
+  $app.innerHTML = cabecera(negocio) + `
+    <div class="card">
+      <span class="chip">${esc(p.codigo)}</span>
+      <h1 style="margin-top:8px">${p.cliente ? `Hola ${esc(p.cliente)}!` : 'Tu pedido'}</h1>
+      <p class="sub">${esc(p.titulo)}</p>
+      <p style="margin:12px 0 0">Estado: <span class="estado" style="color:${cerrado ? 'var(--bad)' : 'var(--accent)'}">${esc(p.estado_etiqueta)}</span></p>
+      ${pasos}
+      ${p.entrega_estimada ? `<p class="muted" style="margin:12px 0 0">📅 Entrega estimada: <b>${esc(new Date(p.entrega_estimada + 'T12:00:00').toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' }))}</b></p>` : ''}
+    </div>
+    ${p.nota ? `<div class="aviso info">💬 ${esc(p.nota)}</div>` : ''}
+    <div class="card">
+      <h2>Precio</h2>
+      <div class="precio">
+        <div><small>Total</small><strong>${pesos(p.total)}</strong></div>
+        <div><small>Seña</small><strong>${pesos(p.sena)}</strong></div>
+        <div><small>Saldo</small><strong style="color:${p.saldo > 0 ? 'var(--warn)' : 'var(--ok)'}">${pesos(p.saldo)}</strong></div>
+      </div>
+      <p class="nota-precio">${p.precio_congelado ? '🔒 Precio confirmado.' : 'Precio estimado: puede ajustarse si cambia el costo de los materiales hasta que se registre la seña.'}</p>
+    </div>
+    ${p.imagenes_resultado.length ? `<div class="card"><h2>Así quedaría</h2>${foto(p.imagenes_resultado)}</div>` : ''}
+    ${p.descripcion ? `<div class="card"><h2>Detalle del pedido</h2><p style="margin:0;white-space:pre-wrap">${esc(p.descripcion)}</p></div>` : ''}
+    ${p.imagenes_referencia.length ? `<div class="card"><h2>Tus imágenes de referencia</h2>${foto(p.imagenes_referencia)}</div>` : ''}
+    <div class="card">
+      <h2>Movimientos</h2>
+      <ul class="linea">${[...eventos].reverse().map((e) => `<li><time>${esc(hora(e.fecha))}</time><span>${esc(e.detalle)}</span></li>`).join('') || '<li class="muted">Todavía sin movimientos.</li>'}</ul>
+    </div>
+    <div class="card centro">
+      <div class="btns" style="justify-content:center">
+        ${wa ? `<a class="btn wa" href="${esc(wa)}" target="_blank" rel="noopener">💬 Escribinos por WhatsApp</a>` : ''}
+        ${negocio.instagram ? `<a class="btn" href="${esc(negocio.instagram.startsWith('http') ? negocio.instagram : 'https://instagram.com/' + negocio.instagram.replace('@', ''))}" target="_blank" rel="noopener">Instagram</a>` : ''}
+        <button class="sec" id="act">↻ Actualizar</button>
+      </div>
+      <p class="muted" style="margin:12px 0 0">Última actualización: ${esc(hora(p.actualizado))}</p>
+    </div>`
+
+  document.getElementById('act').onclick = () => token ? cargar() : location.reload()
+  document.querySelectorAll('.fotos img').forEach((im) => im.onclick = () => { const z = document.getElementById('zoom'); z.querySelector('img').src = im.src; z.style.display = 'flex' })
+}
+
+document.getElementById('zoom').onclick = (e) => { e.currentTarget.style.display = 'none' }
+token ? cargar() : pantallaCodigo()
+</script>
+</body>
+</html>

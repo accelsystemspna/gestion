@@ -204,7 +204,7 @@ export default function PedidoDetalle({ pedido, onCambio, onCerrar, onEliminado 
                     <button type="button" className="btn btn-sm" onClick={copiarLink}>{copiado === 'link' ? '✓ Copiado' : 'Copiar link'}</button>
                   </div>
                   <p style={{ margin: '6px 0 0', fontSize: 11, color: 'var(--text-muted)' }}>
-                    El cliente abre el link y pone el PIN (últimos 3 números de su celular). El sitio de seguimiento se activa en la próxima etapa: hasta entonces el link todavía no abre nada.
+                    El cliente abre el link y pone el PIN (últimos 3 números de su celular). Después su celular lo recuerda y no se lo vuelve a pedir. Si el cliente no tiene celular cargado, el link entra directo.
                   </p>
                   <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, marginTop: 8, cursor: 'pointer' }}>
                     <input type="checkbox" checked={(('pin_requerido' in edit) ? edit.pin_requerido : p.pin_requerido) !== false} onChange={(e) => setCampo('pin_requerido', e.target.checked)} />
