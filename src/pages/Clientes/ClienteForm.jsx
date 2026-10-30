@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../lib/AuthContext'
-import { urlAccesoCliente } from '../../lib/pedidos'
 
 const ESTADOS = ['pagado', 'pendiente', 'cancelado']
 
@@ -44,7 +43,6 @@ export default function ClienteForm({ cliente, onClose, onSaved, etiquetas = [] 
   const [compras, setCompras] = useState([])
   const [loadingCompras, setLoadingCompras] = useState(false)
   const [saving, setSaving] = useState(false)
-  const [mandandoAcceso, setMandandoAcceso] = useState(false)
   const [error, setError] = useState('')
   const [tabLocal, setTabLocal] = useState('datos') // 'datos' | 'compras'
   const [newCompra, setNewCompra] = useState({ descripcion: '', monto: '', fecha: today(), estado: 'pendiente', notas: '' })
@@ -109,34 +107,6 @@ export default function ClienteForm({ cliente, onClose, onSaved, etiquetas = [] 
     setSaving(false)
     if (err) { setError(err.message); return }
     onSaved()
-  }
-
-  // Panel del cliente: link de un solo uso (vence a los 7 días) para crear su PIN o cambiar el que olvidó.
-  async function mandarAcceso() {
-    if (form.telefono.trim() !== (cliente.telefono ?? '')) { setError('Guardá el celular antes de mandar el acceso.'); return }
-    setError('')
-    const ventana = window.open('', '_blank')   // se abre ahora: después de esperar al servidor el navegador lo bloquearía
-    setMandandoAcceso(true)
-    try {
-      const [{ data: marca }, { data: celular }] = await Promise.all([
-        supabase.from('branding').select('nombre, url_seguimiento').eq('user_id', orgId).maybeSingle(),
-        supabase.rpc('celular_normalizado', { t: cliente.telefono }),
-      ])
-      if (!marca?.url_seguimiento) throw new Error('Cargá la dirección del sitio en Configuración → Marca.')
-      const { data: token, error: errorToken } = await supabase.rpc('generar_acceso_cliente', { p_cliente: cliente.id })
-      if (errorToken) throw new Error(errorToken.message)
-      const texto = [
-        `Hola ${cliente.nombre.trim().split(/\s+/)[0]}! Desde este link podés crear tu PIN y ver tus pedidos en ${marca.nombre || 'nuestro sitio'}:`,
-        urlAccesoCliente(token, marca),
-        'El link vence en 7 días y sirve una sola vez. Después entrás con tu celular y tu PIN.',
-      ].join('\n')
-      ventana.location.href = `https://wa.me/549${celular}?text=${encodeURIComponent(texto)}`
-    } catch (err) {
-      ventana?.close()
-      setError(err.message)
-    } finally {
-      setMandandoAcceso(false)
-    }
   }
 
   async function handleAddCompra() {
@@ -247,13 +217,7 @@ export default function ClienteForm({ cliente, onClose, onSaved, etiquetas = [] 
                 <input style={inputStyle} value={form.email} onChange={set('email')} type="email" placeholder="email@ejemplo.com" />
               </Field>
               <Field label="Teléfono / WhatsApp">
-                <input style={inputStyle} value={form.telefono} onChange={set('telefono')} placeholder="+54 9 11 1234-5678" />
-                {cliente && cliente.telefono && (
-                  <button type="button" className="btn btn-sm" style={{ marginTop: 8 }} onClick={mandarAcceso} disabled={mandandoAcceso}>
-                    {mandandoAcceso ? 'Generando…' : '💬 Mandar acceso por WhatsApp'}
-                  </button>
-                )}
-              </Field>
+                <input style={inputStyle} value={form.telefono} onChange={set('telefono')} placeholder="+54 9 11 1234-5678" />              </Field>
               <Field label="Dirección">
                 <input style={inputStyle} value={form.direccion} onChange={set('direccion')} placeholder="Calle, ciudad…" />
               </Field>

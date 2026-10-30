@@ -4,6 +4,8 @@ import { useAuth } from '../../lib/AuthContext'
 import { fmtMoney } from '../../lib/format'
 import { optimizarFoto } from '../../lib/imagenes'
 import { cargarDatosDePrecio, precioActual, pinDeTelefono, subirImagenPedido, urlSeguimiento, mensajeSeguimiento } from '../../lib/pedidos'
+import { buscarClientesPorCelular, cargarEstadosAcceso } from '../../lib/accesoCliente'
+import AccesoCliente from '../../components/AccesoCliente'
 import EstadoBadge from './EstadoBadge'
 
 const FORMAS_PAGO = ['Efectivo', 'Transferencia', 'Mercado Pago', 'Tarjeta', 'Otro']
@@ -31,6 +33,7 @@ export default function PedidoDetalle({ pedido, onCambio, onCerrar, onEliminado 
   const [ocupado, setOcupado] = useState('')
   const [sena, setSena] = useState({ monto: '', forma: 'Transferencia' })
   const [copiado, setCopiado] = useState(false)
+  const [acceso, setAcceso] = useState(null)    // { cliente, estado } o { motivo } si no se puede mandar el acceso
 
   const valor = (k) => (k in edit ? edit[k] : p[k] ?? '')
   const setCampo = (k, v) => setEdit((e) => ({ ...e, [k]: v }))
@@ -43,6 +46,29 @@ export default function PedidoDetalle({ pedido, onCambio, onCerrar, onEliminado 
     setEventos(data || [])
   }
   useEffect(() => { cargarEventos() }, [p.id])   // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Panel del cliente: el cliente vinculado al pedido o, si no tiene, el único con ese celular.
+  const cargarAcceso = async () => {
+    try {
+      let cliente = null
+      if (p.cliente_id) {
+        const { data } = await supabase.from('clientes').select('id, nombre, telefono').eq('id', p.cliente_id).maybeSingle()
+        cliente = data
+        if (!cliente) return setAcceso({ motivo: 'El cliente vinculado a este pedido ya no existe.' })
+      } else {
+        if (!p.cliente_telefono) return setAcceso({ motivo: 'Este pedido no tiene cliente vinculado ni celular. Cargá el celular para poder mandarle el acceso.' })
+        const encontrados = await buscarClientesPorCelular(p.cliente_telefono)
+        if (!encontrados.length) return setAcceso({ motivo: `No hay ningún cliente con el celular ${p.cliente_telefono}. Crealo en Clientes con ese número.` })
+        if (encontrados.length > 1) return setAcceso({ motivo: `Hay ${encontrados.length} clientes con el celular ${p.cliente_telefono}. Unificalos en Clientes para poder mandarle el acceso.` })
+        cliente = encontrados[0]
+      }
+      const estados = await cargarEstadosAcceso()
+      setAcceso({ cliente, estado: estados.get(cliente.id) })
+    } catch (err) {
+      setAcceso({ motivo: 'No se pudo consultar el acceso del cliente: ' + err.message })
+    }
+  }
+  useEffect(() => { cargarAcceso() }, [p.id, p.cliente_id, p.cliente_telefono])   // eslint-disable-line react-hooks/exhaustive-deps
 
   // Al abrir se pide la versión más reciente del pedido (el precio pudo actualizarse recién, por cambios en los costos).
   useEffect(() => {
@@ -225,6 +251,11 @@ export default function PedidoDetalle({ pedido, onCambio, onCerrar, onEliminado 
                   ? <>Este negocio todavía no tiene su sitio de seguimiento. Cargá la dirección en <strong>Configuración → Marca → Sitio de seguimiento de pedidos</strong>.</>
                   : 'Generando el link…'}</p>
               )}
+              <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--border)' }}>
+                <label style={lbl}>Panel del cliente (todos sus pedidos, con celular y PIN)</label>
+                {acceso?.cliente && <AccesoCliente cliente={acceso.cliente} estado={acceso.estado} onEnviado={cargarAcceso} />}
+                {acceso?.motivo && <p style={{ margin: 0, fontSize: 12, color: 'var(--text-muted)' }}>{acceso.motivo}</p>}
+              </div>
             </div>
 
             <div style={caja}>

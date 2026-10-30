@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../../lib/supabase'
 import { precioVenta } from '../../lib/pricing'
 import ClienteForm from './ClienteForm'
+import AccesoCliente from '../../components/AccesoCliente'
+import { cargarEstadosAcceso } from '../../lib/accesoCliente'
 import ImportarModal from './ImportarModal'
 import VentaDetalle from '../Ventas/VentaDetalle'
 
@@ -76,7 +78,7 @@ const S = {
 }
 
 // ── panel de detalle ──────────────────────────────────────────────────────────
-function DetallePanel({ cliente, onClose, onEdit, onDelete }) {
+function DetallePanel({ cliente, estadoAcceso, onAccesoEnviado, onClose, onEdit, onDelete }) {
   const [ventas,         setVentas]         = useState([])
   const [loading,        setLoading]        = useState(true)
   const [ventaDetalleId, setVentaDetalleId] = useState(null)
@@ -312,6 +314,11 @@ function DetallePanel({ cliente, onClose, onEdit, onDelete }) {
           </div>
         </div>
 
+        {/* acceso al panel del cliente */}
+        <div style={{ padding: '12px 20px', borderBottom: '1px solid var(--border)' }}>
+          <AccesoCliente cliente={cliente} estado={estadoAcceso} onEnviado={onAccesoEnviado} />
+        </div>
+
         {/* info extra */}
         {(cliente.direccion || cliente.notas) && (
           <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -490,6 +497,12 @@ export default function Clientes() {
   const [editTarget, setEditTarget] = useState(null)
   const [showImportar, setShowImportar] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(null)
+  const [accesos, setAccesos] = useState(new Map())
+
+  const cargarAccesos = useCallback(() => {
+    cargarEstadosAcceso().then(setAccesos).catch((err) => console.warn('[clientes] estado de acceso:', err))
+  }, [])
+  useEffect(() => { cargarAccesos() }, [cargarAccesos])
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -634,6 +647,8 @@ export default function Clientes() {
             <ClienteCard
               key={c.id}
               cliente={c}
+              estadoAcceso={accesos.get(c.id)}
+              onAccesoEnviado={cargarAccesos}
               onClick={() => setSelected(c)}
             />
           ))}
@@ -644,6 +659,8 @@ export default function Clientes() {
       {selected && (
         <DetallePanel
           cliente={selected}
+          estadoAcceso={accesos.get(selected.id)}
+          onAccesoEnviado={cargarAccesos}
           onClose={() => setSelected(null)}
           onEdit={openEdit}
           onDelete={(c) => setConfirmDelete(c)}
@@ -733,7 +750,7 @@ export default function Clientes() {
 }
 
 // ── tarjeta cliente ───────────────────────────────────────────────────────────
-function ClienteCard({ cliente: c, onClick }) {
+function ClienteCard({ cliente: c, estadoAcceso, onAccesoEnviado, onClick }) {
   return (
     <div
       style={S.card}
@@ -786,6 +803,9 @@ function ClienteCard({ cliente: c, onClick }) {
           📞 {c.telefono}
         </div>
       )}
+      <div style={{ marginTop: 10 }}>
+        <AccesoCliente cliente={c} estado={estadoAcceso} onEnviado={onAccesoEnviado} />
+      </div>
     </div>
   )
 }
