@@ -154,6 +154,12 @@ export function urlSeguimiento(pedido, branding) {
   return pedido?.token && base ? `${base}/?p=${pedido.token}` : null
 }
 
+/** URL de acceso al panel del cliente (primer ingreso o PIN olvidado), o null si el negocio no cargó su sitio. */
+export function urlAccesoCliente(token, branding) {
+  const base = baseSeguimiento(branding)
+  return token && base ? `${base}/?a=${token}` : null
+}
+
 /** Mensaje listo para mandar al cliente por WhatsApp. */
 export function mensajeSeguimiento(pedido, branding) {
   const url = urlSeguimiento(pedido, branding)

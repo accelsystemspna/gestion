@@ -307,7 +307,7 @@ async function drawPdfFooter(doc, b, C, margin, pageW, pageH, _logoData = null, 
 // ═══════════════════════════════════════════════════════════
 // PRESUPUESTO PDF
 // ═══════════════════════════════════════════════════════════
-export async function exportPresupuestoPDF({ presupuesto, items, cliente, branding, lista, validez }) {
+export async function exportPresupuestoPDF({ presupuesto, items, cliente, branding, lista, validez, comoBlob = false }) {
   const doc    = new jsPDF({ unit: 'pt', format: 'a4' })
   const pageW  = doc.internal.pageSize.getWidth()
   const pageH  = doc.internal.pageSize.getHeight()
@@ -566,6 +566,7 @@ export async function exportPresupuestoPDF({ presupuesto, items, cliente, brandi
   // ─── FOOTER ────────────────────────────────────────────────
   await drawPdfFooter(doc, b, C, margin, pageW, pageH, logoData, iconCache)
 
+  if (comoBlob) return doc.output('blob')
   const fileName = `presupuesto-${(cliente || 'sin-cliente').replace(/\s+/g, '-')}-${fecha.replace(/\//g, '-')}.pdf`
   doc.save(fileName)
 }

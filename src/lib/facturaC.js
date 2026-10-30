@@ -44,7 +44,7 @@ function buildQrUrl({ cuit, ptoVta, nroCmp, importe, cae, fecha, docTipo = 99, d
  * @param {object} params.arcaConfig    - { cuit, punto_venta, razon_social }
  * @param {boolean} params.download     - true = descargar, false = devolver blob URL
  */
-export async function generarFacturaC({ venta, arcaConfig, download = true }) {
+export async function generarFacturaC({ venta, arcaConfig, download = true, comoBlob = false }) {
   const doc = new jsPDF({ unit: 'mm', format: 'a4' })
   const PW  = 210
   const ML  = 15   // margen izquierdo
@@ -189,6 +189,7 @@ export async function generarFacturaC({ venta, arcaConfig, download = true }) {
   doc.setTextColor(0)
 
   // ── Salida ────────────────────────────────────────────────────────────────
+  if (comoBlob) return doc.output('blob')
   const nombre = `factura-C-${nroPv}-${nroComp}.pdf`
   if (download) {
     doc.save(nombre)

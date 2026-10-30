@@ -8,9 +8,35 @@ import ImageThumb from '../../components/ImageThumb'
 import { exportPresupuestoPDF } from '../../lib/pdf'
 import { useAuth } from '../../lib/AuthContext'
 import { crearPedidoDesdePresupuesto } from '../../lib/pedidos'
+import { guardarDocumentoCliente } from '../../lib/documentosCliente'
 
 const blankPieza = { material_id: '', ancho: '', alto: '', cantidad: 1, gramos: '', metros: '', incremento: '' }
 const blankTarifaSel = { tarifa_id: '', fab_minutos: '', fab_segundos: '', incremento: '' }
+
+// Renglones de un presupuesto guardado, como los espera el PDF.
+function itemsPDFDe(p) {
+  const itemsPDF = []
+  for (const it of p.items || []) {
+    if (it.tipo === 'medida' && (it.subtotal > 0 || it.costo_unitario > 0)) {
+      itemsPDF.push({
+        sku: '—',
+        nombre: it.nombre || 'Trabajo a medida',
+        cantidad: it.cantidad ?? 1,
+        precio: it.costo_unitario ?? 0,
+        imagen_url: null,
+      })
+    } else if (it.tipo === 'producto' || it.tipo === 'libre') {
+      itemsPDF.push({
+        sku: it.sku || '—',
+        nombre: it.nombre ?? '',
+        cantidad: it.cantidad ?? 1,
+        precio: it.precio ?? 0,
+        imagen_url: it.imagen_url || null,
+      })
+    }
+  }
+  return itemsPDF
+}
 
 function snapSegs(segs) {
   const s = Number(segs) || 0
@@ -327,7 +353,7 @@ export default function Presupuesto() {
     }))
     const payload = {
       cliente: cliente || null, lista_id: listaSel || null, total: totalGeneral,
-      items: [itemsMedida, ...itemsExtras], notas: notas || null,
+      items: [itemsMedida, ...itemsExtras], notas: notas || null, cliente_id: cliSeleccionado?.id || null,
       org_id: orgId,
     }
     const { data: guardado, error } = await supabase.from('presupuestos').insert(payload).select('*').single()
@@ -345,6 +371,12 @@ export default function Presupuesto() {
       let c = cli
       if (!c && presupuesto.cliente) c = clientes.find((x) => (x.nombre || '').trim().toLowerCase() === presupuesto.cliente.trim().toLowerCase()) || null
       const pedido = await crearPedidoDesdePresupuesto(presupuesto, { telefono: c?.telefono || '', email: c?.email || '', clienteId: c?.id || null })
+      // Copia del PDF para el panel del cliente. Si falla, el pedido ya está creado igual.
+      if (c?.id) {
+        exportPresupuestoPDF({ presupuesto: null, items: itemsPDFDe(presupuesto), cliente: presupuesto.cliente ?? '', branding, lista: listas.find((l) => l.id === presupuesto.lista_id) ?? null, validez: '15 días', comoBlob: true })
+          .then((blob) => guardarDocumentoCliente({ orgId, clienteId: c.id, pedidoId: pedido.id, tipo: 'presupuesto', titulo: `Presupuesto N° ${presupuesto.numero}`, total: presupuesto.total, blob }))
+          .catch((err) => console.warn('[documentos] no se pudo armar el presupuesto', err))
+      }
       setShowHistorial(false)
       navigate(`/pedidos?abrir=${pedido.id}`)
     } catch (err) {
@@ -404,27 +436,7 @@ export default function Presupuesto() {
     setReexportandoId(p.id)
     try {
       const listaObj = listas.find(l => l.id === p.lista_id) ?? null
-      const itemsPDF = []
-      for (const it of p.items) {
-        if (it.tipo === 'medida' && (it.subtotal > 0 || it.costo_unitario > 0)) {
-          itemsPDF.push({
-            sku: '—',
-            nombre: it.nombre || 'Trabajo a medida',
-            cantidad: it.cantidad ?? 1,
-            precio: it.costo_unitario ?? 0,
-            imagen_url: null,
-          })
-        } else if (it.tipo === 'producto' || it.tipo === 'libre') {
-          itemsPDF.push({
-            sku: it.sku || '—',
-            nombre: it.nombre ?? '',
-            cantidad: it.cantidad ?? 1,
-            precio: it.precio ?? 0,
-            imagen_url: it.imagen_url || null,
-          })
-        }
-      }
-      await exportPresupuestoPDF({ presupuesto: null, items: itemsPDF, cliente: p.cliente ?? '', branding, lista: listaObj, validez: '15 días' })
+      await exportPresupuestoPDF({ presupuesto: null, items: itemsPDFDe(p), cliente: p.cliente ?? '', branding, lista: listaObj, validez: '15 días' })
     } catch (err) {
       alert('Error generando PDF: ' + err.message)
     } finally {
