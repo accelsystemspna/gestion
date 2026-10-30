@@ -15,6 +15,14 @@ export async function buscarClientesPorCelular(telefono) {
   return data || []
 }
 
+/** Ficha de una venta: la vinculada o, si no tiene, la única con ese celular (las ventas web suelen venir sin ficha). */
+export async function clienteDeVenta(venta) {
+  if (venta.cliente_id) return venta.cliente_id
+  if (!venta.cliente_telefono) return null
+  const encontrados = await buscarClientesPorCelular(venta.cliente_telefono)
+  return encontrados.length === 1 ? encontrados[0].id : null
+}
+
 /**
  * Genera el link del panel y abre el mensaje de WhatsApp. Cada link nuevo invalida el anterior.
  * Hay que llamarla desde un clic: la ventana se abre antes de esperar al servidor para que el navegador no la bloquee.

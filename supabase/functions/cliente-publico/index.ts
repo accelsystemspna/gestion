@@ -39,6 +39,24 @@ const ETIQUETAS: Record<string, string> = {
   entregado: 'Entregado', rechazado: 'Rechazado', cancelado: 'Cancelado',
 }
 
+const CANALES: Record<string, string> = { pos: 'Local', web_minorista: 'Tienda web', mercadolibre: 'Mercado Libre', web_mayorista: 'Mayorista' }
+const ETAPAS_WEB: Record<string, [string, string]> = {
+  esperando_pago: ['pendiente', 'Esperando pago'],
+  procesado: ['en_preparacion', 'En preparación'],
+  en_preparacion: ['en_preparacion', 'En preparación'],
+  listo: ['listo', 'Lista para despachar'],
+  completado: ['completado', 'Despachada'],
+}
+const ESTADOS_VENTA: Record<string, string> = { pagado: 'Pagada', pendiente: 'Pendiente de pago', parcial: 'Pago parcial', pendiente_revision: 'En revisión' }
+
+/** Estado de la venta para el cliente. En la web manda la etapa del envío: "pendiente_revision" es interno de gestión. */
+function estadoDeVenta(v: any): [string, string] {
+  if (v.estado === 'anulado') return ['anulado', 'Anulada']
+  if (v.estado === 'cancelado' || v.estado_web === 'cancelado') return ['cancelado', 'Cancelada']
+  if (v.canal !== 'pos' && ETAPAS_WEB[v.estado_web]) return ETAPAS_WEB[v.estado_web]
+  return [v.estado, ESTADOS_VENTA[v.estado] || v.estado]
+}
+
 const aHex = (b: ArrayBuffer | Uint8Array) => [...new Uint8Array(b instanceof Uint8Array ? b : new Uint8Array(b))].map((x) => x.toString(16).padStart(2, '0')).join('')
 const deHex = (h: string) => new Uint8Array((h.match(/../g) || []).map((x) => parseInt(x, 16)))
 const sha256 = async (t: string) => aHex(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(t)))
@@ -127,12 +145,19 @@ serve(async (req) => {
     const panel = async (org: string, cliente: any, celular: string) => {
       const { data: pedidos, error } = await admin.rpc('pedidos_de_cliente', { p_org: org, p_cliente: cliente.id, p_celular: celular })
       if (error) throw error
+      const { data: ventas, error: errorVentas } = await admin.rpc('ventas_de_cliente', { p_org: org, p_cliente: cliente.id, p_celular: celular })
+      if (errorVentas) throw errorVentas
       const ids = (pedidos || []).map((p: any) => p.id)
+      const idsVentas = (ventas || []).map((v: any) => v.id)
+      const { data: lineas, error: errorLineas } = idsVentas.length
+        ? await admin.from('venta_items').select('venta_id, descripcion, cantidad, subtotal').in('venta_id', idsVentas).order('id', { ascending: true })
+        : { data: [] as any[], error: null }
+      if (errorLineas) throw errorLineas
       const [{ data: eventos }, { data: docs }] = await Promise.all([
         ids.length
           ? admin.from('pedido_eventos').select('pedido_id, fecha, tipo, detalle').in('pedido_id', ids).eq('visible_cliente', true).order('fecha', { ascending: true })
           : Promise.resolve({ data: [] as any[] }),
-        admin.from('cliente_documentos').select('pedido_id, tipo, titulo, fecha, total, ruta').eq('org_id', org).eq('cliente_id', cliente.id).order('fecha', { ascending: false }),
+        admin.from('cliente_documentos').select('pedido_id, venta_id, tipo, titulo, fecha, total, ruta').eq('org_id', org).eq('cliente_id', cliente.id).order('fecha', { ascending: false }),
       ])
       const firmas = new Map<string, string>()
       const rutas = (docs || []).map((d: any) => d.ruta)
@@ -168,8 +193,24 @@ serve(async (req) => {
           eventos: (eventos || []).filter((e: any) => e.pedido_id === p.id).map((e: any) => ({ fecha: e.fecha, tipo: e.tipo, detalle: e.detalle })),
           documentos: conUrl.filter((d: any) => d.pedido_id === p.id).map(documento),
         })),
-        // Documentos que no están atados a un pedido (ej. una factura emitida desde Ventas)
-        documentos: conUrl.filter((d: any) => !d.pedido_id || !ids.includes(d.pedido_id)).map(documento),
+        // Lo que compró por fuera de los pedidos a medida
+        compras: (ventas || []).map((v: any, i: number) => {
+          const [estado, estado_etiqueta] = estadoDeVenta(v)
+          const propios = conUrl.filter((d: any) => d.venta_id === v.id).map(documento)
+          return {
+            numero: `V-${v.numero ?? `S${i + 1}`}`,
+            fecha: v.fecha,
+            total: Number(v.total) || 0,
+            estado,
+            estado_etiqueta,
+            canal: CANALES[v.canal] || 'Local',
+            items: (lineas || []).filter((l: any) => l.venta_id === v.id).map((l: any) => ({ descripcion: l.descripcion, cantidad: Number(l.cantidad) || 0, subtotal: Number(l.subtotal) || 0 })),
+            ...(v.origen_tracking ? { seguimiento: { codigo: v.origen_tracking, url: v.origen_tracking_url || null } } : {}),
+            ...(propios.length ? { documentos: propios } : {}),
+          }
+        }),
+        // Documentos que no están atados a un pedido ni a una de esas compras
+        documentos: conUrl.filter((d: any) => !ids.includes(d.pedido_id) && !idsVentas.includes(d.venta_id)).map(documento),
       }
     }
 

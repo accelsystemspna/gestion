@@ -4,6 +4,7 @@ import { fmtMoney } from '../../lib/format'
 import jsPDF from 'jspdf'
 import { generarFacturaC, buildWhatsAppText } from '../../lib/facturaC'
 import { guardarDocumentoCliente } from '../../lib/documentosCliente'
+import { clienteDeVenta } from '../../lib/accesoCliente'
 import { ajustarStock } from '../../lib/stock'
 import FacturaCPreview from './FacturaCPreview'
 import ImageThumb from '../../components/ImageThumb'
@@ -142,11 +143,12 @@ export default function VentaDetalle({ ventaId, onClose, onUpdated }) {
       const emitida = { ...venta, cae: data.cae, cae_vto: data.caeVto, nro_factura: data.nroFactura }
       setFactEmitida(emitida)
       // Copia para el panel del cliente. Si falla, la factura ya está emitida igual.
-      if (venta.cliente_id) {
-        generarFacturaC({ venta: emitida, arcaConfig, download: false, comoBlob: true })
-          .then((blob) => guardarDocumentoCliente({ orgId, clienteId: venta.cliente_id, tipo: 'factura', titulo: `Factura C N° ${data.nroFactura}`, total: venta.total, blob }))
-          .catch((err) => console.warn('[documentos] no se pudo armar la factura', err))
-      }
+      clienteDeVenta(venta).then(async (clienteId) => {
+        if (!clienteId) return
+        const blob = await generarFacturaC({ venta: emitida, arcaConfig, download: false, comoBlob: true })
+        const puntoVenta = String(arcaConfig?.punto_venta ?? 3).padStart(4, '0')
+        await guardarDocumentoCliente({ orgId, clienteId, ventaId: venta.id, tipo: 'factura', titulo: `Factura C ${puntoVenta}-${String(data.nroFactura).padStart(8, '0')}`, total: venta.total, blob })
+      }).catch((err) => console.warn('[documentos] no se pudo armar la factura', err))
     } catch (e) {
       alert('Error al emitir factura: ' + e.message)
     }
