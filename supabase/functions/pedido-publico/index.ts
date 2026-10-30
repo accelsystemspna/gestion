@@ -141,6 +141,7 @@ serve(async (req) => {
       entrega_estimada: pedido.entrega_estimada,
       imagenes_referencia: pedido.imagenes_referencia || [],
       imagenes_resultado: pedido.imagenes_resultado || [],
+      imagenes_vencidas: !!pedido.imagenes_vencidas_en && !pedido.imagenes_referencia?.length && !pedido.imagenes_resultado?.length,
       creado: pedido.created_at,
       actualizado: pedido.updated_at,
     },

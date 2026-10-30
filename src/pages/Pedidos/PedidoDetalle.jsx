@@ -114,10 +114,12 @@ export default function PedidoDetalle({ pedido, onCambio, onCerrar, onEliminado 
 
   const quitarFoto = async (campo, url) => {
     if (!confirm('¿Quitar esta imagen del pedido?')) return
-    const marca = '/storage/v1/object/public/productos/'
-    const i = url.indexOf(marca)
-    if (await guardar({ [campo]: (p[campo] || []).filter((u) => u !== url) }, campo) && i >= 0) {
-      supabase.storage.from('productos').remove([decodeURI(url.slice(i + marca.length))]).catch(() => {})
+    const base = '/storage/v1/object/public/productos/'
+    const i = url.indexOf(base)
+    const ruta = i >= 0 ? decodeURI(url.slice(i + base.length)) : ''
+    // El archivo se borra solo si es una foto de pedido; si es una imagen de producto, se quita del pedido y nada más.
+    if (await guardar({ [campo]: (p[campo] || []).filter((u) => u !== url) }, campo) && ruta.startsWith('pedidos/')) {
+      supabase.storage.from('productos').remove([ruta]).catch(() => {})
     }
   }
 
@@ -292,6 +294,10 @@ export default function PedidoDetalle({ pedido, onCambio, onCerrar, onEliminado 
 
           {/* ── Columna 2 ── */}
           <div>
+            <p style={{ margin: '0 0 8px', fontSize: 12, color: 'var(--text-muted)' }}>
+              🕓 Las fotos de los pedidos se borran solas a los 90 días de cargadas. El pedido queda.
+              {p.imagenes_vencidas_en && ` Última limpieza en este pedido: ${new Date(p.imagenes_vencidas_en).toLocaleDateString('es-AR')}.`}
+            </p>
             {fotos('imagenes_referencia', 'Imágenes de referencia (del cliente)', 'Las fotos o ideas que nos pasó el cliente. Se achican solas para no ocupar espacio.')}
             {fotos('imagenes_resultado', 'Cómo quedaría (imágenes nuestras)', 'El diseño o la simulación del producto terminado. El cliente la va a ver en el seguimiento.')}
 
