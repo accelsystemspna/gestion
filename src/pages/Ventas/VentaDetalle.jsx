@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { fmtMoney } from '../../lib/format'
-import jsPDF from 'jspdf'
 import { generarFacturaC, buildWhatsAppText } from '../../lib/facturaC'
-import { guardarDocumentoCliente } from '../../lib/documentosCliente'
-import { clienteDeVenta } from '../../lib/accesoCliente'
+import { facturaEnPanel, sincronizarTicketCliente, quitarTicketCliente } from '../../lib/documentosCliente'
+import { generarComprobanteVenta } from '../../lib/comprobanteVenta'
+import { CONDICIONES_IVA, DOC_CONSUMIDOR, DOC_CUIT, DOC_CUIL, NOMBRE_DOC, cuitValido, receptorDeCliente, soloDigitos } from '../../lib/cuit'
 import { ajustarStock } from '../../lib/stock'
 import FacturaCPreview from './FacturaCPreview'
 import ImageThumb from '../../components/ImageThumb'
@@ -41,21 +41,6 @@ const CANAL_S = {
   web_mayorista: { label: '🏢 Web mayorista', color: '#7c3aed', bg: '#f5f3ff' },
 }
 
-async function urlToDataUrl(url) {
-  try {
-    const resp = await fetch(url)
-    const blob = await resp.blob()
-    return await new Promise((res, rej) => {
-      const reader = new FileReader()
-      reader.onloadend = () => res(reader.result)
-      reader.onerror = rej
-      reader.readAsDataURL(blob)
-    })
-  } catch {
-    return null
-  }
-}
-
 export default function VentaDetalle({ ventaId, onClose, onUpdated }) {
   const { orgId } = useAuth()
   const [venta,         setVenta]         = useState(null)
@@ -68,7 +53,7 @@ export default function VentaDetalle({ ventaId, onClose, onUpdated }) {
   const [showEliminar,   setShowEliminar]   = useState(false)
   const [arcaConfig,     setArcaConfig]     = useState(null)
   const [showFactModal,  setShowFactModal]  = useState(false)
-  const [factOpts,       setFactOpts]       = useState({ concepto: 1, docTipo: 99, docNro: '' })
+  const [factOpts,       setFactOpts]       = useState({ concepto: 1, docTipo: DOC_CONSUMIDOR, docNro: '', condIva: 'Consumidor Final' })
   const [emitiendo,      setEmitiendo]      = useState(false)
   const [factEmitida,    setFactEmitida]    = useState(null)   // datos tras emitir
   const [descargando,    setDescargando]    = useState(false)
@@ -98,6 +83,11 @@ export default function VentaDetalle({ ventaId, onClose, onUpdated }) {
       supabase.from('arca_config').select('*').eq('user_id', orgId).maybeSingle(),
     ]).then(([v, it, br, ar]) => {
       setVenta(v.data)
+      // Si la ficha tiene CUIT o CUIL, la factura ya sale a su nombre
+      if (v.data?.cliente_id) {
+        supabase.from('clientes').select('cuit, cuit_tipo, condicion_iva').eq('id', v.data.cliente_id).maybeSingle()
+          .then(({ data: cli }) => { if (cli?.cuit) setFactOpts(o => ({ ...o, ...receptorDeCliente(cli) })) })
+      }
       setItems(it.data ?? [])
       setBranding(br.data)
       setArcaConfig(ar.data ?? null)
@@ -108,6 +98,10 @@ export default function VentaDetalle({ ventaId, onClose, onUpdated }) {
 
   // ── Emitir Factura C ─────────────────────────────────────────────────────────
   const emitirFacturaC = async () => {
+    if (factOpts.docTipo !== DOC_CONSUMIDOR && !cuitValido(factOpts.docNro)) {
+      alert(`Revisá el ${NOMBRE_DOC[factOpts.docTipo]}: tiene que tener 11 números y el último no coincide.`)
+      return
+    }
     setEmitiendo(true)
     try {
       const { data, error } = await supabase.functions.invoke('emitir-factura', {
@@ -116,7 +110,7 @@ export default function VentaDetalle({ ventaId, onClose, onUpdated }) {
           importe:  venta.total,
           concepto: factOpts.concepto,
           doc_tipo: factOpts.docTipo,
-          doc_nro:  factOpts.docTipo === 99 ? '0' : factOpts.docNro.replace(/-/g, ''),
+          doc_nro:  factOpts.docTipo === DOC_CONSUMIDOR ? '0' : soloDigitos(factOpts.docNro),
         },
       })
       if (error) throw new Error(error.message)
@@ -140,15 +134,20 @@ export default function VentaDetalle({ ventaId, onClose, onUpdated }) {
       }))
       setShowFactModal(false)
       // Mostrar modal de éxito con preview, descarga y WhatsApp
-      const emitida = { ...venta, cae: data.cae, cae_vto: data.caeVto, nro_factura: data.nroFactura }
+      const conDoc = factOpts.docTipo !== DOC_CONSUMIDOR
+      const datosFactura = {
+        factura_fecha:    new Date().toLocaleDateString('en-CA'),
+        factura_doc_tipo: factOpts.docTipo,
+        factura_doc_nro:  conDoc ? soloDigitos(factOpts.docNro) : null,
+        factura_cond_iva: conDoc ? factOpts.condIva : 'Consumidor Final',
+      }
+      // Para reimprimirla igual. Aparte: la factura ya quedó guardada aunque esto falle.
+      supabase.from('ventas').update(datosFactura).eq('id', venta.id)
+        .then(({ error: e }) => { if (e) console.warn('[factura] no se guardaron los datos del receptor', e.message) })
+      const emitida = { ...venta, ...datosFactura, cae: data.cae, cae_vto: data.caeVto, nro_factura: data.nroFactura, venta_items: items }
       setFactEmitida(emitida)
-      // Copia para el panel del cliente. Si falla, la factura ya está emitida igual.
-      clienteDeVenta(venta).then(async (clienteId) => {
-        if (!clienteId) return
-        const blob = await generarFacturaC({ venta: emitida, arcaConfig, download: false, comoBlob: true })
-        const puntoVenta = String(arcaConfig?.punto_venta ?? 3).padStart(4, '0')
-        await guardarDocumentoCliente({ orgId, clienteId, ventaId: venta.id, tipo: 'factura', titulo: `Factura C ${puntoVenta}-${String(data.nroFactura).padStart(8, '0')}`, total: venta.total, blob })
-      }).catch((err) => console.warn('[documentos] no se pudo armar la factura', err))
+      // Con factura, el cliente ve la factura en lugar del ticket.
+      facturaEnPanel({ venta: emitida, items, arcaConfig, orgId }).then(() => sincronizarTicketCliente(venta.id))
     } catch (e) {
       alert('Error al emitir factura: ' + e.message)
     }
@@ -158,7 +157,7 @@ export default function VentaDetalle({ ventaId, onClose, onUpdated }) {
   const handleDescargarPDF = async () => {
     if (!factEmitida) return
     setDescargando(true)
-    await generarFacturaC({ venta: factEmitida, arcaConfig, download: true })
+    await generarFacturaC({ venta: factEmitida, arcaConfig, branding: branding ?? {}, download: true })
     setDescargando(false)
   }
 
@@ -190,6 +189,7 @@ export default function VentaDetalle({ ventaId, onClose, onUpdated }) {
     ajustarStock(items.map(i => ({ producto_id: i.producto_id, cantidad: -i.cantidad })))
       .catch(err => console.error('[stock]', err))
     setVenta(v => ({ ...v, estado: 'anulado' }))
+    sincronizarTicketCliente(ventaId)
     setAccion(null)
     onUpdated?.()
   }
@@ -213,6 +213,7 @@ export default function VentaDetalle({ ventaId, onClose, onUpdated }) {
       }
     }
     setVenta(v => ({ ...v, estado: 'pagado', forma_pago: pagoForma }))
+    sincronizarTicketCliente(ventaId)
     setAccion(null)
     setShowPagoPicker(false)
     onUpdated?.()
@@ -235,6 +236,7 @@ export default function VentaDetalle({ ventaId, onClose, onUpdated }) {
       await ajustarStock(items.map(i => ({ producto_id: i.producto_id, cantidad: -i.cantidad })))
         .catch(err => console.error('[stock]', err))
     }
+    await quitarTicketCliente(ventaId)
     await supabase.from('venta_items').delete().eq('venta_id', ventaId)
     await supabase.from('ventas').delete().eq('id', ventaId)
     setAccion(null)
@@ -244,193 +246,9 @@ export default function VentaDetalle({ ventaId, onClose, onUpdated }) {
   }
 
   // ── Exportar PDF ───────────────────────────────────────────────────────────
-  const exportPDF = async () => {
-    if (!venta) return
-    const doc  = new jsPDF({ unit: 'pt', format: 'a4' })
-    const pw   = doc.internal.pageSize.getWidth()
-    const ph   = doc.internal.pageSize.getHeight()
-    const comp = COMPROBANTES.find(c => c.value === venta.comprobante)
-    const est  = ESTADO_S[venta.estado] ?? ESTADO_S.pendiente
-    const DARK = [20, 20, 20]
-
-    const negocio = branding?.nombre ?? branding?.nombre_negocio ?? 'Mi Empresa'
-
-    // Franja superior delgada (neutra, sin color de marca)
-    doc.setFillColor(...DARK)
-    doc.rect(0, 0, pw, 4, 'F')
-
-    // Logo
-    let logoW = 0
-    let y = 16
-    if (branding?.logo_url) {
-      const dataUrl = await urlToDataUrl(branding.logo_url)
-      if (dataUrl) {
-        doc.addImage(dataUrl, 40, y, 64, 64)
-        logoW = 76
-      }
-    }
-
-    // Slogan y contacto (a la derecha del logo; el nombre ya figura en el logo)
-    const nameX = 40 + logoW
-    if (branding?.slogan) {
-      doc.setFont('helvetica', 'normal')
-      doc.setFontSize(10)
-      doc.setTextColor(100, 100, 100)
-      doc.text(branding.slogan, nameX, y + 26)
-    }
-
-    const contactParts = [branding?.direccion, branding?.telefono, branding?.email].filter(Boolean)
-    if (contactParts.length) {
-      doc.setFont('helvetica', 'normal')
-      doc.setFontSize(9)
-      doc.setTextColor(120, 120, 120)
-      const cy = branding?.slogan ? y + 42 : y + 30
-      doc.text(contactParts.join('  |  '), nameX, cy)
-    }
-
-    // Comprobante info (derecha)
-    const numStr = 'N' + String.fromCharCode(176) + ' ' + String(venta.numero ?? 0).padStart(4, '0')
-    doc.setTextColor(...DARK)
-    doc.setFont('helvetica', 'bold')
-    doc.setFontSize(15)
-    doc.text((comp?.label ?? 'Ticket') + ' ' + numStr, pw - 40, y + 18, { align: 'right' })
-
-    doc.setFont('helvetica', 'normal')
-    doc.setFontSize(10)
-    doc.setTextColor(80, 80, 80)
-    doc.text(fmtDate(venta.fecha), pw - 40, y + 34, { align: 'right' })
-    if (venta.hora) doc.text(venta.hora, pw - 40, y + 48, { align: 'right' })
-
-    // Estado (solo texto ASCII, sin unicode decorativo)
-    const estRgb =
-      venta.estado === 'pagado'    ? [22, 163, 74]   :
-      venta.estado === 'pendiente' ? [217, 119, 6]   :
-      venta.estado === 'anulado'   ? [100, 116, 139] : [124, 58, 237]
-    doc.setFont('helvetica', 'bold')
-    doc.setFontSize(9)
-    doc.setTextColor(...estRgb)
-    doc.text(est.label.toUpperCase(), pw - 40, y + 64, { align: 'right' })
-
-    y += 82
-
-    // Separador grueso
-    doc.setDrawColor(...DARK)
-    doc.setLineWidth(1.5)
-    doc.line(40, y, pw - 40, y)
-    doc.setLineWidth(0.5)
-    y += 14
-
-    // Cliente / forma de pago
-    doc.setTextColor(...DARK)
-    doc.setFontSize(10)
-    doc.setFont('helvetica', 'bold')
-    doc.text('Cliente:', 40, y)
-    doc.setFont('helvetica', 'normal')
-    doc.text(venta.cliente_nombre ?? 'Consumidor Final', 95, y)
-
-    const fpObj = FORMAS_PAGO.find(f => f.value === venta.forma_pago)
-    const fpLblPdf = fpObj?.label ?? (venta.forma_pago ?? '')
-    doc.setFont('helvetica', 'bold')
-    doc.text('Forma de pago:', pw / 2, y)
-    doc.setFont('helvetica', 'normal')
-    doc.text(fpLblPdf, pw / 2 + 90, y)
-    y += 18
-
-    doc.setDrawColor(200, 200, 200)
-    doc.setLineWidth(0.5)
-    doc.line(40, y, pw - 40, y)
-    y += 13
-
-    // Posiciones de columnas de la tabla
-    const X_DESC   = 50          // Descripcion — izquierda
-    const X_CANT   = 355         // Cantidad    — centro
-    const X_PRECIO = 450         // Precio      — centro
-    const X_SUB    = pw - 45     // Subtotal    — derecha  (= 550)
-    // Posiciones de la sección de totales
-    const TOT_L    = pw - 245    // etiqueta izquierda (= 350)
-    const TOT_V    = pw - 45     // valor derecha       (= 550)
-
-    // Cabecera tabla
-    doc.setFillColor(245, 245, 245)
-    doc.rect(40, y - 2, pw - 80, 20, 'F')
-    doc.setFont('helvetica', 'bold')
-    doc.setFontSize(9)
-    doc.setTextColor(60, 60, 60)
-    doc.text('DESCRIPCION', X_DESC,   y + 12)
-    doc.text('CANT.',       X_CANT,   y + 12, { align: 'center' })
-    doc.text('PRECIO',      X_PRECIO, y + 12, { align: 'center' })
-    doc.text('SUBTOTAL',    X_SUB,    y + 12, { align: 'right' })
-    y += 22
-
-    // Filas de items
-    doc.setFont('helvetica', 'normal')
-    doc.setFontSize(10)
-    doc.setTextColor(0, 0, 0)
-    for (const [idx, it] of items.entries()) {
-      if (idx % 2 === 0) {
-        doc.setFillColor(251, 251, 251)
-        doc.rect(40, y - 2, pw - 80, 19, 'F')
-      }
-      const desc = it.descripcion
-      doc.text(desc,                         X_DESC,   y + 12)
-      doc.text(String(it.cantidad),          X_CANT,   y + 12, { align: 'center' })
-      doc.text(fmtMoney(it.precio_unitario), X_PRECIO, y + 12, { align: 'center' })
-      doc.text(fmtMoney(it.subtotal),        X_SUB,    y + 12, { align: 'right' })
-      doc.setDrawColor(225, 225, 225)
-      doc.line(40, y + 17, pw - 40, y + 17)
-      y += 21
-    }
-    y += 10
-
-    // Totales
-    doc.setDrawColor(160, 160, 160)
-    doc.line(TOT_L, y, TOT_V, y)
-    y += 12
-
-    const rowTot = (label, value, bold, rgb) => {
-      doc.setFont('helvetica', bold ? 'bold' : 'normal')
-      doc.setFontSize(bold ? 13 : 10)
-      doc.setTextColor(...(rgb ?? [40, 40, 40]))
-      doc.text(label, TOT_L, y)
-      doc.text(value, TOT_V, y, { align: 'right' })
-      y += bold ? 24 : 16
-    }
-
-    rowTot('Subtotal:', fmtMoney(venta.subtotal_items ?? venta.total), false, null)
-    if ((venta.descuento_porcentaje ?? 0) > 0) {
-      rowTot(
-        'Descuento (' + venta.descuento_porcentaje + '%):',
-        '-' + fmtMoney(venta.descuento_monto),
-        false, [200, 30, 30]
-      )
-    }
-
-    // Caja TOTAL — rect centrado sobre el texto (baseline en y, fuente 13pt)
-    doc.setFillColor(245, 245, 245)
-    doc.roundedRect(TOT_L - 6, y - 14, TOT_V - TOT_L + 16, 22, 3, 3, 'F')
-    rowTot('TOTAL:', fmtMoney(venta.total), true, DARK)
-
-    // CAE
-    if (venta.cae) {
-      y += 8
-      doc.setFontSize(9)
-      doc.setTextColor(120, 120, 120)
-      doc.text('CAE: ' + venta.cae + '   Vto: ' + (venta.cae_vencimiento ?? ''), 40, y)
-    }
-
-    // Footer oscuro
-    doc.setFillColor(...DARK)
-    doc.rect(0, ph - 24, pw, 24, 'F')
-    doc.setFontSize(8)
-    doc.setFont('helvetica', 'normal')
-    doc.setTextColor(200, 200, 200)
-    doc.text('Generado el ' + new Date().toLocaleString('es-AR'), 44, ph - 9)
-    if (branding?.instagram) {
-      doc.text('@' + branding.instagram.replace(/^@/, ''), pw - 44, ph - 9, { align: 'right' })
-    }
-
-    doc.save('comprobante-' + String(venta.numero ?? 0).padStart(4, '0') + '.pdf')
-  }
+  const exportPDF = () => venta.factura_emitida && arcaConfig
+    ? generarFacturaC({ venta: { ...venta, venta_items: items }, arcaConfig, branding: branding ?? {}, download: true })
+    : generarComprobanteVenta({ venta, items, branding })
 
   // ── Render ─────────────────────────────────────────────────────────────────
   if (loading) return (
@@ -833,7 +651,7 @@ export default function VentaDetalle({ ventaId, onClose, onUpdated }) {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)' }}>Receptor</label>
               <div style={{ display: 'flex', gap: 6 }}>
-                {[{ v: 99, l: 'Consumidor Final' }, { v: 80, l: 'Con CUIT' }].map(({ v, l }) => (
+                {[{ v: DOC_CONSUMIDOR, l: 'Consumidor Final' }, { v: DOC_CUIT, l: 'Con CUIT' }, { v: DOC_CUIL, l: 'Con CUIL' }].map(({ v, l }) => (
                   <button key={v} className="btn btn-sm"
                     onClick={() => setFactOpts(o => ({ ...o, docTipo: v }))}
                     style={{
@@ -847,10 +665,15 @@ export default function VentaDetalle({ ventaId, onClose, onUpdated }) {
                   </button>
                 ))}
               </div>
-              {factOpts.docTipo === 80 && (
-                <input className="input" placeholder="CUIT del cliente (sin guiones)"
+              {factOpts.docTipo !== DOC_CONSUMIDOR && (
+                <input className="input" placeholder={`${NOMBRE_DOC[factOpts.docTipo]} del cliente`}
                   value={factOpts.docNro} onChange={e => setFactOpts(o => ({ ...o, docNro: e.target.value }))}
                   style={{ fontSize: 14 }} />
+              )}
+              {factOpts.docTipo !== DOC_CONSUMIDOR && (
+                <select className="select" value={factOpts.condIva} onChange={e => setFactOpts(o => ({ ...o, condIva: e.target.value }))} style={{ fontSize: 14 }}>
+                  {CONDICIONES_IVA.map(v => <option key={v}>{v}</option>)}
+                </select>
               )}
             </div>
 

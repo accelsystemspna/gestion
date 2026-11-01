@@ -4,6 +4,7 @@
  * Se usa como vista previa antes de emitir y como confirmación post-emisión.
  */
 import { fmtMoney } from '../../lib/format'
+import { NOMBRE_DOC } from '../../lib/cuit'
 
 const fmtFecha = (iso) => {
   if (!iso) return new Date().toLocaleDateString('es-AR', { day:'2-digit', month:'2-digit', year:'numeric' })
@@ -24,8 +25,8 @@ export default function FacturaCPreview({ venta, items, arcaConfig, branding, fa
   const ventaItems = items ?? venta?.venta_items ?? []
   const total      = Number(venta?.total ?? 0)
   const concepto   = CONCEPTOS[factOpts?.concepto ?? 1] || 'Productos'
-  const receptor   = factOpts?.docTipo === 80 && factOpts?.docNro
-    ? `CUIT: ${factOpts.docNro}` : (venta?.cliente_nombre || 'Consumidor Final')
+  const receptor   = NOMBRE_DOC[factOpts?.docTipo] && factOpts?.docNro
+    ? `${NOMBRE_DOC[factOpts.docTipo]}: ${factOpts.docNro}` : (venta?.cliente_nombre || 'Consumidor Final')
 
   const W  = { maxWidth: 620, margin: '0 auto', fontFamily: 'Arial, sans-serif', fontSize: 12 }
   const BG = '#1a3a5c'   // azul oscuro header

@@ -70,6 +70,13 @@ export default function PedidoDetalle({ pedido, onCambio, onCerrar, onEliminado 
   }
   useEffect(() => { cargarAcceso() }, [p.id, p.cliente_id, p.cliente_telefono])   // eslint-disable-line react-hooks/exhaustive-deps
 
+  // De qué presupuesto salió este pedido.
+  const [presupuestoOrigen, setPresupuestoOrigen] = useState(null)
+  useEffect(() => {
+    if (!p.presupuesto_id) return
+    supabase.from('presupuestos').select('numero').eq('id', p.presupuesto_id).maybeSingle().then(({ data }) => setPresupuestoOrigen(data))
+  }, [p.presupuesto_id])
+
   // Al abrir se pide la versión más reciente del pedido (el precio pudo actualizarse recién, por cambios en los costos).
   useEffect(() => {
     supabase.from('pedidos').select('*').eq('id', pedido.id).single().then(({ data }) => {
@@ -210,6 +217,7 @@ export default function PedidoDetalle({ pedido, onCambio, onCerrar, onEliminado 
             </h3>
             <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
               Pedido <code style={{ fontWeight: 700 }}>{p.codigo}</code> · PIN <code style={{ fontWeight: 700 }}>{p.pin_requerido === false ? 'sin PIN' : (p.pin || '—')}</code>
+              {presupuestoOrigen && <> · Viene del presupuesto N° {presupuestoOrigen.numero}</>}
               <button type="button" className="btn btn-sm btn-ghost" style={{ marginLeft: 8 }} onClick={copiarDatos}>{copiado === true ? '✓ Copiado' : '📋 Copiar mensaje para el cliente'}</button>
             </div>
           </div>

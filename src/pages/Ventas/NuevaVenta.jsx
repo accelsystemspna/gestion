@@ -4,6 +4,7 @@ import { fmtMoney } from '../../lib/format'
 import { precioVenta } from '../../lib/pricing'
 import ImageThumb from '../../components/ImageThumb'
 import { useAuth } from '../../lib/AuthContext'
+import { sincronizarTicketCliente } from '../../lib/documentosCliente'
 
 let _k = 0
 const newKey = () => `vi${++_k}`
@@ -217,6 +218,7 @@ export default function NuevaVenta({ venta, onClose, onSaved }) {
     const { error: errItems } = await supabase.from('venta_items').insert(itemsPayload)
     if (errItems) { setError(errItems.message); setSaving(false); return }
 
+    sincronizarTicketCliente(ventaId)
     setSaving(false)
     onSaved()
   }

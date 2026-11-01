@@ -49,6 +49,13 @@ const ETAPAS_WEB: Record<string, [string, string]> = {
 }
 const ESTADOS_VENTA: Record<string, string> = { pagado: 'Pagada', pendiente: 'Pendiente de pago', parcial: 'Pago parcial', pendiente_revision: 'En revisión' }
 
+/** Cuánto falta pagar, solo si se sabe: de una venta "parcial" no se registra cuánto se cobró, y la página pide confirmarlo. */
+function pendienteDeVenta(v: any) {
+  if (v.estado === 'pendiente') return { pendiente: Number(v.total) || 0 }
+  if (v.estado === 'pagado') return { pendiente: 0 }
+  return {}
+}
+
 /** Estado de la venta para el cliente. En la web manda la etapa del envío: "pendiente_revision" es interno de gestión. */
 function estadoDeVenta(v: any): [string, string] {
   if (v.estado === 'anulado') return ['anulado', 'Anulada']
@@ -204,13 +211,16 @@ serve(async (req) => {
             estado,
             estado_etiqueta,
             canal: CANALES[v.canal] || 'Local',
+            forma_pago: v.forma_pago || null,
+            ...pendienteDeVenta(v),
             items: (lineas || []).filter((l: any) => l.venta_id === v.id).map((l: any) => ({ descripcion: l.descripcion, cantidad: Number(l.cantidad) || 0, subtotal: Number(l.subtotal) || 0 })),
             ...(v.origen_tracking ? { seguimiento: { codigo: v.origen_tracking, url: v.origen_tracking_url || null } } : {}),
             ...(propios.length ? { documentos: propios } : {}),
           }
         }),
         // Documentos que no están atados a un pedido ni a una de esas compras
-        documentos: conUrl.filter((d: any) => !ids.includes(d.pedido_id) && !idsVentas.includes(d.venta_id)).map(documento),
+        // (un ticket sin venta quedó de una venta borrada: no se muestra)
+        documentos: conUrl.filter((d: any) => !ids.includes(d.pedido_id) && !idsVentas.includes(d.venta_id) && (d.tipo !== 'ticket' || d.venta_id)).map(documento),
       }
     }
 

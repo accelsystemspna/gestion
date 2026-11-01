@@ -8,6 +8,7 @@ import Categorias from './Categorias'
 import Integraciones from './Integraciones'
 import Rubros from './Rubros'
 import Backup from './Backup'
+import DocumentosPanel from './DocumentosPanel'
 import Arca from './Arca'
 import Apariencia from './Apariencia'
 
@@ -68,7 +69,7 @@ export default function Configuracion() {
       {tab === 'categorias' && <Categorias />}
       {tab === 'rubros' && <Rubros />}
       {tab === 'integraciones' && <Integraciones />}
-      {tab === 'backup' && <Backup />}
+      {tab === 'backup' && <><Backup /><DocumentosPanel /></>}
       {tab === 'arca' && <Arca />}
       {tab === 'apariencia' && <Apariencia />}
     </div>

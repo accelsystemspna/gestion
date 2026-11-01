@@ -25,6 +25,7 @@ try {
 
   const { data: arcaConfig, error: errorArca } = await supabase.from('arca_config').select('*').maybeSingle()
   if (errorArca || !arcaConfig) throw new Error('No se pudo leer arca_config: ' + errorArca?.message)
+  const { data: branding } = await supabase.from('branding').select('*').eq('user_id', arcaConfig.user_id).maybeSingle()
   const { data: ventas, error } = await supabase.from('ventas')
     .select('id, org_id, numero, fecha, total, cliente_id, cliente_nombre, nro_factura, cae, cae_vto, venta_items(descripcion, cantidad, subtotal)')
     .eq('factura_emitida', true).not('cae', 'is', null).not('cliente_id', 'is', null).order('fecha')
@@ -40,7 +41,7 @@ try {
     if (hechas.has(v.id)) { console.log(`ya está   V-${v.numero} ${titulo}`); continue }
     console.log(`${aplicar ? 'guardando' : 'guardaría'} V-${v.numero} ${v.fecha} ${titulo} $${v.total} · ${v.cliente_nombre}`)
     if (!aplicar) continue
-    const blob = await generarFacturaC({ venta: v, arcaConfig, download: false, comoBlob: true })
+    const blob = await generarFacturaC({ venta: v, arcaConfig, branding: branding ?? {}, download: false, comoBlob: true })
     const ruta = `${createHash('sha256').update(v.org_id).digest('hex')}/${randomUUID()}.pdf`
     const { error: e1 } = await supabase.storage.from('documentos-clientes').upload(ruta, blob, { contentType: 'application/pdf' })
     if (e1) throw e1

@@ -9,6 +9,7 @@ import { supabase }                                from './supabase'
 import { precioVenta, calcInsumo, calcTarifaCost } from './pricing'
 import { syncManyToWoo, conCategoriasWeb }         from './wooSync'
 import { syncMayorista }                           from './mayoristaSync'
+import { sincronizarTicketCliente }                from './documentosCliente'
 
 /**
  * Recalcula los precios de todas las ventas pendientes en cuenta corriente
@@ -87,6 +88,7 @@ export async function recalcularCCPorProductos(productoIds) {
 
     if (Math.abs(nuevoTotal - (venta.total ?? 0)) > 0.001) {
       await supabase.from('ventas').update({ total: nuevoTotal }).eq('id', venta.id)
+      sincronizarTicketCliente(venta.id)
       ventasActualizadas++
       if (venta.cliente_id) {
         saldoDeltas[venta.cliente_id] =

@@ -15,6 +15,7 @@ const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
 export default function Facturas() {
   const [facturas,    setFacturas]    = useState([])
   const [arcaConfig,  setArcaConfig]  = useState({})
+  const [branding,    setBranding]    = useState({})
   const [loading,     setLoading]     = useState(true)
   const [search,      setSearch]      = useState('')
   const [descargando, setDescargando] = useState(null)
@@ -22,15 +23,17 @@ export default function Facturas() {
   useEffect(() => {
     const load = async () => {
       setLoading(true)
-      const [fRes, aRes] = await Promise.all([
+      const [fRes, aRes, bRes] = await Promise.all([
         supabase.from('ventas')
-          .select('id, fecha, total, cliente_nombre, nro_factura, cae, cae_vto, venta_items(descripcion, cantidad, subtotal)')
+          .select('*, venta_items(descripcion, cantidad, subtotal)')
           .eq('factura_emitida', true)
           .order('fecha', { ascending: false }),
         supabase.from('arca_config').select('*').maybeSingle(),
+        supabase.from('branding').select('*').maybeSingle(),
       ])
       setFacturas(fRes.data ?? [])
       setArcaConfig(aRes.data ?? {})
+      setBranding(bRes.data ?? {})
       setLoading(false)
     }
     load()
@@ -63,7 +66,7 @@ export default function Facturas() {
 
   const handleDescargar = async (f) => {
     setDescargando(f.id)
-    await generarFacturaC({ venta: f, arcaConfig, download: true })
+    await generarFacturaC({ venta: f, arcaConfig, branding, download: true })
     setDescargando(null)
   }
 

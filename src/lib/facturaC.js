@@ -3,9 +3,12 @@
  * Genera el PDF oficial de Factura C (Monotributo Argentina) usando jsPDF.
  * Incluye QR de verificación AFIP/ARCA.
  */
-import { jsPDF } from 'jspdf'
 import QRCode   from 'qrcode'
 import { fmtMoney } from './format'
+import { crearFicha, armarDocumento, filaCeldas, bloqueTotal, dibujarCelda, logoEn, texto, altoTabla } from './fichaPDF'
+import { FORMAS_PAGO } from './comprobanteVenta'
+import { fmtCuit, NOMBRE_DOC, DOC_CONSUMIDOR } from './cuit'
+
 
 const fmtFecha = (iso) => {
   if (!iso) return ''
@@ -37,158 +40,152 @@ function buildQrUrl({ cuit, ptoVta, nroCmp, importe, cae, fecha, docTipo = 99, d
 }
 
 /**
- * Genera y descarga el PDF de Factura C.
+ * Genera el PDF de Factura C con la ficha: media hoja si todo entra, A4 si no.
+ * Usa los datos guardados: no le pide nada a ARCA.
  *
  * @param {object} params
- * @param {object} params.venta         - Registro de la venta (con items)
- * @param {object} params.arcaConfig    - { cuit, punto_venta, razon_social }
+ * @param {object} params.venta         - Registro de la venta (con venta_items)
+ * @param {object} params.arcaConfig    - { cuit, punto_venta, razon_social, domicilio, iibb, inicio_actividades }
+ * @param {object} params.branding      - Logo y contacto
  * @param {boolean} params.download     - true = descargar, false = devolver blob URL
  */
-export async function generarFacturaC({ venta, arcaConfig, download = true, comoBlob = false }) {
-  const doc = new jsPDF({ unit: 'mm', format: 'a4' })
-  const PW  = 210
-  const ML  = 15   // margen izquierdo
-  const MR  = 15   // margen derecho
-  const CW  = PW - ML - MR   // ancho contenido
-
+export async function generarFacturaC({ venta, arcaConfig, branding = {}, download = true, comoBlob = false }) {
   const nroPv    = String(arcaConfig.punto_venta ?? 3).padStart(4, '0')
   const nroComp  = String(venta.nro_factura ?? 0).padStart(8, '0')
   const cuit     = String(arcaConfig.cuit ?? '').replace(/\D/g, '')
-  const razon    = arcaConfig.razon_social || 'CC DISEÑOS'
-  const fecha    = fmtFecha(venta.fecha)
-  const items    = venta.venta_items ?? []
+  const fecha    = venta.factura_fecha || venta.fecha
+  const filas = (venta.venta_items ?? []).map((it) => ({
+    nombre: it.descripcion,
+    cantidad: Number(it.cantidad ?? 1),
+    precio: Number(it.subtotal ?? 0) / (Number(it.cantidad) || 1),
+    subtotal: Number(it.subtotal ?? 0),
+  }))
 
-  // ── Tipografías ───────────────────────────────────────────────────────────
-  doc.setFont('helvetica')
+  const nombreDoc = NOMBRE_DOC[venta.factura_doc_tipo]
+  const qr = await QRCode.toDataURL(buildQrUrl({
+    cuit,
+    ptoVta:  arcaConfig.punto_venta ?? 3,
+    nroCmp:  venta.nro_factura ?? 0,
+    importe: venta.total,
+    cae:     venta.cae,
+    fecha,
+    docTipo: nombreDoc ? venta.factura_doc_tipo : DOC_CONSUMIDOR,
+    docNro:  nombreDoc ? venta.factura_doc_nro : 0,
+  }), { width: 220, margin: 1 }).catch(() => null)
 
-  // ── Encabezado izquierdo (datos del emisor) ──────────────────────────────
-  let y = 18
-  doc.setFontSize(16).setFont('helvetica', 'bold')
-  doc.text(razon, ML, y)
+  const receptor = [
+    { f: 2, celda: [{ et: 'Cliente' }, { t: venta.cliente_nombre || 'Consumidor Final', bold: true }] },
+    { celda: [{ et: 'Documento' }, nombreDoc ? { t: `${nombreDoc} ${fmtCuit(venta.factura_doc_nro)}`, mono: true } : { t: 'Sin identificar' }] },
+    { celda: [{ et: 'Condición IVA' }, { t: venta.factura_cond_iva || 'Consumidor Final' }] },
+  ]
+  const domicilio = arcaConfig.domicilio || branding?.direccion
+  const razon = arcaConfig.razon_social || branding?.nombre || ''
+  const importe = fmtMoney(Number(venta.total))
+  const datosCae = [
+    { et: 'CAE' }, { t: venta.cae ?? '', mono: true },
+    { et: 'Vencimiento del CAE' }, { t: fmtFecha(venta.cae_vto), mono: true },
+    { t: 'Comprobante autorizado por ARCA' },
+  ]
+  const dibujarQr = (c, x, y, lado) => { if (qr) c.doc.addImage(qr, 'PNG', x, y, lado, lado, 'qr') }
 
-  y += 6
-  doc.setFontSize(9).setFont('helvetica', 'normal')
-  doc.text(`CUIT: ${cuit.replace(/(\d{2})(\d{8})(\d{1})/, '$1-$2-$3')}`, ML, y)
-  y += 5
-  doc.text('Monotributista', ML, y)
-  y += 5
-  doc.text(`Punto de venta: ${nroPv}`, ML, y)
+  // La media hoja solo se usa si entra todo en una
+  const prueba = await crearFicha({ tamano: 'media' })
+  const entraEnMedia = altoTabla(prueba, filas) <= prueba.y1 - prueba.y0 - 72 - 38 - 66
+  const c = await crearFicha({ tamano: entraEnMedia ? 'media' : 'a4', branding })
 
-  // ── Caja central "C" ─────────────────────────────────────────────────────
-  const boxX = PW / 2 - 10
-  doc.setDrawColor(0).setLineWidth(0.8)
-  doc.rect(boxX, 12, 20, 20)
-  doc.setFontSize(22).setFont('helvetica', 'bold')
-  doc.text('C', boxX + 10, 26, { align: 'center' })
-
-  // ── Encabezado derecho (número y fecha) ──────────────────────────────────
-  const RX = PW - MR
-  doc.setFontSize(12).setFont('helvetica', 'bold')
-  doc.text('FACTURA', RX, 18, { align: 'right' })
-  doc.setFontSize(10).setFont('helvetica', 'normal')
-  doc.text(`Nro: ${nroPv}-${nroComp}`, RX, 25, { align: 'right' })
-  doc.text(`Fecha: ${fecha}`, RX, 31, { align: 'right' })
-
-  // ── Línea separadora ─────────────────────────────────────────────────────
-  y = 38
-  doc.setLineWidth(0.5).setDrawColor(180)
-  doc.line(ML, y, PW - MR, y)
-
-  // ── Datos del receptor ───────────────────────────────────────────────────
-  y += 6
-  doc.setFontSize(9).setFont('helvetica', 'bold')
-  doc.text('Receptor:', ML, y)
-  doc.setFont('helvetica', 'normal')
-  const receptor = venta.cliente_nombre || 'Consumidor Final'
-  doc.text(receptor, ML + 20, y)
-
-  y += 5
-  doc.setFont('helvetica', 'bold')
-  doc.text('Condición IVA:', ML, y)
-  doc.setFont('helvetica', 'normal')
-  doc.text('Consumidor Final', ML + 30, y)
-
-  // ── Línea separadora ─────────────────────────────────────────────────────
-  y += 7
-  doc.setLineWidth(0.3).setDrawColor(180)
-  doc.line(ML, y, PW - MR, y)
-
-  // ── Tabla de ítems ───────────────────────────────────────────────────────
-  y += 6
-  doc.setFillColor(240, 240, 240)
-  doc.rect(ML, y - 4, CW, 7, 'F')
-  doc.setFontSize(9).setFont('helvetica', 'bold')
-  doc.text('Descripción',    ML + 2,       y)
-  doc.text('Cant.',          ML + 95,      y, { align: 'right' })
-  doc.text('Precio unit.',   ML + 125,     y, { align: 'right' })
-  doc.text('Subtotal',       ML + CW - 2,  y, { align: 'right' })
-
-  y += 2
-  doc.setLineWidth(0.3).setDrawColor(180)
-  doc.line(ML, y, PW - MR, y)
-
-  y += 5
-  doc.setFont('helvetica', 'normal').setFontSize(9)
-
-  for (const item of items) {
-    const desc     = String(item.descripcion || '').slice(0, 50)
-    const cant     = Number(item.cantidad ?? 1)
-    const precio   = Number(item.subtotal ?? 0) / cant
-    const subtotal = Number(item.subtotal ?? 0)
-
-    doc.text(desc,                   ML + 2,      y)
-    doc.text(String(cant),           ML + 95,     y, { align: 'right' })
-    doc.text(fmtMoney(precio),       ML + 125,    y, { align: 'right' })
-    doc.text(fmtMoney(subtotal),     ML + CW - 2, y, { align: 'right' })
-    y += 6
-
-    if (y > 240) {        // salto de página si hay muchos items
-      doc.addPage()
-      y = 20
+  const cabeceraFactura = (y, emisor) => {
+    const anchos = c.media ? [70, 54] : [104, 62]
+    const alto = c.media ? 72 : 96
+    const x1 = c.x0 + anchos[0]
+    const x2 = x1 + anchos[1]
+    logoEn(c, c.x0 + 6, y + 5, anchos[0] - 12, alto - 10)
+    c.doc.setDrawColor(29, 30, 32)
+    c.doc.setLineWidth(0.7)
+    c.doc.line(x1, y, x1, y + alto)
+    c.doc.line(x2, y, x2, y + alto)
+    texto(c, 'C', (x1 + x2) / 2, y + alto / 2 + c.fs * 0.5, { mono: true, bold: true, size: c.fs * (c.media ? 2.4 : 3), align: 'center' })
+    texto(c, 'COD. 011', (x1 + x2) / 2, y + alto / 2 + c.fs * 1.75, { mono: true, size: c.fs * 0.72, align: 'center' })
+    const xd = x2 + c.pad
+    if (!c.media) {
+      // Igual que el presupuesto y el ticket: título y número arriba, campos abajo
+      const altoTit = 40
+      const xm = (x2 + c.x1) / 2
+      c.doc.line(x2, y + altoTit, c.x1, y + altoTit)
+      c.doc.line(xm, y + altoTit, xm, y + alto)
+      texto(c, 'FACTURA', xd, y + altoTit - 13, { bold: true, size: c.fs * 1.9 })
+      texto(c, `N° ${nroPv}-${nroComp}`, c.x1 - c.pad, y + altoTit - 13, { mono: true, align: 'right' })
+      dibujarCelda(c, [{ et: 'Fecha de emisión' }, { t: fmtFecha(fecha), mono: true }], xd, y + altoTit + c.pad * 0.5)
+      dibujarCelda(c, [{ et: 'Punto de venta' }, { t: nroPv, mono: true }], xm + c.pad, y + altoTit + c.pad * 0.5)
+    } else {
+      const bt = y + c.pad + c.fs * 1.1
+      texto(c, 'FACTURA', xd, bt, { bold: true, size: c.fs * 1.4 })
+      dibujarCelda(c, [{ t: `N° ${nroPv}-${nroComp}`, mono: true }, { et: 'Fecha de emisión' }, { t: fmtFecha(fecha), mono: true }], xd, bt + 1)
     }
+    if (emisor) {
+      const xe = (x2 + c.x1) / 2 - 8
+      c.doc.line(xe, y, xe, y + alto)
+      dibujarCelda(c, emisor, xe + c.pad, y + c.pad * 0.4)
+    }
+    c.doc.setLineWidth(1.1)
+    c.doc.line(c.x0, y + alto, c.x1, y + alto)
+    return y + alto
   }
 
-  // ── Línea + Total ────────────────────────────────────────────────────────
-  y += 2
-  doc.setLineWidth(0.5).setDrawColor(0)
-  doc.line(ML + CW * 0.55, y, PW - MR, y)
-  y += 6
-  doc.setFontSize(12).setFont('helvetica', 'bold')
-  doc.text('Total:', ML + CW * 0.55, y)
-  doc.text(fmtMoney(Number(venta.total)), PW - MR, y, { align: 'right' })
-
-  // ── CAE ──────────────────────────────────────────────────────────────────
-  y += 12
-  doc.setLineWidth(0.3).setDrawColor(180)
-  doc.line(ML, y - 4, PW - MR, y - 4)
-  doc.setFontSize(8).setFont('helvetica', 'normal').setTextColor(80)
-  doc.text(`CAE: ${venta.cae ?? ''}`, ML, y)
-  doc.text(`Vto. CAE: ${fmtFecha(venta.cae_vto)}`, ML + 70, y)
-  doc.text('Comprobante autorizado por ARCA (ex-AFIP)', ML, y + 5)
-  doc.setTextColor(0)
-
-  // ── QR de verificación ───────────────────────────────────────────────────
-  try {
-    const qrUrl  = buildQrUrl({
-      cuit,
-      ptoVta:  arcaConfig.punto_venta ?? 3,
-      nroCmp:  venta.nro_factura ?? 0,
-      importe: venta.total,
-      cae:     venta.cae,
-      fecha:   venta.fecha,
+  if (c.media) {
+    const emisor = [
+      { t: razon, bold: true },
+      ...(domicilio ? [{ t: domicilio }] : []),
+      { t: `Resp. Monotributo · ${fmtCuit(cuit)}` },
+      ...(arcaConfig.iibb ? [{ t: `IIBB: ${arcaConfig.iibb}` }] : []),
+      ...(arcaConfig.inicio_actividades ? [{ t: `Inicio: ${fmtFecha(arcaConfig.inicio_actividades)}` }] : []),
+    ]
+    armarDocumento(c, {
+      cabecera: (y) => filaCeldas(c, cabeceraFactura(y, emisor), receptor),
+      filas,
+      altoFinal: 66,
+      final: (y) => bloqueTotal(c, y, 66, {
+        dibujarIzquierda: () => {
+          dibujarQr(c, c.x0 + c.pad, y + 7, 52)
+          dibujarCelda(c, datosCae, c.x0 + c.pad + 62, y + 2)
+        },
+        etiqueta: 'Importe total',
+        total: importe,
+      }),
     })
-    const qrDataUrl = await QRCode.toDataURL(qrUrl, { width: 80, margin: 1 })
-    doc.addImage(qrDataUrl, 'PNG', PW - MR - 28, y - 12, 28, 28)
-  } catch (_) {
-    // QR no crítico, continuar sin él
+  } else {
+    const altoCae = 88
+    armarDocumento(c, {
+      cabecera: (y) => {
+        const conEmisor = filaCeldas(c, cabeceraFactura(y), [
+          { celda: [{ et: 'Emisor' }, { t: razon, bold: true }, ...(domicilio ? [{ t: domicilio }] : []), { t: 'Responsable Monotributo' }] },
+          { celda: [
+            { et: 'CUIT' }, { t: fmtCuit(cuit), mono: true },
+            ...(arcaConfig.iibb ? [{ et: 'Ingresos Brutos' }, { t: arcaConfig.iibb, mono: true }] : []),
+            ...(arcaConfig.inicio_actividades ? [{ et: 'Inicio de actividades' }, { t: fmtFecha(arcaConfig.inicio_actividades), mono: true }] : []),
+          ] },
+        ])
+        return filaCeldas(c, conEmisor, receptor)
+      },
+      filas,
+      altoFinal: 46 + altoCae,
+      final: (y) => {
+        const fin = bloqueTotal(c, y, 46, {
+          izquierda: [{ et: 'Forma de pago' }, { t: FORMAS_PAGO[venta.forma_pago] ?? venta.forma_pago ?? '—' }],
+          etiqueta: 'Importe total',
+          total: importe,
+        })
+        c.doc.setDrawColor(29, 30, 32)
+        c.doc.setLineWidth(0.7)
+        c.doc.line(c.x0, fin, c.x1, fin)
+        dibujarQr(c, c.x0 + c.pad, fin + 8, 72)
+        dibujarCelda(c, datosCae, c.x0 + c.pad + 84, fin + 6)
+      },
+      contacto: [branding?.telefono, branding?.web_minorista || branding?.web_mayorista, branding?.instagram ? `@${branding.instagram.replace(/^@/, '')}` : null],
+    })
   }
-
-  // ── Pie ──────────────────────────────────────────────────────────────────
-  doc.setFontSize(7).setTextColor(150)
-  doc.text('Generado por CC Gestión', PW / 2, 290, { align: 'center' })
-  doc.setTextColor(0)
 
   // ── Salida ────────────────────────────────────────────────────────────────
+  const { doc } = c
   if (comoBlob) return doc.output('blob')
   const nombre = `factura-C-${nroPv}-${nroComp}.pdf`
   if (download) {

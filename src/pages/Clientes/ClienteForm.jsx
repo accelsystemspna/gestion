@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../lib/AuthContext'
+import { CONDICIONES_IVA, cuitValido, soloDigitos, fmtCuit } from '../../lib/cuit'
 
 const ESTADOS = ['pagado', 'pendiente', 'cancelado']
 
@@ -38,6 +39,9 @@ export default function ClienteForm({ cliente, onClose, onSaved, etiquetas = [] 
     etiqueta: '',
     notas: '',
     lista_id: '',
+    cuit: '',
+    cuit_tipo: 'CUIT',
+    condicion_iva: 'Consumidor Final',
   })
   const [listas, setListas] = useState([])
   const [compras, setCompras] = useState([])
@@ -68,6 +72,9 @@ export default function ClienteForm({ cliente, onClose, onSaved, etiquetas = [] 
         etiqueta: cliente.etiqueta ?? '',
         notas: cliente.notas ?? '',
         lista_id: cliente.lista_id ? String(cliente.lista_id) : '',
+        cuit: fmtCuit(cliente.cuit),
+        cuit_tipo: cliente.cuit_tipo ?? 'CUIT',
+        condicion_iva: cliente.condicion_iva ?? 'Consumidor Final',
       })
       // cargar compras existentes
       setLoadingCompras(true)
@@ -87,6 +94,7 @@ export default function ClienteForm({ cliente, onClose, onSaved, etiquetas = [] 
 
   async function handleSave() {
     if (!form.nombre.trim()) { setError('El nombre es obligatorio.'); return }
+    if (form.cuit.trim() && !cuitValido(form.cuit)) { setError(`Revisá el ${form.cuit_tipo}: tiene que tener 11 números y el último no coincide.`); return }
     setSaving(true)
     setError('')
     const payload = {
@@ -97,6 +105,12 @@ export default function ClienteForm({ cliente, onClose, onSaved, etiquetas = [] 
       etiqueta: form.etiqueta.trim() || null,
       notas: form.notas.trim() || null,
       lista_id: form.lista_id || null,
+      // Solo si hay algo que guardar en estos datos, que son opcionales
+      ...(form.cuit.trim() || cliente?.cuit ? {
+        cuit: soloDigitos(form.cuit) || null,
+        cuit_tipo: form.cuit.trim() ? form.cuit_tipo : null,
+        condicion_iva: form.cuit.trim() ? form.condicion_iva : null,
+      } : {}),
     }
     let err
     if (cliente) {
@@ -221,6 +235,24 @@ export default function ClienteForm({ cliente, onClose, onSaved, etiquetas = [] 
               <Field label="Dirección">
                 <input style={inputStyle} value={form.direccion} onChange={set('direccion')} placeholder="Calle, ciudad…" />
               </Field>
+              <div style={{ display: 'grid', gridTemplateColumns: '90px 1fr', gap: 8 }}>
+                <Field label="Documento">
+                  <select style={inputStyle} value={form.cuit_tipo} onChange={set('cuit_tipo')}>
+                    <option>CUIT</option>
+                    <option>CUIL</option>
+                  </select>
+                </Field>
+                <Field label={`${form.cuit_tipo} (para facturar)`}>
+                  <input style={inputStyle} value={form.cuit} onChange={set('cuit')} inputMode="numeric" placeholder="Opcional. Ej: 20-12345678-6" />
+                </Field>
+              </div>
+              {form.cuit.trim() && (
+                <Field label="Condición frente al IVA">
+                  <select style={inputStyle} value={form.condicion_iva} onChange={set('condicion_iva')}>
+                    {CONDICIONES_IVA.map((v) => <option key={v}>{v}</option>)}
+                  </select>
+                </Field>
+              )}
               <Field label="Categoría / Etiqueta">
                 {etiquetaCustom ? (
                   <div style={{ display: 'flex', gap: 6 }}>

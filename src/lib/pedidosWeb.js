@@ -1,6 +1,7 @@
 import { supabase } from './supabase'
 import { ajustarStock } from './stock'
 import { portalApi } from './portalApi'
+import { sincronizarTicketCliente, quitarTicketCliente } from './documentosCliente'
 
 // Fases de un pedido de la web. En WooCommerce "en preparación" y "listo para
 // despachar" son el mismo estado (processing): la diferencia solo existe acá.
@@ -131,6 +132,7 @@ export async function cambiarEstadoWeb({ venta, tienda, nuevo, tracking, notific
     const falta = /estado_web_check/.test(error.message)
     return { ok: false, error: falta ? 'Falta correr supabase_tiendas_fases.sql en Supabase (SQL Editor).' : error.message }
   }
+  sincronizarTicketCliente(venta.id)
 
   if (cancelar) {
     const { data: items } = await supabase.from('venta_items').select('producto_id, cantidad').eq('venta_id', venta.id)
@@ -297,6 +299,7 @@ export async function guardarComoCliente({ grupo, orgId }) {
   const ids = grupo.pedidos.map(p => p.id)
   const { error: errUpd } = await supabase.from('ventas').update({ cliente_id: clienteId }).in('id', ids)
   if (errUpd) throw new Error(errUpd.message)
+  ids.forEach(sincronizarTicketCliente)
   return clienteId
 }
 
@@ -334,6 +337,7 @@ export async function eliminarPedidosCancelados(ventas) {
         .catch(err => console.error('[stock]', err))
     }
 
+    await quitarTicketCliente(ids)
     const { error: errItems } = await supabase.from('venta_items').delete().in('venta_id', ids)
     if (errItems) return { eliminadas, omitidas, bloqueadas, error: errItems.message }
     const { error } = await supabase.from('ventas').delete().in('id', ids)

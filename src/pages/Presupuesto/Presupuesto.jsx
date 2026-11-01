@@ -1,42 +1,21 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { fmtMoney } from '../../lib/format'
 import { calcInsumo, precioVenta } from '../../lib/pricing'
 import { promoDeProducto, etiquetaOferta, precioConPromoProducto } from '../../lib/promos'
 import ImageThumb from '../../components/ImageThumb'
-import { exportPresupuestoPDF } from '../../lib/pdf'
+import { itemsPDFDe } from '../../lib/pdf'
+import { exportPresupuestoPDF } from '../../lib/presupuestoPDF'
 import { useAuth } from '../../lib/AuthContext'
-import { crearPedidoDesdePresupuesto } from '../../lib/pedidos'
-import { guardarDocumentoCliente } from '../../lib/documentosCliente'
+import { crearPedidoDesdePresupuesto, ESTADOS } from '../../lib/pedidos'
+import { presupuestoEnPanel, quitarPresupuestoDelPanel } from '../../lib/documentosCliente'
+import { celularValido } from '../../lib/accesoCliente'
+import ClienteSelector from '../../components/ClienteSelector'
+import ClienteRapido from '../../components/ClienteRapido'
 
 const blankPieza = { material_id: '', ancho: '', alto: '', cantidad: 1, gramos: '', metros: '', incremento: '' }
 const blankTarifaSel = { tarifa_id: '', fab_minutos: '', fab_segundos: '', incremento: '' }
-
-// Renglones de un presupuesto guardado, como los espera el PDF.
-function itemsPDFDe(p) {
-  const itemsPDF = []
-  for (const it of p.items || []) {
-    if (it.tipo === 'medida' && (it.subtotal > 0 || it.costo_unitario > 0)) {
-      itemsPDF.push({
-        sku: '—',
-        nombre: it.nombre || 'Trabajo a medida',
-        cantidad: it.cantidad ?? 1,
-        precio: it.costo_unitario ?? 0,
-        imagen_url: null,
-      })
-    } else if (it.tipo === 'producto' || it.tipo === 'libre') {
-      itemsPDF.push({
-        sku: it.sku || '—',
-        nombre: it.nombre ?? '',
-        cantidad: it.cantidad ?? 1,
-        precio: it.precio ?? 0,
-        imagen_url: it.imagen_url || null,
-      })
-    }
-  }
-  return itemsPDF
-}
 
 function snapSegs(segs) {
   const s = Number(segs) || 0
@@ -94,11 +73,11 @@ export default function Presupuesto() {
 
   // Cabecera
   const [cliente, setCliente] = useState('')
-  const [cliInputFocused,  setCliInputFocused]  = useState(false)
   const [cliSeleccionado,  setCliSeleccionado]  = useState(null)
   const [reexportandoId,   setReexportandoId]   = useState(null)
-  const [cliDropRect,      setCliDropRect]      = useState(null)
-  const cliInputRef = useRef(null)
+  const [altaCliente,      setAltaCliente]      = useState(null)   // { cliente?, inicial?, luego }: alta o celular faltante
+  const [elegirPara,       setElegirPara]       = useState(null)   // presupuesto viejo sin cliente: hay que decir de quién es
+  const [elegirTexto,      setElegirTexto]      = useState('')
   const [listaSel, setListaSel] = useState('')
   const [descripcion, setDescripcion] = useState('')
   const [cantidad, setCantidad] = useState(1)
@@ -130,6 +109,8 @@ export default function Presupuesto() {
   const [showHistorial,  setShowHistorial]  = useState(false)
   const [historial,      setHistorial]      = useState([])
   const [histLoading,    setHistLoading]    = useState(false)
+  const [pedidoDe,       setPedidoDe]       = useState({})   // presupuesto_id → su pedido
+  const [pasando,        setPasando]        = useState(false)
 
   useEffect(() => {
     Promise.all([
@@ -148,12 +129,12 @@ export default function Presupuesto() {
 
     // Cargar clientes por separado con fallback:
     // intenta con lista_id (disponible tras la migración SQL),
-    // si falla (columna aún no existe) carga sólo id + nombre
-    supabase.from('clientes').select('id, nombre, lista_id').order('nombre')
+    // si falla (columna aún no existe) carga sin ella
+    supabase.from('clientes').select('id, nombre, telefono, email, lista_id').order('nombre')
       .then(({ data, error }) => {
         if (error) {
           console.warn('[Presupuesto] lista_id no existe aún, cargando sin ella:', error.message)
-          return supabase.from('clientes').select('id, nombre').order('nombre')
+          return supabase.from('clientes').select('id, nombre, telefono, email').order('nombre')
         }
         return { data, error: null }
       })
@@ -275,26 +256,29 @@ export default function Presupuesto() {
   const addTarifa = () => { const idx = tarifasSel.length; setTarifasSel((prev) => [...prev, { ...blankTarifaSel }]); setExpTarifas((prev) => ({ ...prev, [idx]: true })) }
   const removeTarifa = (i) => { setTarifasSel((prev) => prev.filter((_, idx) => idx !== i)); setExpTarifas((prev) => { const n = { ...prev }; delete n[i]; return n }) }
 
-  // Autocomplete de cliente — basado en foco, sin useEffect
-  const cliSugerencias = useMemo(() => {
-    if (!cliInputFocused || cliSeleccionado) return []
-    const q = cliente.trim().toLowerCase()
-    if (!q) return clientes.slice(0, 8)           // sin texto → mostrar los primeros 8
-    return clientes.filter(c => c.nombre.toLowerCase().includes(q)).slice(0, 8)
-  }, [cliInputFocused, cliente, clientes, cliSeleccionado])
-
   const seleccionarCliente = (c) => {
     setCliente(c.nombre)
     setCliSeleccionado(c)
-    setCliInputFocused(false)
-    setCliDropRect(null)
     if (c.lista_id) setListaSel(String(c.lista_id))  // funciona cuando se agregue la columna a la DB
   }
 
   const limpiarCliente = () => {
     setCliente('')
     setCliSeleccionado(null)
-    setCliInputFocused(false)
+  }
+
+  // Suma a la lista un cliente recién creado o actualiza el que cambió.
+  const recordarCliente = (c) => setClientes((prev) => {
+    const lista = prev.some((x) => x.id === c.id) ? prev.map((x) => x.id === c.id ? { ...x, ...c } : x) : [...prev, c]
+    return [...lista].sort((a, b) => (a.nombre || '').localeCompare(b.nombre || '', 'es'))
+  })
+
+  // El cliente de un presupuesto: el vinculado o, en los viejos que guardaban solo el nombre, el único con ese nombre.
+  const clienteDePresupuesto = (p) => {
+    if (p.cliente_id) return clientes.find((c) => c.id === p.cliente_id) || null
+    const nombre = (p.cliente || '').trim().toLowerCase()
+    const iguales = nombre ? clientes.filter((c) => (c.nombre || '').trim().toLowerCase() === nombre) : []
+    return iguales.length === 1 ? iguales[0] : null
   }
 
   // Cargar un presupuesto guardado en el formulario
@@ -304,7 +288,7 @@ export default function Presupuesto() {
     const prods  = (p.items ?? []).filter(it => it.tipo === 'producto' || it.tipo === 'libre')
 
     setCliente(p.cliente ?? '')
-    setCliSeleccionado(null)
+    setCliSeleccionado(clienteDePresupuesto(p))
     setListaSel(p.lista_id ? String(p.lista_id) : '')
     setNotas(p.notas ?? '')
 
@@ -338,7 +322,7 @@ export default function Presupuesto() {
   }
 
   const guardar = async () => {
-    if (!cliente.trim()) { alert('Ingresá el nombre del cliente antes de guardar.'); return }
+    if (!cliSeleccionado) return
     if (!listaSel) { alert('Seleccioná una lista de precios antes de guardar.'); return }
     setSaving(true)
     const itemsMedida = {
@@ -352,13 +336,15 @@ export default function Presupuesto() {
       cantidad: it.cantidad, precio: it.precio, subtotal: it.subtotal,
     }))
     const payload = {
-      cliente: cliente || null, lista_id: listaSel || null, total: totalGeneral,
-      items: [itemsMedida, ...itemsExtras], notas: notas || null, cliente_id: cliSeleccionado?.id || null,
+      cliente: cliSeleccionado.nombre, lista_id: listaSel || null, total: totalGeneral,
+      items: [itemsMedida, ...itemsExtras], notas: notas || null, cliente_id: cliSeleccionado.id,
       org_id: orgId,
     }
     const { data: guardado, error } = await supabase.from('presupuestos').insert(payload).select('*').single()
+    if (error) { setSaving(false); return alert('Error: ' + error.message) }
+    // Se espera: si después pasa a pedido, encuentra este documento y lo vincula en lugar de repetirlo.
+    await presupuestoEnPanel({ presupuesto: guardado, orgId, clienteId: cliSeleccionado.id, celular: cliSeleccionado.telefono, branding, validez })
     setSaving(false)
-    if (error) return alert('Error: ' + error.message)
     // El presupuesto pasa a Pedidos (con código de seguimiento, seña y saldo).
     if (window.confirm('Presupuesto guardado.\n\n¿Pasarlo a Pedidos ahora? Se crea el pedido con su código de seguimiento y el precio se mantiene al día hasta que el cliente dé la seña.')) {
       await pasarAPedido(guardado, cliSeleccionado)
@@ -366,23 +352,44 @@ export default function Presupuesto() {
   }
 
   // Crea el pedido a partir de un presupuesto guardado y lo abre en la sección Pedidos.
+  // Cada presupuesto da un solo pedido, y el pedido sale con el celular de la ficha del cliente.
   const pasarAPedido = async (presupuesto, cli = null) => {
+    if (pasando) return
+    setPasando(true)
     try {
-      let c = cli
-      if (!c && presupuesto.cliente) c = clientes.find((x) => (x.nombre || '').trim().toLowerCase() === presupuesto.cliente.trim().toLowerCase()) || null
-      const pedido = await crearPedidoDesdePresupuesto(presupuesto, { telefono: c?.telefono || '', email: c?.email || '', clienteId: c?.id || null })
-      // Copia del PDF para el panel del cliente. Si falla, el pedido ya está creado igual.
-      if (c?.id) {
-        exportPresupuestoPDF({ presupuesto: null, items: itemsPDFDe(presupuesto), cliente: presupuesto.cliente ?? '', branding, lista: listas.find((l) => l.id === presupuesto.lista_id) ?? null, validez: '15 días', comoBlob: true })
-          .then((blob) => guardarDocumentoCliente({ orgId, clienteId: c.id, pedidoId: pedido.id, tipo: 'presupuesto', titulo: `Presupuesto N° ${presupuesto.numero}`, total: presupuesto.total, blob }))
-          .catch((err) => console.warn('[documentos] no se pudo armar el presupuesto', err))
+      const { data: yaCreado, error: errorBusqueda } = await supabase.from('pedidos').select('id').eq('presupuesto_id', presupuesto.id).limit(1).maybeSingle()
+      if (errorBusqueda) throw new Error(errorBusqueda.message)
+      if (yaCreado) { setShowHistorial(false); navigate(`/pedidos?abrir=${yaCreado.id}`); return }
+
+      const c = cli || clienteDePresupuesto(presupuesto)
+      if (!c) {
+        setShowHistorial(false)
+        setElegirTexto(presupuesto.cliente || '')
+        setElegirPara(presupuesto)
+        return
       }
+      if (!celularValido(c.telefono)) {
+        setShowHistorial(false)
+        setAltaCliente({ cliente: c, luego: (actualizado) => pasarAPedido(presupuesto, actualizado) })
+        return
+      }
+      // Un presupuesto viejo queda vinculado a la ficha que se eligió.
+      const conCliente = { ...presupuesto, cliente: c.nombre, cliente_id: c.id }
+      if (presupuesto.cliente_id !== c.id) {
+        const { error: errorVinculo } = await supabase.from('presupuestos').update({ cliente_id: c.id, cliente: c.nombre }).eq('id', presupuesto.id)
+        if (errorVinculo) throw new Error(errorVinculo.message)
+      }
+      const pedido = await crearPedidoDesdePresupuesto(conCliente, { telefono: c.telefono, email: c.email || '', clienteId: c.id })
+      // El PDF del panel queda vinculado al pedido. Si falla, el pedido ya está creado igual.
+      presupuestoEnPanel({ presupuesto: conCliente, orgId, clienteId: c.id, celular: c.telefono, pedidoId: pedido.id, branding })
       setShowHistorial(false)
       navigate(`/pedidos?abrir=${pedido.id}`)
     } catch (err) {
       alert(/relation|does not exist|schema cache/i.test(err.message)
         ? 'Todavía falta crear las tablas de Pedidos en Supabase (supabase_pedidos.sql).'
         : 'No se pudo crear el pedido: ' + err.message)
+    } finally {
+      setPasando(false)
     }
   }
 
@@ -390,10 +397,15 @@ export default function Presupuesto() {
     setHistLoading(true)
     const { data } = await supabase
       .from('presupuestos')
-      .select('id, cliente, total, notas, created_at, lista_id, items')
+      .select('id, numero, cliente, cliente_id, total, notas, created_at, lista_id, items')
       .order('created_at', { ascending: false })
       .limit(100)
     setHistorial(data ?? [])
+    const ids = (data ?? []).map((p) => p.id)
+    const { data: pedidos } = ids.length
+      ? await supabase.from('pedidos').select('id, codigo, estado, presupuesto_id').in('presupuesto_id', ids)
+      : { data: [] }
+    setPedidoDe(Object.fromEntries((pedidos ?? []).map((x) => [x.presupuesto_id, x])))
     setHistLoading(false)
   }
 
@@ -406,7 +418,9 @@ export default function Presupuesto() {
 
   const eliminarPresupuesto = async (id) => {
     if (!window.confirm('Eliminar este presupuesto?')) return
+    const borrado = historial.find(p => p.id === id)
     await supabase.from('presupuestos').delete().eq('id', id)
+    if (borrado?.numero) quitarPresupuestoDelPanel(borrado)
     setHistorial(prev => prev.filter(p => p.id !== id))
   }
 
@@ -422,7 +436,7 @@ export default function Presupuesto() {
       for (const it of extrasConPrecio) {
         itemsPDF.push({ sku: it.producto.sku || '—', nombre: it.producto.nombre, cantidad: it.cantidad, precio: it.precio, imagen_url: it.producto.imagen_url || null })
       }
-      await exportPresupuestoPDF({ presupuesto: null, items: itemsPDF, cliente, branding, lista, validez })
+      await exportPresupuestoPDF({ presupuesto: null, items: itemsPDF, cliente, celular: cliSeleccionado?.telefono, branding, validez })
     } catch (err) {
       alert('Error generando PDF: ' + err.message)
     } finally {
@@ -435,8 +449,7 @@ export default function Presupuesto() {
     if (!p.items) { alert('Este presupuesto no tiene ítems guardados.'); return }
     setReexportandoId(p.id)
     try {
-      const listaObj = listas.find(l => l.id === p.lista_id) ?? null
-      await exportPresupuestoPDF({ presupuesto: null, items: itemsPDFDe(p), cliente: p.cliente ?? '', branding, lista: listaObj, validez: '15 días' })
+      await exportPresupuestoPDF({ presupuesto: p, items: itemsPDFDe(p), cliente: p.cliente ?? '', celular: clienteDePresupuesto(p)?.telefono, branding, validez: '15 días' })
     } catch (err) {
       alert('Error generando PDF: ' + err.message)
     } finally {
@@ -454,7 +467,8 @@ export default function Presupuesto() {
           <button className="btn" onClick={abrirHistorial}>
             📋 Historial
           </button>
-          <button className="btn" onClick={guardar} disabled={saving}>
+          <button className="btn" onClick={guardar} disabled={saving || !cliSeleccionado}
+            title={!cliSeleccionado ? 'Elegí o creá un cliente para guardar' : ''}>
             {saving ? 'Guardando...' : '💾 Guardar'}
           </button>
           <button
@@ -484,73 +498,21 @@ export default function Presupuesto() {
           {secLabel('1. Datos del presupuesto')}
 
           <F label="Cliente *">
-            <div style={{ display:'flex', flexDirection:'column', gap:0 }}>
-              {cliSeleccionado ? (
-                <div style={{ display:'flex', alignItems:'center', gap:7, padding:'6px 10px', border:'1px solid var(--primary)', borderRadius:6, background:'var(--bg-highlight)' }}>
-                  <div style={{ width:26, height:26, borderRadius:'50%', background:'var(--primary)', color:'white', display:'flex', alignItems:'center', justifyContent:'center', fontSize:12, fontWeight:800, flexShrink:0 }}>
-                    {cliente.charAt(0).toUpperCase()}
-                  </div>
-                  <span style={{ flex:1, fontSize:13, fontWeight:600 }}>{cliente}</span>
-                  <button onClick={limpiarCliente} style={{ background:'none', border:'none', cursor:'pointer', color:'var(--text-muted)', fontSize:15, padding:'0 2px', lineHeight:1 }}>✕</button>
-                </div>
-              ) : (
-                <input
-                  ref={cliInputRef}
-                  className="input"
-                  style={si()}
-                  value={cliente}
-                  onChange={e => { setCliente(e.target.value); setCliSeleccionado(null) }}
-                  onFocus={() => {
-                    if (cliInputRef.current) {
-                      const r = cliInputRef.current.getBoundingClientRect()
-                      setCliDropRect({ top: r.bottom + window.scrollY, left: r.left + window.scrollX, width: r.width })
-                    }
-                    setCliInputFocused(true)
-                  }}
-                  onBlur={() => setTimeout(() => { setCliInputFocused(false); setCliDropRect(null) }, 200)}
-                  placeholder="Nombre o razón social *"
-                  autoComplete="off"
-                />
-              )}
-              {/* Dropdown con position:fixed — escapa cualquier overflow:hidden del árbol padre */}
-              {cliInputFocused && !cliSeleccionado && cliDropRect && (
-                <div style={{
-                  position: 'fixed',
-                  top: cliDropRect.top,
-                  left: cliDropRect.left,
-                  width: cliDropRect.width,
-                  zIndex: 9999,
-                  border: '1px solid var(--border)',
-                  borderRadius: 8,
-                  background: 'var(--bg-card)',
-                  boxShadow: '0 8px 24px rgba(0,0,0,0.14)',
-                  maxHeight: 260,
-                  overflowY: 'auto',
-                }}>
-                  {cliCargando ? (
-                    <div style={{ padding:'10px 12px', fontSize:12, color:'var(--text-muted)' }}>Cargando clientes...</div>
-                  ) : cliSugerencias.length === 0 ? (
-                    <div style={{ padding:'10px 12px', fontSize:12, color:'var(--text-muted)' }}>
-                      {clientes.length === 0
-                        ? '⚠️ No hay clientes registrados aún'
-                        : `Sin resultados para "${cliente}"`}
-                    </div>
-                  ) : (
-                    cliSugerencias.map(c => (
-                      <div key={c.id}
-                        onMouseDown={e => { e.preventDefault(); seleccionarCliente(c) }}
-                        style={{ padding:'9px 12px', cursor:'pointer', fontSize:13, display:'flex', alignItems:'center', gap:9, borderBottom:'1px solid var(--border)' }}
-                        onMouseEnter={e => e.currentTarget.style.background='var(--bg-highlight)'}
-                        onMouseLeave={e => e.currentTarget.style.background='var(--bg-card)'}
-                      >
-                        <div style={{ width:28, height:28, borderRadius:'50%', background:'var(--primary)', color:'white', display:'flex', alignItems:'center', justifyContent:'center', fontSize:12, fontWeight:800, flexShrink:0 }}>
-                          {c.nombre.charAt(0).toUpperCase()}
-                        </div>
-                        <span style={{ fontWeight:600 }}>{c.nombre}</span>
-                      </div>
-                    ))
-                  )}
-                </div>
+            <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
+              <ClienteSelector
+                clientes={clientes}
+                cargando={cliCargando}
+                texto={cliente}
+                seleccionado={cliSeleccionado}
+                onTexto={setCliente}
+                onElegir={seleccionarCliente}
+                onLimpiar={limpiarCliente}
+                onCrear={(inicial) => setAltaCliente({ inicial, luego: seleccionarCliente })}
+                onCargarCelular={() => setAltaCliente({ cliente: cliSeleccionado, luego: seleccionarCliente })}
+                inputStyle={si()}
+              />
+              {!cliSeleccionado && (
+                <span style={{ fontSize:11, color:'var(--text-muted)' }}>Para guardar, elegí o creá el cliente. Para un PDF suelto alcanza con escribir el nombre.</span>
               )}
             </div>
           </F>
@@ -963,6 +925,7 @@ export default function Presupuesto() {
                 const fecha = new Date(p.created_at).toLocaleDateString('es-AR', { day:'2-digit', month:'2-digit', year:'numeric' })
                 const hora  = new Date(p.created_at).toLocaleTimeString('es-AR', { hour:'2-digit', minute:'2-digit' })
                 const listaObj = listas.find(l => l.id === p.lista_id)
+                const pedido = pedidoDe[p.id]
                 return (
                   <div key={p.id} style={{ padding:'11px 13px', border:'1px solid var(--border)', borderRadius:8, background:'var(--surface)', display:'flex', gap:10, alignItems:'flex-start' }}>
                     <div style={{ flex:1, minWidth:0 }}>
@@ -985,13 +948,23 @@ export default function Presupuesto() {
                       <div style={{ fontSize:11, color:'var(--text-muted)', marginTop:4 }}>
                         {fecha} · {hora}
                       </div>
+                      {pedido && (
+                        <button
+                          onClick={() => { setShowHistorial(false); navigate(`/pedidos?abrir=${pedido.id}`) }}
+                          style={{ marginTop:6, background:'rgba(14,116,144,0.1)', border:'none', color:'#0e7490', borderRadius:6, padding:'4px 8px', cursor:'pointer', fontSize:11, fontWeight:700, textAlign:'left' }}>
+                          Pedido {pedido.codigo} · {ESTADOS[pedido.estado]?.label ?? pedido.estado} ›
+                        </button>
+                      )}
                     </div>
                     <div style={{ display:'flex', flexDirection:'column', gap:5, flexShrink:0 }}>
-                      <button
-                        onClick={() => pasarAPedido(p)}
-                        style={{ background:'#0e7490', border:'none', color:'white', borderRadius:6, padding:'6px 12px', cursor:'pointer', fontSize:12, fontWeight:700 }}>
-                        📋 Pasar a pedido
-                      </button>
+                      {!pedido && (
+                        <button
+                          onClick={() => pasarAPedido(p)}
+                          disabled={pasando}
+                          style={{ background:'#0e7490', border:'none', color:'white', borderRadius:6, padding:'6px 12px', cursor:'pointer', fontSize:12, fontWeight:700 }}>
+                          📋 Pasar a pedido
+                        </button>
+                      )}
                       <button
                         onClick={() => convertirEnVenta(p)}
                         style={{ background:'#16a34a', border:'none', color:'white', borderRadius:6, padding:'6px 12px', cursor:'pointer', fontSize:12, fontWeight:700, display:'flex', alignItems:'center', gap:5 }}>
@@ -1020,6 +993,51 @@ export default function Presupuesto() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* ── Presupuesto viejo sin ficha: de qué cliente es ──────────────── */}
+      {elegirPara && (
+        <div className="modal-overlay">
+          <div className="modal" style={{ maxWidth:440 }}>
+            <div className="modal-header">
+              <h3 style={{ margin:0 }}>¿De qué cliente es este presupuesto?</h3>
+              <button className="btn btn-ghost btn-sm" onClick={() => setElegirPara(null)} title="Cerrar">✕</button>
+            </div>
+            <div className="modal-body" style={{ display:'flex', flexDirection:'column', gap:8 }}>
+              <span style={{ fontSize:13, color:'var(--text-muted)' }}>
+                Se guardó a nombre de "{elegirPara.cliente || 'sin nombre'}". Para pasarlo a pedido tiene que estar vinculado a un cliente.
+              </span>
+              <ClienteSelector
+                clientes={clientes}
+                cargando={cliCargando}
+                texto={elegirTexto}
+                onTexto={setElegirTexto}
+                onElegir={(c) => { const p = elegirPara; setElegirPara(null); pasarAPedido(p, c) }}
+                onCrear={(inicial) => {
+                  const p = elegirPara
+                  setElegirPara(null)
+                  setAltaCliente({ inicial, luego: (c) => pasarAPedido(p, c) })
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {altaCliente && (
+        <ClienteRapido
+          cliente={altaCliente.cliente}
+          inicial={altaCliente.inicial}
+          onCancelar={() => setAltaCliente(null)}
+          onListo={(c, yaExistia) => {
+            // Si ya existía solo vuelven id, nombre y teléfono: se completa con lo que ya está cargado.
+            const completo = yaExistia ? (clientes.find((x) => x.id === c.id) || c) : c
+            recordarCliente(completo)
+            const luego = altaCliente.luego
+            setAltaCliente(null)
+            luego(completo)
+          }}
+        />
       )}
     </div>
   )

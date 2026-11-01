@@ -5,7 +5,7 @@ import { precioVenta } from './pricing'
 // ═══════════════════════════════════════════════════════════
 // BASE HELPERS
 // ═══════════════════════════════════════════════════════════
-async function fetchImageAsDataURL(url) {
+export async function fetchImageAsDataURL(url) {
   if (!url) return null
   try {
     const res = await fetch(url)
@@ -20,7 +20,7 @@ async function fetchImageAsDataURL(url) {
 
 // Resize an image dataURL to maxW×maxH (contain) and re-encode as JPEG at given quality.
 // This is the key fix for large PDF sizes: full-resolution PNGs/JPEGs become small JPEGs.
-async function resizeImageToDataURL(dataUrl, maxW = 400, maxH = 300, quality = 0.80) {
+export async function resizeImageToDataURL(dataUrl, maxW = 400, maxH = 300, quality = 0.80) {
   return new Promise((resolve) => {
     try {
       const img = new window.Image()
@@ -305,270 +305,31 @@ async function drawPdfFooter(doc, b, C, margin, pageW, pageH, _logoData = null, 
 }
 
 // ═══════════════════════════════════════════════════════════
-// PRESUPUESTO PDF
+// RENGLONES DEL PRESUPUESTO
 // ═══════════════════════════════════════════════════════════
-export async function exportPresupuestoPDF({ presupuesto, items, cliente, branding, lista, validez, comoBlob = false }) {
-  const doc    = new jsPDF({ unit: 'pt', format: 'a4' })
-  const pageW  = doc.internal.pageSize.getWidth()
-  const pageH  = doc.internal.pageSize.getHeight()
-  const margin = 40
-  const contentW = pageW - margin * 2
-
-  const b = branding || {}
-
-  const C = {
-    primary: [30,  41,  59],   // dark navy — neutral, works with any brand colour
-    stripe:  [148, 163, 184],  // light slate — subtle row-left accent stripes
-    dark:    [15,  23,  42],
-    muted:   [100, 116, 139],
-    border:  [226, 232, 240],
-    surface: [248, 250, 252],
-    white:   [255, 255, 255],
-    green:   [21,  128,  61],  // darker, more professional green for prices
-    navy:    [30,   41,  59],
-  }
-
-  // Fetch logo, thumbnails and icons — all in parallel, shared between header + footer
-  const [logoData, iconCache] = await Promise.all([
-    fetchImageAsDataURL(b.logo_url),
-    preloadIcons(b),
-  ])
-  const thumbMap = {}
-  await Promise.all(
-    items.map(async (it) => {
-      if (it.imagen_url && !thumbMap[it.imagen_url]) {
-        const d = await fetchImageAsDataURL(it.imagen_url)
-        if (d) thumbMap[it.imagen_url] = d
-      }
-    })
-  )
-
-  let y = 0
-
-  // ─── TOP ACCENT BARS ───────────────────────────────────────
-  doc.setFillColor(...C.primary)
-  doc.rect(0, 0, pageW, 6, 'F')
-  doc.setFillColor(15, 23, 42)
-  doc.rect(0, 6, pageW, 2, 'F')
-  y = 22
-
-  // ─── HEADER ────────────────────────────────────────────────
-  // Left: LOGO (larger when present — it IS the brand name)
-  const LOGO_SIZE = 80
-  let contentStartX = margin
-
-  if (logoData) {
-    const dims = await getImgSize(logoData)
-    const box  = containBox(dims?.w, dims?.h, LOGO_SIZE, LOGO_SIZE)
-    try { doc.addImage(logoData, getImgFormat(logoData), margin + box.dx, y + box.dy, box.w, box.h) } catch {}
-    contentStartX = margin + LOGO_SIZE + 14
-  }
-
-  // Company name ONLY when no logo (logo already contains the brand name)
-  let hy = y + 14
-  if (!logoData && b.nombre) {
-    doc.setFont('helvetica', 'bold')
-    doc.setFontSize(20)
-    doc.setTextColor(...C.dark)
-    doc.text(b.nombre, contentStartX, hy)
-    hy += 16
-  }
-
-  if (b.slogan) {
-    doc.setFont('helvetica', 'italic')
-    doc.setFontSize(9.5)
-    doc.setTextColor(...C.muted)
-    doc.text(b.slogan, contentStartX, hy)
-    hy += 13
-  }
-
-  // Right column: contact details — same icons as footer (from shared iconCache)
-  const HICON = 11   // header icon size (pt)
-  const rightItems = [
-    b.telefono  && { txt: b.telefono,  bold: true,  type: 'wa'  },
-    b.email     && { txt: b.email,     bold: false, type: 'em'  },
-    b.direccion && { txt: b.direccion, bold: false, type: 'loc' },
-    (b.web_minorista || b.web_mayorista) && { txt: b.web_minorista || b.web_mayorista, bold: false, type: 'web' },
-  ].filter(Boolean)
-
-  if (rightItems.length) {
-    let ry = y + 12
-    rightItems.forEach(({ txt, bold, type }) => {
-      doc.setFont('helvetica', bold ? 'bold' : 'normal')
-      doc.setFontSize(9)
-      const tw    = doc.getTextWidth(txt)
-      const iconX = pageW - margin - tw - 4 - HICON
-      const iconY = ry - HICON * 0.78   // alinea el centro visual del ícono con el texto
-      headerContactIcon(doc, type, iconX, iconY, HICON, iconCache)
-      doc.setTextColor(...C.muted)
-      doc.text(txt, pageW - margin, ry, { align: 'right' })
-      ry += 14
-    })
-  }
-
-  y += LOGO_SIZE + 8
-
-  // Separator
-  doc.setDrawColor(...C.border)
-  doc.setLineWidth(0.5)
-  doc.line(margin, y, pageW - margin, y)
-  y += 30   // más aire entre la línea y el título
-
-  // ─── TITLE + DATE ──────────────────────────────────────────
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(22)
-  doc.setTextColor(...C.primary)
-  doc.text('PRESUPUESTO', margin, y)
-
-  doc.setFont('helvetica', 'normal')
-  doc.setFontSize(8.5)
-  doc.setTextColor(...C.muted)
-  const fecha = new Date().toLocaleDateString('es-AR')
-  doc.text(`Fecha: ${fecha}`, pageW - margin, y - 6, { align: 'right' })
-  if (presupuesto?.numero) {
-    doc.text(`N°: ${String(presupuesto.numero).padStart(5, '0')}`, pageW - margin, y + 8, { align: 'right' })
-  }
-
-  y += 26
-
-  // ─── VALIDITY BANNER ──────────────────────────────────────
-  const validezText = validez ? `Válido por ${validez} desde la fecha de emisión.` : ''
-  if (validezText) {
-    // Info band — neutral light gray
-    doc.setFillColor(...C.surface)
-    doc.setDrawColor(...C.border)
-    doc.setLineWidth(0.5)
-    doc.roundedRect(margin, y, contentW, 22, 2, 2, 'FD')
-    // Left accent
-    doc.setFillColor(...C.primary)
-    doc.roundedRect(margin, y, 4, 22, 1, 1, 'F')
-    doc.setFont('helvetica', 'bold')
-    doc.setFontSize(8.5)
-    doc.setTextColor(...C.primary)
-    doc.text(validezText, margin + 14, y + 14)
-    y += 30
-  }
-
-  // ─── CLIENTE BAR ───────────────────────────────────────────
-  doc.setFillColor(...C.surface)
-  doc.setDrawColor(...C.border)
-  doc.setLineWidth(0.5)
-  doc.roundedRect(margin, y, contentW, 26, 3, 3, 'FD')
-  doc.setFillColor(...C.primary)
-  doc.roundedRect(margin, y, 4, 26, 2, 2, 'F')
-
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(7.5)
-  doc.setTextColor(...C.muted)
-  doc.text('CLIENTE', margin + 14, y + 17)
-  doc.setFont('helvetica', 'normal')
-  doc.setFontSize(10.5)
-  doc.setTextColor(...C.dark)
-  doc.text(cliente || 'Consumidor final', margin + 62, y + 17)
-  y += 36
-
-  // ─── TABLE ─────────────────────────────────────────────────
-  const THUMB_W = 40
-  const SKU_W   = 68
-  // col.cant  = centro del encabezado/valor (align: 'center')
-  // col.unit  = borde derecho de P.Unit.   (align: 'right')
-  // col.sub   = borde derecho de Subtotal  (align: 'right') — con margen interno de 10pt
-  const col = {
-    thumb:  margin,
-    sku:    margin + THUMB_W + 4,
-    nombre: margin + THUMB_W + SKU_W + 8,
-    cant:   pageW - margin - 182,   // centro de la columna Cant.
-    unit:   pageW - margin - 82,    // borde derecho de P. Unit.
-    sub:    pageW - margin - 10,    // borde derecho de Subtotal (10 pt de margen)
-  }
-  const nombreMaxW = col.cant - 30 - col.nombre   // espacio libre para el texto del producto
-
-  doc.setFillColor(...C.navy)
-  doc.roundedRect(margin, y, contentW, 24, 3, 3, 'F')
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(8.5)
-  doc.setTextColor(...C.white)
-  doc.text('SKU',      col.sku,    y + 15)
-  doc.text('Producto', col.nombre, y + 15)
-  doc.text('Cant.',    col.cant,   y + 15, { align: 'center' })
-  doc.text('P. Unit.', col.unit,   y + 15, { align: 'right'  })
-  doc.text('Subtotal', col.sub,    y + 15, { align: 'right'  })
-  y += 28
-
-  let total  = 0
-  let altRow = false
-
-  for (const it of items) {
-    const lines = doc.splitTextToSize(it.nombre, nombreMaxW)
-    const rowH  = Math.max(44, lines.length * 13 + 16)
-
-    if (y + rowH > pageH - 54) { doc.addPage(); y = margin }
-
-    if (altRow) { doc.setFillColor(243, 244, 246); doc.rect(margin, y, contentW, rowH, 'F') }
-    altRow = !altRow
-
-    doc.setFillColor(...C.stripe)
-    doc.rect(margin, y, 3, rowH, 'F')
-
-    const imgData = it.imagen_url ? thumbMap[it.imagen_url] : null
-    if (imgData) {
-      const dims = await getImgSize(imgData)
-      const box  = containBox(dims?.w, dims?.h, THUMB_W - 4, rowH - 8)
-      try { doc.addImage(imgData, getImgFormat(imgData), col.thumb + 4 + box.dx, y + 4 + box.dy, box.w, box.h) } catch {}
+// Renglones de un presupuesto guardado, como los espera el PDF.
+export function itemsPDFDe(p) {
+  const itemsPDF = []
+  for (const it of p.items || []) {
+    if (it.tipo === 'medida' && (it.subtotal > 0 || it.costo_unitario > 0)) {
+      itemsPDF.push({
+        sku: '—',
+        nombre: it.nombre || 'Trabajo a medida',
+        cantidad: it.cantidad ?? 1,
+        precio: it.costo_unitario ?? 0,
+        imagen_url: null,
+      })
+    } else if (it.tipo === 'producto' || it.tipo === 'libre') {
+      itemsPDF.push({
+        sku: it.sku || '—',
+        nombre: it.nombre ?? '',
+        cantidad: it.cantidad ?? 1,
+        precio: it.precio ?? 0,
+        imagen_url: it.imagen_url || null,
+      })
     }
-
-    const textY = y + rowH / 2 - (lines.length - 1) * 6.5 + 3
-
-    doc.setFont('helvetica', 'normal')
-    doc.setFontSize(7.5)
-    doc.setTextColor(...C.muted)
-    doc.text(it.sku || '—', col.sku, textY)
-
-    doc.setFontSize(9.5)
-    doc.setTextColor(...C.dark)
-    doc.text(lines, col.nombre, textY)
-
-    doc.setFontSize(9.5)
-    doc.text(String(it.cantidad),              col.cant, textY, { align: 'center' })
-    doc.text(fmtMoney(it.precio),              col.unit, textY, { align: 'right'  })
-
-    doc.setFont('helvetica', 'bold')
-    doc.setTextColor(...C.dark)
-    doc.text(fmtMoney(it.precio * it.cantidad), col.sub, textY, { align: 'right'  })
-    total += it.precio * it.cantidad
-
-    y += rowH
-    doc.setDrawColor(...C.border)
-    doc.setLineWidth(0.3)
-    doc.line(margin, y, pageW - margin, y)
   }
-
-  // ─── TOTAL BOX ─────────────────────────────────────────────
-  y += 14
-  const totalBoxW = 210
-  const totalBoxX = pageW - margin - totalBoxW
-
-  doc.setFillColor(215, 219, 227)
-  doc.roundedRect(totalBoxX + 2, y + 2, totalBoxW, 36, 5, 5, 'F')
-  doc.setFillColor(...C.surface)
-  doc.setDrawColor(...C.primary)
-  doc.setLineWidth(1.2)
-  doc.roundedRect(totalBoxX, y, totalBoxW, 36, 5, 5, 'FD')
-
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(9.5)
-  doc.setTextColor(...C.muted)
-  doc.text('TOTAL DEL PRESUPUESTO', totalBoxX + 14, y + 14)
-  doc.setFontSize(16)
-  doc.setTextColor(...C.dark)
-  doc.text(fmtMoney(total), pageW - margin - 12, y + 28, { align: 'right' })
-
-  // ─── FOOTER ────────────────────────────────────────────────
-  await drawPdfFooter(doc, b, C, margin, pageW, pageH, logoData, iconCache)
-
-  if (comoBlob) return doc.output('blob')
-  const fileName = `presupuesto-${(cliente || 'sin-cliente').replace(/\s+/g, '-')}-${fecha.replace(/\//g, '-')}.pdf`
-  doc.save(fileName)
+  return itemsPDF
 }
 
 // ═══════════════════════════════════════════════════════════

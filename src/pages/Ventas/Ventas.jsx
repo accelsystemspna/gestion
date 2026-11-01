@@ -5,6 +5,8 @@ import { useAuth } from '../../lib/AuthContext'
 import { fmtMoney } from '../../lib/format'
 import { calcInsumo, precioVenta } from '../../lib/pricing'
 import { ajustarStock, aplicarStockPropio } from '../../lib/stock'
+import { facturaEnPanel, sincronizarTicketCliente } from '../../lib/documentosCliente'
+import { receptorDeCliente, cuitValido, DOC_CONSUMIDOR } from '../../lib/cuit'
 import { precioConPromoProducto, promoDeProducto, etiquetaOferta } from '../../lib/promos'
 
 function snapSegs(segs) {
@@ -98,6 +100,8 @@ export default function Ventas() {
   const [cliResults,  setCliResults]  = useState([])
   const [listaSel,    setListaSel]    = useState('')
   const [comprobante, setComprobante] = useState('ticket')
+  // Cliente con CUIT al que esta venta se le factura igual como consumidor final. Al cambiar de cliente deja de valer.
+  const [consumidorFinalDe, setConsumidorFinalDe] = useState(null)
 
   // ── Panel de productos ───────────────────────────────────────────────────
   const [catFiltro,  setCatFiltro]  = useState('')
@@ -627,6 +631,7 @@ export default function Ventas() {
 
     // Factura C → emitir a ARCA automáticamente
     let arcaResult = null
+    const receptor = receptorDeCliente(cliente && consumidorFinalDe === cliente.id ? null : cliente)
     let arcaFallo   = null
     if (comprobante === 'factura_c' && arcaConfig) {
       try {
@@ -635,8 +640,8 @@ export default function Ventas() {
             accion:   'emitir',
             venta_id: ventaData.id,
             concepto: arcaConfig?.concepto ?? 1,
-            doc_tipo: 99,
-            doc_nro:  '0',
+            doc_tipo: receptor.docTipo,
+            doc_nro:  receptor.docTipo === DOC_CONSUMIDOR ? '0' : receptor.docNro,
             importe:  total,
           }
         })
@@ -658,6 +663,22 @@ export default function Ventas() {
         console.warn('[ARCA] Error al emitir automáticamente:', arcaFallo)
         alert('La venta se guardó, pero la Factura C no se pudo emitir a ARCA:\n' + arcaFallo + '\n\nPodés reintentar desde el detalle de la venta (Historial → abrir la venta → Emitir Factura C).')
       }
+    }
+
+    // Lo que el cliente ve en su panel: la factura si se emitió o, si no, el ticket.
+    if (arcaResult) {
+      const { data: lineas } = await supabase.from('venta_items').select('*').eq('venta_id', ventaData.id).order('id')
+      const datosFactura = {
+        factura_fecha:    new Date().toLocaleDateString('en-CA'),
+        factura_doc_tipo: receptor.docTipo,
+        factura_doc_nro:  receptor.docNro || null,
+        factura_cond_iva: receptor.condIva,
+      }
+      supabase.from('ventas').update(datosFactura).eq('id', ventaData.id)
+        .then(({ error: e }) => { if (e) console.warn('[factura] no se guardaron los datos del receptor', e.message) })
+      facturaEnPanel({ venta: { ...ventaData, ...datosFactura, cae: arcaResult.cae, cae_vto: arcaResult.caeVto, nro_factura: arcaResult.nroFactura }, items: lineas ?? [], arcaConfig, orgId })
+    } else {
+      sincronizarTicketCliente(ventaData.id)
     }
 
     try { localStorage.removeItem(draftKey) } catch { /* noop */ }
@@ -704,6 +725,7 @@ export default function Ventas() {
     setCliSearch('')
     setCliEditMode(false)
     setComprobante('ticket')
+    setConsumidorFinalDe(null)
     setListaSel('')
     setFecha(todayStr())   // siempre resetear al día actual
     setShowSuccess(false)
@@ -854,6 +876,13 @@ export default function Ventas() {
             {COMPROBANTES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
           </select>
         </div>
+        {comprobante === 'factura_c' && cuitValido(cliente?.cuit) && (
+          <label title="Sin tildar, la factura sale a nombre del cliente" style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap', cursor: 'pointer', flexShrink: 0 }}>
+            <input type="checkbox" checked={consumidorFinalDe === cliente.id}
+              onChange={e => setConsumidorFinalDe(e.target.checked ? cliente.id : null)} />
+            Consumidor final
+          </label>
+        )}
 
         {/* Ventas del día */}
         <button onClick={() => setShowHistorial(true)}

@@ -130,6 +130,14 @@ export default function Arca() {
         </div>
         <Input label="Razón social / Nombre" value={form.razon_social}
           onChange={v => set('razon_social', v)} placeholder="CC Diseños" />
+        <Input label="Domicilio comercial (como figura en ARCA)" value={form.domicilio ?? ''}
+          onChange={v => set('domicilio', v)} />
+        <div className="form-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+          <Input label="Ingresos Brutos" value={form.iibb ?? ''}
+            onChange={v => set('iibb', v)} />
+          <Input label="Inicio de actividades" type="date" value={form.inicio_actividades ?? ''}
+            onChange={v => set('inicio_actividades', v)} />
+        </div>
 
         {/* Concepto */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>

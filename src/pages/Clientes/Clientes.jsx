@@ -4,6 +4,7 @@ import { precioVenta } from '../../lib/pricing'
 import ClienteForm from './ClienteForm'
 import AccesoCliente from '../../components/AccesoCliente'
 import { cargarEstadosAcceso } from '../../lib/accesoCliente'
+import { sincronizarTicketCliente } from '../../lib/documentosCliente'
 import ImportarModal from './ImportarModal'
 import VentaDetalle from '../Ventas/VentaDetalle'
 
@@ -177,6 +178,7 @@ function DetallePanel({ cliente, estadoAcceso, onAccesoEnviado, onClose, onEdit,
 
         if (Math.abs(nuevoTotal - (venta.total ?? 0)) > 0.001) {
           await supabase.from('ventas').update({ total: nuevoTotal }).eq('id', venta.id)
+          sincronizarTicketCliente(venta.id)
           ventasActualizadas++
         }
       }
