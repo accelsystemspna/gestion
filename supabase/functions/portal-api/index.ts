@@ -265,8 +265,13 @@ serve(async (req) => {
     }
 
     if (accion === 'order-label') {
-      const r = await llamarPortal(tienda, 'order-label', { order_id: orderId })
+      // Cantidad de bultos: el portal la guarda para que al reimprimir salga la misma
+      const bultos = Number(body.bultos)
+      const conBultos = Number.isInteger(bultos) && bultos >= 1 && bultos <= 99
+      const r = await llamarPortal(tienda, 'order-label', { order_id: orderId, ...(conBultos ? { bultos } : {}) })
       if (!r.ok) return falla(r)
+      // Se guarda también en la venta para mostrarla sin esperar el próximo aviso del portal
+      if (conBultos) await admin.from('ventas').update({ etiqueta_bultos: bultos }).eq('id', venta.id).then(() => {}, () => {})
       return json({ ok: true, label: r.data.label ?? null })
     }
 

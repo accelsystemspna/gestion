@@ -27,6 +27,10 @@ const FORMA_LABEL = {
 
 const COLUMNAS_BASE = 'id, numero, canal, fecha, hora, created_at, cliente_id, cliente_nombre, cliente_email, cliente_telefono, cliente_direccion, total, forma_pago, estado, estado_web, origen_estado, origen_pago, origen_ref, tienda_id, factura_emitida, notas'
 // Datos del pedido del portal mayorista (supabase_mayorista_pedidos.sql)
+const CLAVE_PAPEL = 'mayorista_etiqueta_papel'
+
+// Bultos de la etiqueta (supabase_etiqueta_bultos.sql): si falta la columna se carga sin ella
+const COL_BULTOS = ', etiqueta_bultos'
 const COLUMNAS = COLUMNAS_BASE + ', origen_numero, origen_logistica, origen_tracking, origen_tracking_url, origen_estado_portal, cliente_dni, cliente_empresa, cliente_direccion_envio, contacto_preferido'
 
 // Número con el que se reconoce el pedido: el del portal (2026-0014) o el de WooCommerce (#123)
@@ -145,6 +149,11 @@ export default function Tiendas() {
   const [trackingTxt, setTrackingTxt] = useState('')
   const [notificarCli, setNotificarCli] = useState(true)
   const [portalOcupado, setPortalOcupado] = useState(null)  // acción en curso sobre un pedido del portal
+  const [bultos, setBultos] = useState(null)               // { ventaId, n, cargando } mientras se elige cuántas etiquetas
+  const [bultosDe, setBultosDe] = useState({})             // venta_id → bultos que guardó el portal
+  // Papel de la etiqueta. Misma clave que el panel del portal, así las dos pantallas recuerdan lo mismo.
+  const [papel, setPapel] = useState(() => { try { return localStorage.getItem(CLAVE_PAPEL) === 'termica' ? 'termica' : 'a4' } catch { return 'a4' } })
+  const elegirPapel = (p) => { setPapel(p); try { localStorage.setItem(CLAVE_PAPEL, p) } catch { /* sin almacenamiento: vale para esta vez */ } }
   const [edicionTrack, setEdicionTrack]   = useState({ id: null, texto: '', avisar: false })  // seguimiento en edición
   const [pendientesPortal, setPendientesPortal] = useState(0) // clientes del portal esperando aprobación
 
@@ -154,7 +163,7 @@ export default function Tiendas() {
       .order('created_at', { ascending: false }).limit(1000)
     const [t, v0] = await Promise.all([
       supabase.from('tiendas').select('*').eq('user_id', orgId).order('created_at'),
-      pedirVentas(COLUMNAS),
+      pedirVentas(COLUMNAS + COL_BULTOS).then((r) => (r.error ? pedirVentas(COLUMNAS) : r)),
     ])
     setTiendas(t.data || [])
     // Si todavía falta el SQL del portal mayorista, se cargan los pedidos sin esos datos.
@@ -343,7 +352,21 @@ export default function Tiendas() {
   const actualizarDesdePortal = (venta) =>
     accionPortal(venta, 'sync', 'order', {}, 'Pedido actualizado con los datos del portal.')
 
-  const imprimirEtiquetaPedido = async (venta) => {
+  // Antes de imprimir se elige cuántos bultos van: arranca con lo que guardó el portal, o 1.
+  const elegirBultos = async (venta) => {
+    setBultos({ ventaId: venta.id, n: bultosDe[venta.id] || venta.etiqueta_bultos || 1, cargando: true })
+    setMsg(null)
+    let r
+    try { r = await portalApi('order-label', { venta_id: venta.id }) } catch (err) { r = { ok: false, error: err.message } }
+    const guardado = Number(r?.label?.bultos) || 0
+    if (guardado) setBultosDe((m) => ({ ...m, [venta.id]: guardado }))
+    setBultos((b) => (b?.ventaId === venta.id ? { ...b, n: guardado || b.n, cargando: false } : b))
+  }
+
+  const cantBultos = (v) => bultosDe[v.id] || v.etiqueta_bultos || 0
+
+  const imprimirEtiquetaPedido = async (venta, cantidad) => {
+    setBultos(null)
     // La ventana se abre en el clic (si no, el navegador la bloquea) y se completa cuando llegan los datos.
     // Si el portal falla la ventana NO se cierra: muestra el motivo (y el cartel de la pantalla también).
     const win = window.open('', '_blank')
@@ -353,7 +376,7 @@ export default function Tiendas() {
     setMsg(null)
     let r
     try {
-      r = await portalApi('order-label', { venta_id: venta.id })
+      r = await portalApi('order-label', { venta_id: venta.id, ...(cantidad ? { bultos: cantidad } : {}) })
     } catch (err) {
       r = { ok: false, error: err.message }
     }
@@ -364,7 +387,9 @@ export default function Tiendas() {
       setMsg({ tipo: 'error', texto: 'No se pudo preparar la etiqueta: ' + motivo })
       return
     }
-    imprimirEtiqueta(r.label, win)
+    if (cantidad) setBultosDe((m) => ({ ...m, [venta.id]: cantidad }))
+    imprimirEtiqueta(r.label, win, cantidad, papel)
+    if (papel === 'a4') setMsg({ tipo: 'ok', texto: 'Al imprimir en A4: papel A4, escala 100 % (sin "Ajustar a la página") y sin encabezados ni pies de página.' })
   }
 
   // ── Eliminar pedidos cancelados (uno o todos los de la vista) ─────────────
@@ -981,9 +1006,31 @@ export default function Tiendas() {
                 {botonesPedido(v)}
                 {esMay && (
                   <>
-                    <button className="btn btn-sm" disabled={!!portalOcupado} onClick={() => imprimirEtiquetaPedido(v)}>
-                      {portalOcupado === 'etiqueta' ? '…' : '🏷️ Imprimir etiqueta'}
-                    </button>
+                    {bultos?.ventaId === v.id ? (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 10px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--bg-muted)' }}>
+                        <span style={{ fontSize: 13, fontWeight: 600 }}>Cantidad de bultos</span>
+                        <button className="btn btn-sm" aria-label="Un bulto menos" disabled={bultos.cargando || bultos.n <= 0}
+                          onClick={() => setBultos((b) => ({ ...b, n: b.n - 1 }))}>−</button>
+                        <input className="input" type="number" min={0} max={99} aria-label="Cantidad de bultos" value={bultos.cargando ? '' : bultos.n}
+                          placeholder="…" disabled={bultos.cargando}
+                          onChange={(e) => setBultos((b) => ({ ...b, n: Math.min(99, Math.max(0, Math.trunc(Number(e.target.value) || 0))) }))}
+                          style={{ width: 56, textAlign: 'center', fontSize: 15, fontWeight: 700, padding: '4px 6px' }} />
+                        <button className="btn btn-sm" aria-label="Un bulto más" disabled={bultos.cargando || bultos.n >= 99}
+                          onClick={() => setBultos((b) => ({ ...b, n: b.n + 1 }))}>+</button>
+                        <button className="btn btn-sm btn-primary" disabled={bultos.cargando || !!portalOcupado} onClick={() => imprimirEtiquetaPedido(v, bultos.n)}>
+                          {bultos.n === 0 ? 'Imprimir sin numerar' : bultos.n === 1 ? 'Imprimir 1 etiqueta' : `Imprimir ${bultos.n} etiquetas`}
+                        </button>
+                        <select className="select" aria-label="Papel" value={papel} onChange={(e) => elegirPapel(e.target.value)} style={{ fontSize: 13, padding: '4px 6px' }}>
+                          <option value="a4">Hoja A4 (4 por hoja)</option>
+                          <option value="termica">Etiquetera 100 × 150 mm</option>
+                        </select>
+                        <button className="btn btn-sm btn-ghost" onClick={() => setBultos(null)}>Cancelar</button>
+                      </div>
+                    ) : (
+                      <button className="btn btn-sm" disabled={!!portalOcupado} onClick={() => elegirBultos(v)}>
+                        {portalOcupado === 'etiqueta' ? '…' : `🏷️ Imprimir etiqueta${cantBultos(v) ? ` · ${cantBultos(v)} ${cantBultos(v) === 1 ? 'bulto' : 'bultos'}` : ''}`}
+                      </button>
+                    )}
                     {e !== 'cancelado' && (
                       <button className="btn btn-sm" disabled={!!portalOcupado} onClick={() => avisarCliente(v)}>
                         {portalOcupado === 'aviso' ? '…' : '📣 Avisar al cliente'}

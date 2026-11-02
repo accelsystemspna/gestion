@@ -447,6 +447,7 @@ export default function Ventas() {
       telefono:  nuevoCliForm.telefono.trim()  || null,
       email:     nuevoCliForm.email.trim()     || null,
       direccion: nuevoCliForm.direccion.trim() || null,
+      org_id:    orgId,
     }
     const { data, error } = await supabase.from('clientes').insert(payload).select().single()
     if (error) { alert('Error al crear cliente: ' + error.message); setNuevoCliSaving(false); return }

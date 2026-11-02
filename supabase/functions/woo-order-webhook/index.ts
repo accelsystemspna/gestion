@@ -87,6 +87,15 @@ function camposPortalDe(order: any): Record<string, string> {
   return out
 }
 
+// Bultos de la etiqueta que guardó el portal ("0" = sin cargar). Va aparte del resto: si todavía no se corrió
+// el SQL, no se pierde nada de lo demás.
+async function guardarBultos(admin: any, ventaId: number, order: any) {
+  const valor = (order.meta_data ?? []).find((m: any) => m?.key === 'etiqueta_bultos')?.value
+  const n = Number(valor)
+  if (valor == null || !Number.isInteger(n) || n < 0 || n > 99) return
+  await admin.from('ventas').update({ etiqueta_bultos: n || null }).eq('id', ventaId).then(() => {}, () => {})
+}
+
 // Estado de fabricación de cada renglón (solo lo manda el portal mayorista): meta "produccion" con
 // {"0":"a_fabricar","1":"listo"} y, en cada line_item, meta "indice". WooCommerce minorista no trae nada
 // de esto → devuelve [] y no se toca nada.
@@ -282,6 +291,7 @@ serve(async (req) => {
       ;({ error: errUpd } = await admin.from('ventas').update(cambios).eq('id', existente.id))
     }
     if (errUpd) return json({ error: errUpd.message }, 500)
+    await guardarBultos(admin, existente.id, order)
 
     if (cancelar) {
       const { data: its } = await admin.from('venta_items').select('producto_id, cantidad').eq('venta_id', existente.id)
@@ -364,6 +374,7 @@ serve(async (req) => {
     ;({ data: venta, error: ventaErr } = await admin.from('ventas').insert(ventaPayload).select().single())
   }
   if (ventaErr) return json({ error: ventaErr.message }, 500)
+  await guardarBultos(admin, venta.id, order)
 
   // Ítems — intentar matchear por SKU contra el catálogo; si no hay match, se
   // guarda como ítem libre (igual que un ítem libre cargado a mano en el POS).
