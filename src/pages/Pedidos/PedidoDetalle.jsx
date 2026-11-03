@@ -7,6 +7,7 @@ import { cargarDatosDePrecio, precioActual, pinDeTelefono, subirImagenPedido, ur
 import { buscarClientesPorCelular, cargarEstadosAcceso } from '../../lib/accesoCliente'
 import AccesoCliente from '../../components/AccesoCliente'
 import EstadoBadge from './EstadoBadge'
+import CobroFacturas from '../../components/CobroFacturas'
 
 const FORMAS_PAGO = ['Efectivo', 'Transferencia', 'Mercado Pago', 'Tarjeta', 'Otro']
 const sec = { fontSize: 11, fontWeight: 700, letterSpacing: 0.5, textTransform: 'uppercase', color: 'var(--text-muted)', margin: '0 0 8px' }
@@ -328,6 +329,11 @@ export default function PedidoDetalle({ pedido, onCambio, onCerrar, onEliminado 
                   </div>
                 </div>
               )}
+            </div>
+
+            <div style={caja}>
+              <div style={sec}>Saldo y facturas</div>
+              <CobroFacturas key={`${p.id}-${p.sena_monto}-${p.total}`} pedidoId={p.id} referencia={p.codigo} editarSena={false} onCambio={onCambio} />
             </div>
           </div>
 

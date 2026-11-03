@@ -12,6 +12,7 @@ import { crearPedidoDesdePresupuesto, ESTADOS } from '../../lib/pedidos'
 import { presupuestoEnPanel, quitarPresupuestoDelPanel } from '../../lib/documentosCliente'
 import { celularValido } from '../../lib/accesoCliente'
 import ClienteSelector from '../../components/ClienteSelector'
+import { materialesOcultos, paraElegir } from '../../lib/materiales'
 import ClienteRapido from '../../components/ClienteRapido'
 
 const blankPieza = { material_id: '', ancho: '', alto: '', cantidad: 1, gramos: '', metros: '', incremento: '' }
@@ -66,6 +67,7 @@ export default function Presupuesto() {
   const [listas, setListas] = useState([])
   const [productos, setProductos] = useState([])
   const [materiales, setMateriales] = useState([])
+  const [ocultos, setOcultos] = useState(new Set())
   const [tarifas, setTarifas] = useState([])
   const [clientes, setClientes] = useState([])
   const [cliCargando, setCliCargando] = useState(true)
@@ -123,6 +125,7 @@ export default function Presupuesto() {
       setListas(li.data || [])
       setProductos(pr.data || [])
       setMateriales(ma.data || [])
+      materialesOcultos().then(setOcultos)
       setTarifas(ta.data || [])
       setBranding(br.data || {})
     })
@@ -588,7 +591,7 @@ export default function Presupuesto() {
                           <F label="Insumo" col={2}>
                             <select className="select" style={si()} value={p.material_id} onChange={e=>setPieza(i,'material_id',e.target.value)}>
                               <option value="">— Seleccionar insumo —</option>
-                              {materiales.map(m => <option key={m.id} value={m.id}>{m.nombre}</option>)}
+                              {paraElegir(materiales, ocultos, p.material_id).map(m => <option key={m.id} value={m.id}>{m.nombre}</option>)}
                             </select>
                           </F>
                           {!p.material_id ? (

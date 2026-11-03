@@ -246,21 +246,27 @@ serve(async (req) => {
     const wsfeUrl = homo ? URLS.wsfe.homo : URLS.wsfe.prod
 
     // ── Obtener token (cache) ────────────────────────────────────────────────
+    // Uno por modo: ARCA no da un acceso nuevo mientras el anterior sigue vigente, así que pasar a
+    // homologación para probar no puede pisar el de producción.
     let token: string, sign: string
+    const sufijo = homo ? '_homo' : ''
+    // En homologación se usa su propio certificado, si está cargado
+    const certPem = homo ? (cfg.cert_pem_homo || cfg.cert_pem) : cfg.cert_pem
+    const keyPem  = homo ? (cfg.key_pem_homo || cfg.key_pem) : cfg.key_pem
 
     const { data: cached } = await supabaseClient
       .from('arca_token').select('*').eq('user_id', orgId).maybeSingle()
 
     const ahora = new Date()
-    if (cached?.token && cached?.expiracion && new Date(cached.expiracion) > ahora) {
-      token = cached.token
-      sign  = cached.sign
+    if (cached?.['token' + sufijo] && cached?.['expiracion' + sufijo] && new Date(cached['expiracion' + sufijo]) > ahora) {
+      token = cached['token' + sufijo]
+      sign  = cached['sign' + sufijo]
     } else {
-      const ta = await getToken(cfg.cert_pem, cfg.key_pem, homo)
+      const ta = await getToken(certPem, keyPem, homo)
       token = ta.token
       sign  = ta.sign
       await supabaseClient.from('arca_token').upsert({
-        user_id: orgId, token, sign, expiracion: ta.expiracion, updated_at: new Date().toISOString(),
+        user_id: orgId, ['token' + sufijo]: token, ['sign' + sufijo]: sign, ['expiracion' + sufijo]: ta.expiracion, updated_at: new Date().toISOString(),
       }, { onConflict: 'user_id' })
     }
 
@@ -272,6 +278,59 @@ serve(async (req) => {
       return new Response(JSON.stringify({ ok: true, modo: cfg.modo }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
+    }
+
+    // ── Factura de una parte: seña o saldo (también sirve por el total) ────────
+    // El importe se reserva en la base antes de pedir el CAE, así nunca se factura más que el total.
+    if (body.accion === 'emitir_parcial') {
+      const responder = (data: unknown, status = 200) => new Response(JSON.stringify(data), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status,
+      })
+      const ventaId  = body.venta_id ? Number(body.venta_id) : null
+      const pedidoId = typeof body.pedido_id === 'string' ? body.pedido_id : null
+      const concepto = String(body.concepto ?? '')
+      const monto    = Math.round(Number(body.importe) * 100) / 100
+      const detalle  = String(body.detalle ?? '').trim().slice(0, 200)
+      const docTipo  = Number(body.doc_tipo ?? 99)
+      const docNro   = docTipo === 99 ? '0' : String(body.doc_nro ?? '').replace(/\D/g, '')
+      if (!['sena', 'saldo', 'total'].includes(concepto)) return responder({ ok: false, error: 'Concepto inválido.' }, 400)
+      if (!Number.isFinite(monto) || monto <= 0) return responder({ ok: false, error: 'El importe tiene que ser mayor a cero.' }, 400)
+      if (!detalle) return responder({ ok: false, error: 'Falta el detalle de la factura.' }, 400)
+      if (!/^[0-9a-f-]{36}$/i.test(String(body.solicitud_id ?? ''))) return responder({ ok: false, error: 'Solicitud inválida.' }, 400)
+      if (![80, 86, 99].includes(docTipo) || (docTipo !== 99 && docNro.length !== 11)) return responder({ ok: false, error: 'Documento del cliente inválido.' }, 400)
+
+      const { data: reserva, error: errReserva } = await supabaseClient.rpc('reservar_factura', {
+        p_org: orgId, p_venta: ventaId, p_pedido: pedidoId, p_concepto: concepto, p_importe: monto,
+        p_solicitud: body.solicitud_id, p_modo: homo ? 'homologacion' : 'produccion', p_detalle: detalle,
+        p_doc_tipo: docTipo, p_doc_nro: docTipo === 99 ? null : docNro, p_cond_iva: body.cond_iva ?? null,
+      })
+      if (errReserva) return responder({ ok: false, error: errReserva.message }, 400)
+      if (!reserva.nueva) {
+        const { data: previa } = await supabaseClient.from('facturas').select('*').eq('id', reserva.id).single()
+        if (previa?.estado === 'emitida') return responder({ ok: true, factura: previa })
+        return responder({ ok: false, error: previa?.estado === 'fallida' ? (previa.error || 'ARCA no la autorizó.') : 'Esa factura se está emitiendo. Esperá un momento y actualizá.' }, 409)
+      }
+
+      try {
+        const ptoVtaP = Number(cfg.punto_venta)
+        const nro = (await ultimoNro(wsfeUrl, token, sign, cfg.cuit.replace(/-/g, ''), ptoVtaP, 11)) + 1
+        const fechaArca = fechaHoyARCCYYMMDD()
+        const r = await emitirFactura({
+          url: wsfeUrl, token, sign, cuit: cfg.cuit.replace(/-/g, ''), ptoVta: ptoVtaP,
+          cbteTipo: 11, concepto: cfg.concepto ?? 1, docTipo, docNro,
+          importe: monto, fecha: fechaArca, nroFactura: nro,
+        })
+        const { data: factura, error: errGuardar } = await supabaseClient.from('facturas').update({
+          estado: 'emitida', cae: r.cae, cae_vto: r.caeVto, nro_factura: r.nroFactura, punto_venta: ptoVtaP,
+          fecha: `${fechaArca.slice(0, 4)}-${fechaArca.slice(4, 6)}-${fechaArca.slice(6, 8)}`,
+        }).eq('id', reserva.id).select('*').single()
+        // ARCA ya la autorizó: aunque no se pueda guardar, se devuelve el CAE para no perderlo.
+        if (errGuardar) console.error('[emitir-factura] CAE sin guardar', reserva.id, r, errGuardar)
+        return responder({ ok: true, factura: factura ?? { id: reserva.id, ...r } })
+      } catch (err) {
+        await supabaseClient.from('facturas').update({ estado: 'fallida', error: String(err?.message ?? err).slice(0, 500) }).eq('id', reserva.id)
+        return responder({ ok: false, error: err?.message ?? String(err) })
+      }
     }
 
     // Emitir factura
@@ -287,6 +346,21 @@ serve(async (req) => {
       return new Response(JSON.stringify({ ok: false, error: 'Faltan parámetros: venta_id, importe' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 400,
+      })
+    }
+
+    // La venta tiene que ser de este negocio, y sin facturas por partes (seña o saldo)
+    const { data: ventaPropia } = await supabaseClient.from('ventas').select('id').eq('id', venta_id).eq('org_id', orgId).maybeSingle()
+    if (!ventaPropia) {
+      return new Response(JSON.stringify({ ok: false, error: 'No se encontró la venta.' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 404,
+      })
+    }
+    const { data: partes, error: errPartes } = await supabaseClient.from('facturas').select('id')
+      .eq('venta_id', venta_id).eq('modo', homo ? 'homologacion' : 'produccion').in('estado', ['pendiente', 'emitida']).limit(1)
+    if (!errPartes && partes?.length) {
+      return new Response(JSON.stringify({ ok: false, error: 'Esta venta ya tiene facturas de seña o saldo: facturá lo que falta desde ahí.' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400,
       })
     }
 

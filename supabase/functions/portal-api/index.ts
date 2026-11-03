@@ -5,7 +5,7 @@
 //   Usuario (autenticado) → esta función → POST <portal>/wp-json/mayorista/v1/<ruta>
 //
 // Body: { accion, venta_id?, tienda_id?, ...datos }   (lista blanca de acciones abajo)
-//   Pedido (necesitan venta_id):  order, order-notify, order-tracking, order-item-status, order-label, order-delete
+//   Pedido (necesitan venta_id):  order, order-notify, order-tracking, order-item-status, order-label, order-delete, order-payment
 //   Clientes (usan tienda_id):    leads, lead-status, lead-delete
 //
 // Los cambios que gestión pide por estas rutas NO vuelven por webhook: acá mismo se refleja
@@ -25,7 +25,7 @@ function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } })
 }
 
-const ACCIONES_PEDIDO = new Set(['order', 'order-notify', 'order-tracking', 'order-item-status', 'order-label', 'order-delete'])
+const ACCIONES_PEDIDO = new Set(['order', 'order-notify', 'order-tracking', 'order-item-status', 'order-label', 'order-delete', 'order-payment'])
 const ACCIONES_LEADS  = new Set(['leads', 'lead-status', 'lead-delete'])
 const ESTADOS_LEAD    = new Set(['pendiente', 'aprobado', 'rechazado'])
 
@@ -47,7 +47,21 @@ function baseUrl(url: string): string {
   return base
 }
 
-type Respuesta = { ok: true; data: any } | { ok: false; status: number; error: string }
+/** Cobro que manda el portal (strings) → columnas de la venta. */
+function cobroDesdePortal(c: any): Record<string, unknown> {
+  const fecha = (f: unknown) => (/^\d{4}-\d{2}-\d{2}/.test(String(f ?? '')) ? String(f).slice(0, 10) : null)
+  return {
+    sena_monto: Number(c.sena_monto) || 0,
+    sena_fecha: fecha(c.sena_fecha),
+    sena_forma: c.sena_forma || null,
+    saldo_cobrado: String(c.saldo_cobrado) === '1' || c.saldo_cobrado === true,
+    saldo_fecha: fecha(c.saldo_fecha),
+    saldo_forma: c.saldo_forma || null,
+    cobro_actualizado: c.cobro_actualizado || null,
+  }
+}
+
+type Respuesta = { ok: true; data: any } | { ok: false; status: number; error: string; codigo?: string }
 
 async function llamarPortal(tienda: any, ruta: string, payload: Record<string, unknown>): Promise<Respuesta> {
   let res: Response
@@ -70,7 +84,7 @@ async function llamarPortal(tienda: any, ruta: string, payload: Record<string, u
       res.status === 401 ? 'El secret no coincide con el del portal.' :
       res.status === 403 ? 'El portal todavía no tiene un secret configurado.' :
       `El portal respondió HTTP ${res.status}.`
-    return { ok: false, status: res.status, error: detalle && res.status !== 401 && res.status !== 403 ? `${texto} ${detalle}` : texto }
+    return { ok: false, status: res.status, codigo: data?.code, error: detalle && res.status !== 401 && res.status !== 403 ? `${texto} ${detalle}` : texto }
   }
   return { ok: true, data }
 }
@@ -273,6 +287,51 @@ serve(async (req) => {
       // Se guarda también en la venta para mostrarla sin esperar el próximo aviso del portal
       if (conBultos) await admin.from('ventas').update({ etiqueta_bultos: bultos }).eq('id', venta.id).then(() => {}, () => {})
       return json({ ok: true, label: r.data.label ?? null })
+    }
+
+    // ── Seña, saldo y facturas del pedido ─────────────────────────────────────
+    // Gestión manda su cobro (si lo cambió) y SIEMPRE la lista completa de facturas, que reemplaza a la anterior.
+    // Gana el último cambio: si el portal tiene uno más nuevo, no se pisa y se trae el suyo.
+    if (accion === 'order-payment') {
+      const { data: c, error: errCobro } = await admin.from('ventas')
+        .select('total, fecha, factura_emitida, factura_fecha, nro_factura, sena_monto, sena_fecha, sena_forma, saldo_cobrado, saldo_fecha, saldo_forma, cobro_actualizado')
+        .eq('id', venta.id).single()
+      if (errCobro) return json({ ok: false, error: 'Falta correr supabase_sena_facturas.sql en Supabase.' })
+      const { data: propias } = await admin.from('facturas').select('concepto, punto_venta, nro_factura, importe, fecha')
+        .eq('venta_id', venta.id).eq('modo', 'produccion').eq('estado', 'emitida').order('created_at')
+      const pv = (n: unknown) => String(n ?? 0).padStart(4, '0')
+      const nro = (n: unknown) => String(n ?? 0).padStart(8, '0')
+      const facturas = (propias ?? []).map((f: any) => ({ concepto: f.concepto, numero: `${pv(f.punto_venta)}-${nro(f.nro_factura)}`, monto: Number(f.importe).toFixed(2), fecha: f.fecha }))
+      if (c.factura_emitida && c.nro_factura) {
+        const { data: cfg } = await admin.from('arca_config').select('punto_venta').eq('user_id', orgId).maybeSingle()
+        facturas.unshift({ concepto: 'total', numero: `${pv(cfg?.punto_venta)}-${nro(c.nro_factura)}`, monto: Number(c.total).toFixed(2), fecha: c.factura_fecha || c.fecha })
+      }
+      const payload: Record<string, unknown> = { order_id: orderId, facturas }
+      if (body.solo_facturas !== true && c.cobro_actualizado) {
+        Object.assign(payload, {
+          cobro_actualizado: new Date(c.cobro_actualizado).toISOString().replace(/\.\d+Z$/, '+00:00'),
+          sena_monto: Number(c.sena_monto ?? 0).toFixed(2),
+          sena_fecha: c.sena_fecha ?? '',
+          sena_forma: c.sena_forma ?? '',
+          saldo_cobrado: c.saldo_cobrado ? '1' : '0',
+          saldo_fecha: c.saldo_fecha ?? '',
+          saldo_forma: c.saldo_forma ?? '',
+        })
+      }
+      const r = await llamarPortal(tienda, 'order-payment', payload)
+      if (!r.ok) {
+        // Portal sin actualizar: queda pendiente y se reintenta después
+        if (r.status === 404 && r.codigo === 'rest_no_route') {
+          await admin.from('ventas').update({ cobro_pendiente_portal: true }).eq('id', venta.id)
+          return json({ ok: true, pendiente: true })
+        }
+        await admin.from('ventas').update({ cobro_pendiente_portal: true }).eq('id', venta.id)
+        return falla(r)
+      }
+      const cambios: Record<string, unknown> = { cobro_pendiente_portal: false }
+      if (r.data.aplicado === false && r.data.cobro) Object.assign(cambios, cobroDesdePortal(r.data.cobro))
+      await admin.from('ventas').update(cambios).eq('id', venta.id)
+      return json({ ok: true, aplicado: r.data.aplicado !== false, cobro: r.data.cobro ?? null })
     }
 
     if (accion === 'order-delete') {

@@ -184,6 +184,18 @@ export default function Arca() {
           Certificado digital
         </div>
 
+        {form.modo === 'homologacion' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, background: '#fffbeb', border: '1px solid #fcd34d', borderRadius: 8, padding: 12 }}>
+            <div style={{ fontSize: 13, color: '#92400e' }}>
+              Para probar en homologación hace falta el certificado de pruebas de ARCA (es otro). Si lo cargás acá, el de producción queda guardado y no se toca.
+            </div>
+            <textarea className="input" value={form.cert_pem_homo ?? ''} onChange={e => set('cert_pem_homo', e.target.value)}
+              placeholder="Certificado de homologación (-----BEGIN CERTIFICATE-----)" rows={4} style={{ fontFamily: 'monospace', fontSize: 11, resize: 'vertical' }} />
+            <textarea className="input" value={form.key_pem_homo ?? ''} onChange={e => set('key_pem_homo', e.target.value)}
+              placeholder="Clave privada de homologación (-----BEGIN PRIVATE KEY-----)" rows={4} style={{ fontFamily: 'monospace', fontSize: 11, resize: 'vertical' }} />
+          </div>
+        )}
+
         {/* Cert PEM */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
           <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)' }}>

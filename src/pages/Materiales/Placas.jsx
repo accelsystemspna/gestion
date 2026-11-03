@@ -3,6 +3,8 @@ import { supabase } from '../../lib/supabase'
 import { fmtMoney, padId } from '../../lib/format'
 import { recalcularProductosPorMaterial } from '../../lib/recalcularCC'
 import { recalcularPedidosAbiertos } from '../../lib/pedidos'
+import { useAuth } from '../../lib/AuthContext'
+import { materialesOcultos } from '../../lib/materiales'
 
 const TIPOS = {
   placa:    { label: 'Placa (ancho × alto)', unidad: 'placa' },
@@ -32,17 +34,33 @@ function precioLabel(m) {
 }
 
 export default function Insumos() {
+  const { orgId, isPrincipal } = useAuth()
   const [items, setItems] = useState([])
   const [editing, setEditing] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [ocultos, setOcultos] = useState(new Set())
+  const [verOcultos, setVerOcultos] = useState(false)
+  const [negocios, setNegocios] = useState([])     // otros negocios (solo el Principal los ve)
+  const [accesos, setAccesos] = useState([])       // { material_id, org_id } compartidos
+  const [compartirDe, setCompartirDe] = useState(null)   // material abierto para elegir con quién compartirlo
+  const [sinSql, setSinSql] = useState(false)
 
   const load = async () => {
     setLoading(true)
-    const { data } = await supabase.from('materiales').select('*').order('id')
+    const [{ data }, oc, neg, acc] = await Promise.all([
+      supabase.from('materiales').select('*').order('id'),
+      materialesOcultos(),
+      isPrincipal ? supabase.from('negocios').select('org_id, nombre').neq('org_id', orgId).order('nombre') : Promise.resolve({ data: [] }),
+      isPrincipal ? supabase.from('materiales_acceso').select('material_id, org_id') : Promise.resolve({ data: [] }),
+    ])
     setItems(data || [])
+    setOcultos(oc)
+    setNegocios(neg.data || [])
+    setAccesos(acc.data || [])
+    setSinSql(!!acc.error)
     setLoading(false)
   }
-  useEffect(() => { load() }, [])
+  useEffect(() => { if (orgId) load() }, [orgId, isPrincipal])
 
   const handleSave = async (form) => {
     const tipo = form.tipo_medida || 'placa'
@@ -88,20 +106,75 @@ export default function Insumos() {
     else load()
   }
 
+  // Ocultar un material compartido que este negocio no usa
+  const alternarOculto = async (m) => {
+    const oculto = ocultos.has(m.id)
+    const { error } = oculto
+      ? await supabase.from('materiales_ocultos').delete().eq('material_id', m.id).eq('org_id', orgId)
+      : await supabase.from('materiales_ocultos').insert({ material_id: m.id, org_id: orgId })
+    if (error) return alert(/relation|does not exist|schema cache/i.test(error.message) ? 'Falta correr supabase_materiales_compartidos.sql en Supabase.' : 'Error: ' + error.message)
+    setOcultos((prev) => { const s = new Set(prev); if (oculto) s.delete(m.id); else s.add(m.id); return s })
+  }
+
+  // Compartir con otro negocio (solo el Principal, solo lo propio)
+  const compartido = (matId, org) => accesos.some((a) => a.material_id === matId && a.org_id === org)
+  const cambiarAcceso = async (matIds, org, activar) => {
+    const cambiar = matIds.filter((id) => compartido(id, org) !== activar)
+    if (!cambiar.length) return
+    const { error } = activar
+      ? await supabase.from('materiales_acceso').insert(cambiar.map((id) => ({ material_id: id, org_id: org })))
+      : await supabase.from('materiales_acceso').delete().eq('org_id', org).in('material_id', cambiar)
+    if (error) return alert('Error: ' + error.message)
+    setAccesos((prev) => activar
+      ? [...prev, ...cambiar.map((id) => ({ material_id: id, org_id: org }))]
+      : prev.filter((a) => !(a.org_id === org && cambiar.includes(a.material_id))))
+  }
+
+  const propios = items.filter((m) => m.org_id === orgId)
+  const visibles = items.filter((m) => verOcultos || !ocultos.has(m.id))
+  const cantOcultos = items.filter((m) => ocultos.has(m.id)).length
+  const conQuien = (m) => negocios.filter((n) => compartido(m.id, n.org_id)).map((n) => n.nombre)
+  const columnaCompartir = isPrincipal && negocios.length > 0 && !sinSql
+
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 14, alignItems: 'center' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 14, alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
         <p style={{ color: 'var(--text-muted)', fontSize: 13, margin: 0 }}>
           Placas, filamentos, insumos por unidad o metro. El precio se calcula según el tipo.
         </p>
-        <button className="btn btn-primary btn-sm" onClick={() => setEditing({ ...blank })}>
-          + Nuevo insumo
-        </button>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+          {cantOcultos > 0 && (
+            <label style={{ fontSize: 13, display: 'flex', alignItems: 'center', gap: 5 }}>
+              <input type="checkbox" checked={verOcultos} onChange={(e) => setVerOcultos(e.target.checked)} /> Ver ocultos ({cantOcultos})
+            </label>
+          )}
+          <button className="btn btn-primary btn-sm" onClick={() => setEditing({ ...blank })}>
+            + Nuevo insumo
+          </button>
+        </div>
       </div>
+
+      {columnaCompartir && propios.length > 0 && (
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 12, fontSize: 13 }}>
+          {negocios.map((n) => {
+            const cant = propios.filter((m) => compartido(m.id, n.org_id)).length
+            return (
+              <div key={n.org_id} style={{ display: 'flex', alignItems: 'center', gap: 6, border: '1px solid var(--border)', borderRadius: 8, padding: '5px 10px' }}>
+                <span><strong>{n.nombre}</strong> ve {cant} de {propios.length}</span>
+                <button className="btn btn-sm btn-ghost" onClick={() => cambiarAcceso(propios.map((m) => m.id), n.org_id, true)} disabled={cant === propios.length}>Compartir todos</button>
+                <button className="btn btn-sm btn-ghost" onClick={() => cambiarAcceso(propios.map((m) => m.id), n.org_id, false)} disabled={cant === 0}>Quitar todos</button>
+              </div>
+            )
+          })}
+        </div>
+      )}
+      {isPrincipal && sinSql && (
+        <div style={{ fontSize: 12, color: '#92400e', marginBottom: 12 }}>Para compartir materiales con otros negocios falta correr supabase_materiales_compartidos.sql en Supabase.</div>
+      )}
 
       {loading ? (
         <div style={{ padding: 20, textAlign: 'center', color: 'var(--text-muted)' }}>Cargando...</div>
-      ) : items.length === 0 ? (
+      ) : visibles.length === 0 ? (
         <div style={{ padding: 30, textAlign: 'center', color: 'var(--text-muted)', border: '1px dashed var(--border)', borderRadius: 8 }}>
           No hay insumos cargados.
         </div>
@@ -114,26 +187,59 @@ export default function Insumos() {
                 <th>Nombre</th>
                 <th>Tipo</th>
                 <th>Precio</th>
+                {columnaCompartir && <th>Compartido con</th>}
                 <th></th>
               </tr>
             </thead>
             <tbody>
-              {items.map((m) => (
-                <tr key={m.id}>
-                  <td><code>{padId(m.id)}</code></td>
-                  <td><strong>{m.nombre}</strong></td>
-                  <td>
-                    <span className="badge">
-                      {TIPOS[m.tipo_medida || 'placa']?.label || m.tipo_medida}
-                    </span>
-                  </td>
-                  <td style={{ fontSize: 13, color: 'var(--text-muted)' }}>{precioLabel(m)}</td>
-                  <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
-                    <button className="btn btn-sm btn-ghost" onClick={() => setEditing(m)}>Editar</button>
-                    <button className="btn btn-sm btn-ghost" onClick={() => handleDelete(m.id)} style={{ color: 'var(--danger)' }}>Eliminar</button>
-                  </td>
-                </tr>
-              ))}
+              {visibles.map((m) => {
+                const ajeno = m.org_id !== orgId
+                const oculto = ocultos.has(m.id)
+                return (
+                  <tr key={m.id} style={{ opacity: oculto ? 0.55 : 1 }}>
+                    <td><code>{padId(m.id)}</code></td>
+                    <td>
+                      <strong>{m.nombre}</strong>
+                      {ajeno && <span className="badge" style={{ marginLeft: 6 }} title="Lo comparte otro negocio: el precio lo mantiene él">Compartido</span>}
+                      {oculto && <span className="badge" style={{ marginLeft: 6 }}>Oculto</span>}
+                    </td>
+                    <td>
+                      <span className="badge">
+                        {TIPOS[m.tipo_medida || 'placa']?.label || m.tipo_medida}
+                      </span>
+                    </td>
+                    <td style={{ fontSize: 13, color: 'var(--text-muted)' }}>{precioLabel(m)}</td>
+                    {columnaCompartir && (
+                      <td style={{ fontSize: 12 }}>
+                        {ajeno ? null : compartirDe === m.id ? (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                            {negocios.map((n) => (
+                              <label key={n.org_id} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                                <input type="checkbox" checked={compartido(m.id, n.org_id)} onChange={(e) => cambiarAcceso([m.id], n.org_id, e.target.checked)} /> {n.nombre}
+                              </label>
+                            ))}
+                            <button className="btn btn-sm btn-ghost" style={{ alignSelf: 'flex-start' }} onClick={() => setCompartirDe(null)}>Listo</button>
+                          </div>
+                        ) : (
+                          <button className="btn btn-sm btn-ghost" onClick={() => setCompartirDe(m.id)}>
+                            {conQuien(m).length ? conQuien(m).join(', ') : 'Nadie'} ✎
+                          </button>
+                        )}
+                      </td>
+                    )}
+                    <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                      {ajeno ? (
+                        <button className="btn btn-sm btn-ghost" onClick={() => alternarOculto(m)}>{oculto ? 'Mostrar' : 'Ocultar'}</button>
+                      ) : (
+                        <>
+                          <button className="btn btn-sm btn-ghost" onClick={() => setEditing(m)}>Editar</button>
+                          <button className="btn btn-sm btn-ghost" onClick={() => handleDelete(m.id)} style={{ color: 'var(--danger)' }}>Eliminar</button>
+                        </>
+                      )}
+                    </td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         </div>

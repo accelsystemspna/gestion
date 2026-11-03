@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase }            from '../../lib/supabase'
 import { fmtMoney }            from '../../lib/format'
 import { generarFacturaC, buildWhatsAppText } from '../../lib/facturaC'
+import { ventaParaFactura, arcaParaFactura, CONCEPTOS } from '../../lib/cobro'
 
 const fmtFecha = (iso) => {
   if (!iso) return ''
@@ -23,15 +24,22 @@ export default function Facturas() {
   useEffect(() => {
     const load = async () => {
       setLoading(true)
-      const [fRes, aRes, bRes] = await Promise.all([
+      const [fRes, aRes, bRes, pRes] = await Promise.all([
         supabase.from('ventas')
           .select('*, venta_items(descripcion, cantidad, subtotal)')
           .eq('factura_emitida', true)
           .order('fecha', { ascending: false }),
         supabase.from('arca_config').select('*').maybeSingle(),
         supabase.from('branding').select('*').maybeSingle(),
+        // Facturas de seña o saldo (una venta o un pedido puede tener varias)
+        supabase.from('facturas').select('*, ventas(cliente_nombre, cliente_telefono), pedidos(cliente_nombre, cliente_telefono)')
+          .eq('estado', 'emitida').eq('modo', 'produccion'),
       ])
-      setFacturas(fRes.data ?? [])
+      const partes = (pRes.error ? [] : pRes.data ?? []).map((p) => {
+        const base = { cliente_nombre: p.ventas?.cliente_nombre ?? p.pedidos?.cliente_nombre, cliente_telefono: p.ventas?.cliente_telefono ?? p.pedidos?.cliente_telefono }
+        return { ...ventaParaFactura(p, base), id: 'p-' + p.id, fecha: p.fecha, parte: p }
+      })
+      setFacturas([...(fRes.data ?? []), ...partes].sort((a, b) => String(b.fecha).localeCompare(String(a.fecha))))
       setArcaConfig(aRes.data ?? {})
       setBranding(bRes.data ?? {})
       setLoading(false)
@@ -66,7 +74,7 @@ export default function Facturas() {
 
   const handleDescargar = async (f) => {
     setDescargando(f.id)
-    await generarFacturaC({ venta: f, arcaConfig, branding, download: true })
+    await generarFacturaC({ venta: f, arcaConfig: f.parte ? arcaParaFactura(f.parte, arcaConfig) : arcaConfig, branding, download: true })
     setDescargando(null)
   }
 
@@ -144,7 +152,7 @@ export default function Facturas() {
                   </thead>
                   <tbody>
                     {items.map(f => {
-                      const nroPv   = String(arcaConfig.punto_venta ?? 3).padStart(4, '0')
+                      const nroPv   = String(f.parte?.punto_venta ?? arcaConfig.punto_venta ?? 3).padStart(4, '0')
                       const nroComp = String(f.nro_factura ?? 0).padStart(8, '0')
                       return (
                         <tr key={f.id}>
@@ -152,7 +160,10 @@ export default function Facturas() {
                             <code style={{ fontSize: 12 }}>{nroPv}-{nroComp}</code>
                           </td>
                           <td style={{ whiteSpace: 'nowrap' }}>{fmtFecha(f.fecha)}</td>
-                          <td>{f.cliente_nombre || <span style={{ color: 'var(--text-muted)' }}>Consumidor Final</span>}</td>
+                          <td>
+                            {f.cliente_nombre || <span style={{ color: 'var(--text-muted)' }}>Consumidor Final</span>}
+                            {f.parte && <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{CONCEPTOS[f.parte.concepto]}: {f.parte.detalle}</div>}
+                          </td>
                           <td>
                             <code style={{ fontSize: 11, color: 'var(--text-muted)' }}>{f.cae}</code>
                             {f.cae_vto && (

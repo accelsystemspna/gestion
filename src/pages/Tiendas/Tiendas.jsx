@@ -7,6 +7,7 @@ import ImageThumb from '../../components/ImageThumb'
 import WooPanel from './woo/WooPanel'
 import MercadoLibrePanel from './MercadoLibrePanel'
 import ClientesPortal from './ClientesPortal'
+import CobroFacturas from '../../components/CobroFacturas'
 import { portalApi, imprimirEtiqueta, ventanaPreparando, ventanaError } from '../../lib/portalApi'
 import {
   ESTADOS_WEB, FASES, estadoWebDe, ordenWooId, perteneceATienda,
@@ -933,6 +934,13 @@ export default function Tiendas() {
                   <ItemsPedido items={itemsPedido[v.id]} grande ocupado={!!portalOcupado}
                     onProduccion={esMay && e !== 'cancelado' && e !== 'completado' ? (indice, st) => cambiarFabricacion(v, indice, st) : null} />
                 </div>
+
+                {esMay && (
+                  <div style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 14 }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 10 }}>Seña, saldo y facturas</div>
+                    <CobroFacturas key={v.id} ventaId={v.id} referencia={v.origen_numero || `V-${v.numero}`} onCambio={() => cargar(true)} />
+                  </div>
+                )}
 
                 {/* Comprador, pago y (portal mayorista) entrega */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14, fontSize: 13 }}>

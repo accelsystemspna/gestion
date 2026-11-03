@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from '../../lib/supabase'
+import { materialesOcultos, paraElegir } from '../../lib/materiales'
 import { fmtMoney, padId } from '../../lib/format'
 import { calcCosto3D, calcInsumo, precioVenta } from '../../lib/pricing'
 import { recalcularCCPorProductos } from '../../lib/recalcularCC'
@@ -182,6 +183,7 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
   const [subcategorias, setSubcategorias] = useState([])
   const [subcategoriasTodas, setSubcategoriasTodas] = useState([])
   const [materiales, setMateriales] = useState([])
+  const [ocultos, setOcultos] = useState(new Set())
   const [tarifas, setTarifas] = useState([])
   const [listas, setListas] = useState([])
   const [tiendas, setTiendas] = useState([])
@@ -242,6 +244,7 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
     ]).then(([c, m, t, l, ti, r, sTodas, pr]) => {
       setCategorias(c.data || [])
       setMateriales(m.data || [])
+      materialesOcultos().then(setOcultos)
       setTarifas(t.data || [])
       setListas(l.data || [])
       setTiendas(ti.data || [])
@@ -676,7 +679,7 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
                       <F label="Insumo" col={2}>
                         <select className="select" style={si()} value={pieza.material_id} onChange={e => setPieza(idx,'material_id',e.target.value)}>
                           <option value="">— Seleccionar insumo —</option>
-                          {materiales.map(m=><option key={m.id} value={m.id}>{padId(m.id)} · {m.nombre}</option>)}
+                          {paraElegir(materiales, ocultos, pieza.material_id).map(m=><option key={m.id} value={m.id}>{padId(m.id)} · {m.nombre}</option>)}
                         </select>
                       </F>
                       {sinInsumo ? (

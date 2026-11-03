@@ -4,6 +4,7 @@ import { exportPresupuestoPDF } from './presupuestoPDF.js'
 import { generarComprobanteVenta } from './comprobanteVenta.js'
 import { generarFacturaC } from './facturaC.js'
 import { clienteDeVenta } from './accesoCliente.js'
+import { ventaParaFactura, arcaParaFactura, numeroFactura } from './cobro.js'
 
 const BUCKET = 'documentos-clientes'
 
@@ -20,12 +21,12 @@ async function rutaNueva(orgId) {
  * @param {{ orgId: string, clienteId: string, pedidoId?: string|null, ventaId?: number|null, tipo: 'presupuesto'|'factura'|'recibo'|'ticket', titulo: string, fecha?: string, total?: number, blob: Blob }} doc
  * @returns {Promise<boolean>} si quedó guardado
  */
-export async function guardarDocumentoCliente({ orgId, clienteId, pedidoId = null, ventaId = null, tipo, titulo, fecha, total = 0, blob }) {
+export async function guardarDocumentoCliente({ orgId, clienteId, pedidoId = null, ventaId = null, facturaId = null, tipo, titulo, fecha, total = 0, blob }) {
   try {
     const ruta = await rutaNueva(orgId)
     const { error: errorArchivo } = await supabase.storage.from(BUCKET).upload(ruta, blob, { contentType: 'application/pdf' })
     if (errorArchivo) throw errorArchivo
-    const { error } = await supabase.from('cliente_documentos').insert({ org_id: orgId, cliente_id: clienteId, pedido_id: pedidoId, venta_id: ventaId, tipo, titulo, total: Number(total) || 0, ruta, ...(fecha ? { fecha } : {}) })
+    const { error } = await supabase.from('cliente_documentos').insert({ org_id: orgId, cliente_id: clienteId, pedido_id: pedidoId, venta_id: ventaId, ...(facturaId ? { factura_id: facturaId } : {}), tipo, titulo, total: Number(total) || 0, ruta, ...(fecha ? { fecha } : {}) })
     if (error) {
       await supabase.storage.from(BUCKET).remove([ruta])
       throw error
@@ -99,6 +100,23 @@ export async function facturaEnPanel({ venta, items, arcaConfig, orgId }) {
   }
 }
 
+/**
+ * Copia para el panel de una factura de seña o saldo. Las de prueba (homologación) nunca van al panel.
+ * `base` es la venta o el pedido, con el cliente.
+ */
+export async function facturaParteEnPanel({ factura, base, clienteId, arcaConfig, branding, orgId }) {
+  try {
+    if (factura.modo !== 'produccion' || !clienteId) return
+    const blob = await generarFacturaC({ venta: ventaParaFactura(factura, base), arcaConfig: arcaParaFactura(factura, arcaConfig), branding: branding ?? {}, download: false, comoBlob: true })
+    await guardarDocumentoCliente({
+      orgId, clienteId, facturaId: factura.id, ventaId: factura.venta_id ?? null, pedidoId: factura.pedido_id ?? null,
+      tipo: 'factura', titulo: `Factura C ${numeroFactura(factura)}`, fecha: factura.fecha, total: factura.importe, blob,
+    })
+  } catch (err) {
+    console.warn('[documentos] no se pudo armar la factura', err)
+  }
+}
+
 const llevaTicket = (v) => v.estado !== 'anulado' && v.estado !== 'cancelado' && v.estado_web !== 'cancelado' && !v.factura_emitida
 
 /** Quita el ticket del panel. Se llama antes de borrar la venta: sin venta, el ticket quedaría suelto. */
@@ -120,7 +138,10 @@ export async function sincronizarTicketCliente(ventaId) {
     const { data: venta, error } = await supabase.from('ventas').select('*').eq('id', ventaId).maybeSingle()
     if (error) throw error
     if (!venta) return
-    const clienteId = llevaTicket(venta) ? await clienteDeVenta(venta) : null
+    // Con alguna factura de seña o saldo, el cliente ve esas facturas en lugar del ticket
+    const { count: partes } = await supabase.from('facturas').select('id', { count: 'exact', head: true })
+      .eq('venta_id', ventaId).eq('modo', 'produccion').eq('estado', 'emitida')
+    const clienteId = llevaTicket(venta) && !partes ? await clienteDeVenta(venta) : null
     const { data: actual } = await supabase.from('cliente_documentos').select('id, ruta').eq('tipo', 'ticket').eq('venta_id', ventaId).maybeSingle()
     if (!clienteId) {
       if (actual) await borrarDocumentos([actual])

@@ -7,6 +7,7 @@ import { calcInsumo, precioVenta } from '../../lib/pricing'
 import { ajustarStock, aplicarStockPropio } from '../../lib/stock'
 import { facturaEnPanel, sincronizarTicketCliente } from '../../lib/documentosCliente'
 import { receptorDeCliente, cuitValido, DOC_CONSUMIDOR } from '../../lib/cuit'
+import { materialesOcultos, paraElegir } from '../../lib/materiales'
 import { precioConPromoProducto, promoDeProducto, etiquetaOferta } from '../../lib/promos'
 
 function snapSegs(segs) {
@@ -91,6 +92,7 @@ export default function Ventas() {
   const [listas,     setListas]     = useState([])
   const [clientes,   setClientes]   = useState([])
   const [materiales, setMateriales] = useState([])
+  const [ocultos, setOcultos] = useState(new Set())
   const [tarifas,    setTarifas]    = useState([])
 
   // ── Cabecera de la venta ─────────────────────────────────────────────────
@@ -170,6 +172,7 @@ export default function Ventas() {
       setListas(li.data ?? [])
       setClientes(cl.data ?? [])
       setMateriales(ma.data ?? [])
+      materialesOcultos().then(setOcultos)
       setTarifas(ta.data ?? [])
       setArcaConfig(ar.data ?? null)
     })
@@ -1270,7 +1273,7 @@ export default function Ventas() {
                                 <label style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)' }}>Insumo</label>
                                 <select style={{ ...inp(), fontSize: 12, padding: '5px 7px' }} value={p.material_id} onChange={e => setCotPieza(i, 'material_id', e.target.value)}>
                                   <option value="">— Seleccionar —</option>
-                                  {materiales.map(m => <option key={m.id} value={m.id}>{m.nombre}</option>)}
+                                  {paraElegir(materiales, ocultos, p.material_id).map(m => <option key={m.id} value={m.id}>{m.nombre}</option>)}
                                 </select>
                               </div>
                               {tipo === 'placa' && (<>

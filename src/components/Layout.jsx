@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../lib/AuthContext'
+import { actualizarCostosCompartidos } from '../lib/materiales'
 import { supabase } from '../lib/supabase'
 import { fmtMoney } from '../lib/format'
 import { playCashRegisterSound, unlockAudio } from '../lib/sound'
@@ -58,6 +59,15 @@ export default function Layout() {
     window.addEventListener('pointerdown', handler, { once: true })
     return () => window.removeEventListener('pointerdown', handler)
   }, [])
+
+  // ── Materiales compartidos: si otro negocio cambió un precio, los costos de este se recalculan solos ──
+  // Al entrar y cada 30 minutos mientras gestión queda abierta.
+  useEffect(() => {
+    if (!orgId) return
+    actualizarCostosCompartidos(orgId)
+    const t = setInterval(() => actualizarCostosCompartidos(orgId), 30 * 60 * 1000)
+    return () => clearInterval(t)
+  }, [orgId])
 
   // ── Aviso de pedidos web abiertos → menú Tiendas ──
   // Todo pedido de tienda (web, mayorista, Mercado Libre) que todavía necesita atención: esperando pago,

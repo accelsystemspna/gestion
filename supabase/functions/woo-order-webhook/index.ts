@@ -96,6 +96,29 @@ async function guardarBultos(admin: any, ventaId: number, order: any) {
   await admin.from('ventas').update({ etiqueta_bultos: n || null }).eq('id', ventaId).then(() => {}, () => {})
 }
 
+// Seña y saldo que se cargaron en el portal. Gana el último cambio: si gestión tiene uno más nuevo, no se pisa.
+// Va aparte del resto, como los bultos, para que si falta el SQL no se pierda nada más.
+async function guardarCobro(admin: any, ventaId: number, order: any) {
+  const meta: Record<string, any> = {}
+  for (const m of order.meta_data ?? []) if (m?.key) meta[m.key] = m.value
+  if (!meta.cobro_actualizado) return
+  const llega = new Date(meta.cobro_actualizado)
+  if (Number.isNaN(llega.getTime())) return
+  const { data: actual, error } = await admin.from('ventas').select('cobro_actualizado').eq('id', ventaId).maybeSingle()
+  if (error || !actual) return
+  if (actual.cobro_actualizado && new Date(actual.cobro_actualizado) >= llega) return
+  const fecha = (f: unknown) => (/^\d{4}-\d{2}-\d{2}/.test(String(f ?? '')) ? String(f).slice(0, 10) : null)
+  await admin.from('ventas').update({
+    sena_monto: Number(meta.sena_monto) || 0,
+    sena_fecha: fecha(meta.sena_fecha),
+    sena_forma: meta.sena_forma || null,
+    saldo_cobrado: String(meta.saldo_cobrado) === '1',
+    saldo_fecha: fecha(meta.saldo_fecha),
+    saldo_forma: meta.saldo_forma || null,
+    cobro_actualizado: llega.toISOString(),
+  }).eq('id', ventaId).then(() => {}, () => {})
+}
+
 // Estado de fabricación de cada renglón (solo lo manda el portal mayorista): meta "produccion" con
 // {"0":"a_fabricar","1":"listo"} y, en cada line_item, meta "indice". WooCommerce minorista no trae nada
 // de esto → devuelve [] y no se toca nada.
@@ -292,6 +315,7 @@ serve(async (req) => {
     }
     if (errUpd) return json({ error: errUpd.message }, 500)
     await guardarBultos(admin, existente.id, order)
+    await guardarCobro(admin, existente.id, order)
 
     if (cancelar) {
       const { data: its } = await admin.from('venta_items').select('producto_id, cantidad').eq('venta_id', existente.id)
@@ -375,6 +399,7 @@ serve(async (req) => {
   }
   if (ventaErr) return json({ error: ventaErr.message }, 500)
   await guardarBultos(admin, venta.id, order)
+  await guardarCobro(admin, venta.id, order)
 
   // Ítems — intentar matchear por SKU contra el catálogo; si no hay match, se
   // guarda como ítem libre (igual que un ítem libre cargado a mano en el POS).
