@@ -63,6 +63,7 @@ export default function SaldoAFavor({ cliente, onCambio }) {
             <input className="input" type="date" aria-label="Fecha" value={form.fecha} onChange={(e) => setForm((f) => ({ ...f, fecha: e.target.value }))} />
           </div>
           <input className="input" aria-label="Motivo" placeholder={form.signo > 0 ? 'Motivo (ej: pagó de más en la venta 1042)' : 'Motivo (ej: descontado en la venta 1050)'} value={form.motivo} onChange={(e) => setForm((f) => ({ ...f, motivo: e.target.value }))} />
+          <div style={{ fontSize: 12, color: '#92400e' }}>El cliente ve este motivo en su panel: no escribas notas internas.</div>
           {error && <div style={{ fontSize: 12, color: '#dc2626' }}>{error}</div>}
           <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
             <button className="btn btn-sm" onClick={() => setForm(null)} disabled={guardando}>Cancelar</button>

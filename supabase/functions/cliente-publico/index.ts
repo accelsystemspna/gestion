@@ -160,11 +160,14 @@ serve(async (req) => {
         ? await admin.from('venta_items').select('venta_id, descripcion, cantidad, subtotal').in('venta_id', idsVentas).order('id', { ascending: true })
         : { data: [] as any[], error: null }
       if (errorLineas) throw errorLineas
-      const [{ data: eventos }, { data: docs }] = await Promise.all([
+      const [{ data: eventos }, { data: docs }, { data: saldos, error: errorSaldos }] = await Promise.all([
         ids.length
           ? admin.from('pedido_eventos').select('pedido_id, fecha, tipo, detalle').in('pedido_id', ids).eq('visible_cliente', true).order('fecha', { ascending: true })
           : Promise.resolve({ data: [] as any[] }),
         admin.from('cliente_documentos').select('pedido_id, venta_id, tipo, titulo, fecha, total, ruta').eq('org_id', org).eq('cliente_id', cliente.id).order('fecha', { ascending: false }),
+        // Saldo a favor: aparte de la cuenta corriente. El total suma todo; se muestran los últimos 30.
+        admin.from('cliente_saldos').select('fecha, importe, motivo').eq('org_id', org).eq('cliente_id', cliente.id)
+          .order('fecha', { ascending: false }).order('created_at', { ascending: false }),
       ])
       const firmas = new Map<string, string>()
       const rutas = (docs || []).map((d: any) => d.ruta)
@@ -221,6 +224,13 @@ serve(async (req) => {
         // Documentos que no están atados a un pedido ni a una de esas compras
         // (un ticket sin venta quedó de una venta borrada: no se muestra)
         documentos: conUrl.filter((d: any) => !ids.includes(d.pedido_id) && !idsVentas.includes(d.venta_id) && (d.tipo !== 'ticket' || d.venta_id)).map(documento),
+        // Sin la tabla todavía, no se manda
+        ...(errorSaldos ? {} : {
+          saldo_a_favor: {
+            total: Math.round((saldos || []).reduce((a: number, s: any) => a + Number(s.importe), 0) * 100) / 100,
+            movimientos: (saldos || []).slice(0, 30).map((s: any) => ({ fecha: String(s.fecha).slice(0, 10), importe: Number(s.importe), motivo: s.motivo })),
+          },
+        }),
       }
     }
 
