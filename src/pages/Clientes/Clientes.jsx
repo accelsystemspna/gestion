@@ -7,6 +7,8 @@ import { cargarEstadosAcceso } from '../../lib/accesoCliente'
 import { sincronizarTicketCliente } from '../../lib/documentosCliente'
 import ImportarModal from './ImportarModal'
 import VentaDetalle from '../Ventas/VentaDetalle'
+import SaldoAFavor from './SaldoAFavor'
+import { fmtCuit, soloDigitos } from '../../lib/cuit'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 function fmt(n) {
@@ -79,7 +81,7 @@ const S = {
 }
 
 // ── panel de detalle ──────────────────────────────────────────────────────────
-function DetallePanel({ cliente, estadoAcceso, onAccesoEnviado, onClose, onEdit, onDelete }) {
+function DetallePanel({ cliente, estadoAcceso, onAccesoEnviado, onClose, onEdit, onDelete, onSaldo }) {
   const [ventas,         setVentas]         = useState([])
   const [loading,        setLoading]        = useState(true)
   const [ventaDetalleId, setVentaDetalleId] = useState(null)
@@ -357,6 +359,12 @@ function DetallePanel({ cliente, estadoAcceso, onAccesoEnviado, onClose, onEdit,
           </div>
         </div>
 
+        {/* saldo a favor */}
+        <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)' }}>
+          <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8, color: 'var(--text-muted)' }}>SALDO A FAVOR</div>
+          <SaldoAFavor cliente={cliente} onCambio={onSaldo} />
+        </div>
+
         {/* historial */}
         <div style={{ flex: 1, padding: '16px 20px' }}>
           <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 12, color: 'var(--text-muted)' }}>
@@ -500,6 +508,17 @@ export default function Clientes() {
   const [showImportar, setShowImportar] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(null)
   const [accesos, setAccesos] = useState(new Map())
+  const [orden, setOrden] = useState('nombre')
+  const [resumenes, setResumenes] = useState(new Map())   // cliente_id → { compras, ultima, total }
+  const [saldos, setSaldos] = useState(null)              // cliente_id → saldo a favor; null si falta el SQL
+
+  const cargarSaldos = useCallback(async () => {
+    const { data, error } = await supabase.from('cliente_saldos').select('cliente_id, importe')
+    if (error) { setSaldos(null); return }
+    const m = new Map()
+    for (const s of data ?? []) m.set(s.cliente_id, (m.get(s.cliente_id) ?? 0) + Number(s.importe))
+    setSaldos(m)
+  }, [])
 
   const cargarAccesos = useCallback(() => {
     cargarEstadosAcceso().then(setAccesos).catch((err) => console.warn('[clientes] estado de acceso:', err))
@@ -514,23 +533,44 @@ export default function Clientes() {
       .order('nombre')
     setClientes(data ?? [])
     setLoading(false)
-  }, [])
+    // Para ordenar y encontrar: cuántas compras tiene y cuándo fue la última
+    const { data: vs } = await supabase.from('ventas').select('cliente_id, fecha, total, estado').not('cliente_id', 'is', null).neq('estado', 'anulado').limit(10000)
+    const m = new Map()
+    for (const v of vs ?? []) {
+      const r = m.get(v.cliente_id) ?? { compras: 0, ultima: null, total: 0 }
+      r.compras++
+      r.total += Number(v.total) || 0
+      if (!r.ultima || v.fecha > r.ultima) r.ultima = v.fecha
+      m.set(v.cliente_id, r)
+    }
+    setResumenes(m)
+    cargarSaldos()
+  }, [cargarSaldos])
 
   useEffect(() => { load() }, [load])
 
   // tabs dinámicas: 'todos' + etiquetas únicas
   const etiquetas = [...new Set(clientes.map((c) => c.etiqueta).filter(Boolean))].sort()
-  const tabs = ['todos', ...etiquetas]
+  const tabs = ['todos', ...(saldos ? ['saldos'] : []), ...etiquetas]
+  const saldoDe = (c) => Math.round((saldos?.get(c.id) ?? 0) * 100) / 100
+  const conSaldo = clientes.filter((c) => saldoDe(c) > 0)
 
+  const q = search.trim().toLowerCase()
+  const qDigitos = soloDigitos(q)
   const filtered = clientes.filter((c) => {
-    const matchTab = tab === 'todos' || c.etiqueta === tab
-    const q = search.toLowerCase()
+    const matchTab = tab === 'todos' || (tab === 'saldos' ? saldoDe(c) > 0 : c.etiqueta === tab)
     const matchSearch =
       !q ||
       (c.nombre || '').toLowerCase().includes(q) ||
       (c.email || '').toLowerCase().includes(q) ||
-      (c.telefono || '').toLowerCase().includes(q)
+      (c.telefono || '').toLowerCase().includes(q) ||
+      (qDigitos.length >= 3 && (soloDigitos(c.telefono).includes(qDigitos) || soloDigitos(c.cuit).includes(qDigitos)))
     return matchTab && matchSearch
+  }).sort((a, b) => {
+    if (orden === 'ultima') return String(resumenes.get(b.id)?.ultima ?? '').localeCompare(String(resumenes.get(a.id)?.ultima ?? ''))
+    if (orden === 'compras') return (resumenes.get(b.id)?.compras ?? 0) - (resumenes.get(a.id)?.compras ?? 0)
+    if (orden === 'saldo') return saldoDe(b) - saldoDe(a)
+    return (a.nombre || '').localeCompare(b.nombre || '', 'es')
   })
 
   async function handleDelete(cliente) {
@@ -562,7 +602,7 @@ export default function Clientes() {
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Buscar por nombre, email o teléfono…"
+          placeholder="Buscar por nombre, celular, email o CUIT…"
           style={{
             flex: 1,
             minWidth: 220,
@@ -574,6 +614,13 @@ export default function Clientes() {
             color: 'inherit',
           }}
         />
+        <select value={orden} onChange={(e) => setOrden(e.target.value)} aria-label="Ordenar"
+          style={{ padding: '8px 10px', border: '1px solid var(--border)', borderRadius: 6, fontSize: 14, background: 'var(--surface)', color: 'inherit' }}>
+          <option value="nombre">Ordenar: nombre A-Z</option>
+          <option value="ultima">Ordenar: última compra</option>
+          <option value="compras">Ordenar: más compras</option>
+          {saldos && <option value="saldo">Ordenar: saldo a favor</option>}
+        </select>
         <button
           onClick={() => { setShowImportar(true) }}
           style={{
@@ -609,7 +656,7 @@ export default function Clientes() {
       <div style={S.tabBar}>
         {tabs.map((t) => (
           <button key={t} style={S.tab(tab === t)} onClick={() => setTab(t)}>
-            {t === 'todos' ? 'Todos' : t}
+            {t === 'todos' ? 'Todos' : t === 'saldos' ? 'Saldos a favor' : t}
             <span
               style={{
                 marginLeft: 6,
@@ -622,7 +669,9 @@ export default function Clientes() {
             >
               {t === 'todos'
                 ? clientes.length
-                : clientes.filter((c) => c.etiqueta === t).length}
+                : t === 'saldos'
+                  ? conSaldo.length
+                  : clientes.filter((c) => c.etiqueta === t).length}
             </span>
           </button>
         ))}
@@ -635,25 +684,41 @@ export default function Clientes() {
         </div>
       ) : filtered.length === 0 ? (
         <div style={{ textAlign: 'center', padding: 48, color: 'var(--text-muted)' }}>
-          {search ? 'Sin resultados para la búsqueda.' : 'No hay clientes en esta categoría.'}
+          {search ? 'Sin resultados para la búsqueda.' : tab === 'saldos' ? 'Ningún cliente tiene saldo a favor.' : 'No hay clientes en esta categoría.'}
         </div>
       ) : (
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-            gap: 12,
-          }}
-        >
-          {filtered.map((c) => (
-            <ClienteCard
-              key={c.id}
-              cliente={c}
-              estadoAcceso={accesos.get(c.id)}
-              onAccesoEnviado={cargarAccesos}
-              onClick={() => setSelected(c)}
-            />
-          ))}
+        <div style={{ border: '1px solid var(--border)', borderRadius: 8, overflowX: 'auto', background: 'var(--surface)' }}>
+          {tab === 'saldos' && (
+            <div style={{ padding: '10px 12px', borderBottom: '1px solid var(--border)', fontSize: 13 }}>
+              Total a favor de los clientes: <strong style={{ color: '#15803d' }}>{fmt(conSaldo.reduce((a, c) => a + saldoDe(c), 0))}</strong>
+            </div>
+          )}
+          <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 720 }}>
+            <thead>
+              <tr style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '.04em', color: 'var(--text-muted)', textAlign: 'left' }}>
+                <th style={{ ...celda, fontWeight: 700 }}>Cliente</th>
+                <th style={{ ...celda, fontWeight: 700 }}>Celular</th>
+                <th style={{ ...celda, fontWeight: 700 }}>CUIT / CUIL</th>
+                <th style={{ ...celda, fontWeight: 700 }}>Compras · última</th>
+                {saldos && <th style={{ ...celda, fontWeight: 700, textAlign: 'right' }}>Saldo a favor</th>}
+                <th style={{ ...celda, fontWeight: 700 }}>Panel</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((c) => (
+                <ClienteFila
+                  key={c.id}
+                  cliente={c}
+                  resumen={resumenes.get(c.id)}
+                  saldo={saldoDe(c)}
+                  conSaldos={!!saldos}
+                  estadoAcceso={accesos.get(c.id)}
+                  onAccesoEnviado={cargarAccesos}
+                  onClick={() => setSelected(c)}
+                />
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
 
@@ -666,6 +731,7 @@ export default function Clientes() {
           onClose={() => setSelected(null)}
           onEdit={openEdit}
           onDelete={(c) => setConfirmDelete(c)}
+          onSaldo={cargarSaldos}
         />
       )}
 
@@ -751,63 +817,32 @@ export default function Clientes() {
   )
 }
 
-// ── tarjeta cliente ───────────────────────────────────────────────────────────
-function ClienteCard({ cliente: c, estadoAcceso, onAccesoEnviado, onClick }) {
+// ── fila de la lista ──────────────────────────────────────────────────────────
+const celda = { padding: '9px 10px', borderBottom: '1px solid var(--border)', verticalAlign: 'middle' }
+
+function ClienteFila({ cliente: c, resumen, saldo, conSaldos, estadoAcceso, onAccesoEnviado, onClick }) {
   return (
-    <div
-      style={S.card}
-      onClick={onClick}
-      onMouseEnter={(e) => (e.currentTarget.style.borderColor = 'var(--primary)')}
-      onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'var(--border)')}
-    >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-        <div
-          style={{
-            width: 36,
-            height: 36,
-            borderRadius: '50%',
-            background: 'var(--primary)',
-            color: 'white',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: 15,
-            fontWeight: 700,
-            flexShrink: 0,
-          }}
-        >
-          {(c.nombre || '?').charAt(0).toUpperCase()}
+    <tr onClick={onClick} style={{ cursor: 'pointer' }}
+      onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--bg-muted)')}
+      onMouseLeave={(e) => (e.currentTarget.style.background = '')}>
+      <td style={celda}>
+        <div style={{ fontWeight: 600, fontSize: 14 }}>{c.nombre}</div>
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', marginTop: 2 }}>
+          {c.etiqueta && <span style={S.badge('var(--primary)')}>{c.etiqueta}</span>}
+          {c.email && <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{c.email}</span>}
         </div>
-        <div style={{ minWidth: 0, flex: 1 }}>
-          <div
-            style={{
-              fontWeight: 600,
-              fontSize: 14,
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-            }}
-          >
-            {c.nombre}
-          </div>
-          {c.etiqueta && (
-            <span style={S.badge('var(--primary)')}>{c.etiqueta}</span>
-          )}
-        </div>
-      </div>
-      {c.email && (
-        <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          ✉️ {c.email}
-        </div>
+      </td>
+      <td style={{ ...celda, whiteSpace: 'nowrap', fontSize: 13 }}>{c.telefono || <span style={{ color: 'var(--text-muted)' }}>—</span>}</td>
+      <td style={{ ...celda, whiteSpace: 'nowrap', fontSize: 13, fontFamily: 'monospace' }}>{c.cuit ? fmtCuit(c.cuit) : <span style={{ color: 'var(--text-muted)' }}>—</span>}</td>
+      <td style={{ ...celda, whiteSpace: 'nowrap', fontSize: 13 }}>
+        {resumen ? <>{resumen.compras} · {fmtDate(resumen.ultima)}</> : <span style={{ color: 'var(--text-muted)' }}>Sin compras</span>}
+      </td>
+      {conSaldos && (
+        <td style={{ ...celda, whiteSpace: 'nowrap', textAlign: 'right', fontWeight: 700, color: saldo > 0 ? '#15803d' : 'var(--text-muted)' }}>
+          {saldo > 0 ? fmt(saldo) : '—'}
+        </td>
       )}
-      {c.telefono && (
-        <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-          📞 {c.telefono}
-        </div>
-      )}
-      <div style={{ marginTop: 10 }}>
-        <AccesoCliente cliente={c} estado={estadoAcceso} onEnviado={onAccesoEnviado} />
-      </div>
-    </div>
+      <td style={celda}><AccesoCliente cliente={c} estado={estadoAcceso} onEnviado={onAccesoEnviado} compacto /></td>
+    </tr>
   )
 }

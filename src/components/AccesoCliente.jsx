@@ -7,7 +7,7 @@ import { mandarAccesoCliente } from '../lib/accesoCliente'
  * `estado`: { tiene_pin, link_vigente } o undefined si todavía no tiene credenciales.
  * Los clics no se propagan: en Clientes va dentro de una tarjeta que se abre al tocarla.
  */
-export default function AccesoCliente({ cliente, estado, onEnviado }) {
+export default function AccesoCliente({ cliente, estado, onEnviado, compacto = false }) {
   const { orgId } = useAuth()
   const [enviando, setEnviando] = useState(false)
   const [error, setError] = useState('')
@@ -39,11 +39,11 @@ export default function AccesoCliente({ cliente, estado, onEnviado }) {
         </span>
         {cliente.telefono
           ? <button type="button" className="btn btn-sm" onClick={mandar} disabled={enviando}>
-              {enviando ? 'Generando…' : tienePin ? '💬 Mandar link para cambiar PIN' : '💬 Mandar acceso por WhatsApp'}
+              {enviando ? 'Generando…' : compacto ? '💬 Mandar' : tienePin ? '💬 Mandar link para cambiar PIN' : '💬 Mandar acceso por WhatsApp'}
             </button>
-          : <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Falta cargar el celular para mandarle el acceso.</span>}
+          : !compacto && <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Falta cargar el celular para mandarle el acceso.</span>}
       </div>
-      {estado?.link_vigente && !error && <p style={{ margin: '4px 0 0', fontSize: 11, color: 'var(--text-muted)' }}>Tiene un link vigente sin usar.</p>}
+      {estado?.link_vigente && !error && !compacto && <p style={{ margin: '4px 0 0', fontSize: 11, color: 'var(--text-muted)' }}>Tiene un link vigente sin usar.</p>}
       {error && <p style={{ margin: '4px 0 0', fontSize: 12, color: 'var(--danger)' }}>{error}</p>}
     </div>
   )
