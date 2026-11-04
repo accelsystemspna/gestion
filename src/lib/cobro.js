@@ -8,7 +8,7 @@ export const FORMAS_COBRO = ['Transferencia', 'Efectivo', 'Débito', 'Crédito',
 export const DETALLE_FACTURA = {
   sena:  (ref) => `Seña del pedido ${ref}`,
   saldo: (ref) => `Saldo del pedido ${ref}`,
-  total: (ref) => `Pedido ${ref}`,
+  total: (ref, titulo) => (titulo ? `${titulo} (pedido ${ref})` : `Pedido ${ref}`),
 }
 
 // Facturar por partes en producción (facturas reales) queda apagado hasta que el contador confirme el texto.

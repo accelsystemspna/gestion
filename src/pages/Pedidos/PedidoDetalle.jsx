@@ -85,6 +85,12 @@ export default function PedidoDetalle({ pedido, onCambio, onCerrar, onEliminado 
     })
   }, [pedido.id])   // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Después de cobrar o facturar desde el recuadro de saldo: se trae el pedido como quedó.
+  const recargar = async () => {
+    const { data } = await supabase.from('pedidos').select('*').eq('id', p.id).single()
+    if (data) { setP(data); onCambio?.(data) }
+  }
+
   // Aplica cambios en la base. El servidor puede tocar otros campos (aceptado, precio congelado...), por eso se usa la fila que vuelve.
   const guardar = async (cambios, etiqueta = 'guardar') => {
     setOcupado(etiqueta)
@@ -333,7 +339,7 @@ export default function PedidoDetalle({ pedido, onCambio, onCerrar, onEliminado 
 
             <div style={caja}>
               <div style={sec}>Saldo y facturas</div>
-              <CobroFacturas key={`${p.id}-${p.sena_monto}-${p.total}`} pedidoId={p.id} referencia={p.codigo} editarSena={false} onCambio={onCambio} />
+              <CobroFacturas key={`${p.id}-${p.sena_monto}-${p.total}`} pedidoId={p.id} referencia={p.codigo} titulo={p.titulo} editarSena={false} onCambio={recargar} />
             </div>
           </div>
 

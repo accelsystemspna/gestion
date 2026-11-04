@@ -12,7 +12,7 @@ const ESTADOS = {
 }
 
 /** Ticket de una venta sin factura. Con `paraCliente` devuelve el PDF para su panel en lugar de descargarlo. */
-export async function generarComprobanteVenta({ venta, items, branding, paraCliente = false }) {
+export async function generarComprobanteVenta({ venta, items, branding, paraCliente = false, extra = [] }) {
   const c = await crearFicha({ tamano: 'media', branding })
   const numero = String(venta.numero ?? 0).padStart(4, '0')
   const estado = ESTADOS[venta.estado] ?? ESTADOS.pendiente
@@ -23,6 +23,8 @@ export async function generarComprobanteVenta({ venta, items, branding, paraClie
     subtotal: it.subtotal,
   }))
   const conDescuento = (venta.descuento_porcentaje ?? 0) > 0
+  // El pie crece si lleva renglones de seña y saldo
+  const altoPie = Math.max(44, 16 + ((conDescuento ? 1 : 0) + extra.length + 1) * 14)
 
   armarDocumento(c, {
     cabecera: (y) => filaCeldas(c, cabeceraDoc(c, y, {
@@ -38,10 +40,11 @@ export async function generarComprobanteVenta({ venta, items, branding, paraClie
       { celda: [{ et: 'Celular' }, { t: venta.cliente_telefono || '—', mono: true }] },
     ]),
     filas,
-    altoFinal: 44,
-    final: (y) => bloqueTotal(c, y, 44, {
+    altoFinal: altoPie,
+    final: (y) => bloqueTotal(c, y, altoPie, {
       izquierda: [
         ...(conDescuento ? [{ t: `Descuento ${venta.descuento_porcentaje}%: -${fmtMoney(venta.descuento_monto)}` }] : []),
+        ...extra.map((t) => ({ t })),
         { t: 'Documento no válido como factura.' },
       ],
       etiqueta: venta.estado === 'pendiente' ? 'Falta pagar' : 'Total',

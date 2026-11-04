@@ -55,6 +55,7 @@ export default function Pedidos() {
   }, [pedidos, filtro, q])
 
   const alCambiar = (p) => {
+    if (!p?.id) return
     setPedidos((prev) => prev.some((x) => x.id === p.id) ? prev.map((x) => x.id === p.id ? p : x) : [p, ...prev])
     setAbierto(p)
   }

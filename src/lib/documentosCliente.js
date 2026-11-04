@@ -117,6 +117,50 @@ export async function facturaParteEnPanel({ factura, base, clienteId, arcaConfig
   }
 }
 
+/** Ticket de un pedido cobrado: lo baja y deja la copia en el panel del cliente. */
+export async function ticketPedido(pedidoId) {
+  const { data: p, error } = await supabase.from('pedidos').select('*').eq('id', pedidoId).single()
+  if (error) throw error
+  const { data: branding } = await supabase.from('branding').select('*').eq('user_id', p.org_id).maybeSingle()
+  const renglones = itemsPDFDe({ items: p.items || [] })
+  const items = renglones.length
+    ? renglones.map((r) => ({ descripcion: r.nombre, cantidad: r.cantidad, precio_unitario: r.precio, subtotal: r.precio * r.cantidad }))
+    : [{ descripcion: p.titulo || `Pedido ${p.codigo}`, cantidad: 1, precio_unitario: Number(p.total) || 0, subtotal: Number(p.total) || 0 }]
+  const pagado = !!p.saldo_cobrado || Number(p.saldo) <= 0
+  const pesos = (n) => '$ ' + (Number(n) || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  const fecha = (d) => (d ? new Date(String(d).slice(0, 10) + 'T12:00:00').toLocaleDateString('es-AR') : '')
+  const extra = [
+    ...(Number(p.sena_monto) > 0 ? [`Seña: ${pesos(p.sena_monto)} · ${[fecha(p.sena_fecha), p.sena_forma_pago].filter(Boolean).join(' · ')}`] : []),
+    ...(p.saldo_cobrado ? [`Saldo: cobrado · ${[fecha(p.saldo_fecha), p.saldo_forma].filter(Boolean).join(' · ')}`] : []),
+  ]
+  const venta = {
+    numero: p.codigo, fecha: new Date().toLocaleDateString('en-CA'), hora: new Date().toTimeString().slice(0, 5),
+    cliente_nombre: p.cliente_nombre, cliente_telefono: p.cliente_telefono, forma_pago: p.saldo_forma || p.sena_forma_pago || null,
+    estado: pagado ? 'pagado' : 'pendiente', total: pagado ? p.total : p.saldo,
+  }
+  const blob = await generarComprobanteVenta({ venta, items, branding: branding ?? {}, paraCliente: true, extra })
+  // Se baja
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url; a.download = `ticket-${p.codigo}.pdf`
+  document.body.appendChild(a); a.click(); a.remove()
+  setTimeout(() => URL.revokeObjectURL(url), 10000)
+  // Y queda en el panel del cliente, reemplazando el anterior de este pedido
+  if (!p.cliente_id) return
+  const titulo = `Ticket del pedido ${p.codigo}`
+  const { data: anterior } = await supabase.from('cliente_documentos').select('id, ruta').eq('tipo', 'ticket').eq('pedido_id', p.id).maybeSingle()
+  if (!anterior) {
+    await guardarDocumentoCliente({ orgId: p.org_id, clienteId: p.cliente_id, pedidoId: p.id, tipo: 'ticket', titulo, total: venta.total, blob })
+    return
+  }
+  const ruta = await rutaNueva(p.org_id)
+  const { error: e1 } = await supabase.storage.from(BUCKET).upload(ruta, blob, { contentType: 'application/pdf' })
+  if (e1) throw e1
+  const { error: e2 } = await supabase.from('cliente_documentos').update({ ruta, titulo, total: Number(venta.total) || 0 }).eq('id', anterior.id)
+  if (e2) { await supabase.storage.from(BUCKET).remove([ruta]); throw e2 }
+  await supabase.storage.from(BUCKET).remove([anterior.ruta])
+}
+
 const llevaTicket = (v) => v.estado !== 'anulado' && v.estado !== 'cancelado' && v.estado_web !== 'cancelado' && !v.factura_emitida
 
 /** Quita el ticket del panel. Se llama antes de borrar la venta: sin venta, el ticket quedaría suelto. */

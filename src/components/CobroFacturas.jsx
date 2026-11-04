@@ -4,7 +4,7 @@ import { useAuth } from '../lib/AuthContext'
 import { fmtMoney } from '../lib/format'
 import { portalApi } from '../lib/portalApi'
 import { generarFacturaC } from '../lib/facturaC'
-import { facturaParteEnPanel, sincronizarTicketCliente } from '../lib/documentosCliente'
+import { facturaParteEnPanel, sincronizarTicketCliente, ticketPedido } from '../lib/documentosCliente'
 import { receptorDeCliente, cuitValido, fmtCuit, NOMBRE_DOC, DOC_CONSUMIDOR } from '../lib/cuit'
 import { FACTURAR_PARTES_EN_PRODUCCION, FORMAS_COBRO, DETALLE_FACTURA, CONCEPTOS, resumen, redondear, cargarFacturas, emitirParte, ventaParaFactura, arcaParaFactura, numeroFactura } from '../lib/cobro'
 
@@ -19,7 +19,7 @@ const COLS_PEDIDO = 'id, org_id, codigo, total, cliente_id, cliente_nombre, clie
  * Seña, saldo y facturación en partes de una venta del portal mayorista (`ventaId`) o de un pedido (`pedidoId`).
  * En los pedidos la seña se carga en su propia pantalla (`editarSena` en false); acá se marca el saldo y se factura.
  */
-export default function CobroFacturas({ ventaId = null, pedidoId = null, referencia, editarSena = true, onCambio }) {
+export default function CobroFacturas({ ventaId = null, pedidoId = null, referencia, titulo = null, editarSena = true, onCambio }) {
   const { orgId } = useAuth()
   const [reg, setReg] = useState(null)
   const [facturas, setFacturas] = useState([])
@@ -31,6 +31,7 @@ export default function CobroFacturas({ ventaId = null, pedidoId = null, referen
   const [fact, setFact] = useState(null)          // formulario de factura: { concepto, importe, cf, confirmar, solicitudId }
   const [ocupado, setOcupado] = useState(null)
   const [msg, setMsg] = useState(null)
+  const [siguiente, setSiguiente] = useState(false)   // recién se cobró el saldo: mostrar qué sigue
 
   const esVenta = !!ventaId
   const esPortal = esVenta && reg?.canal === 'web_mayorista'
@@ -85,6 +86,7 @@ export default function CobroFacturas({ ventaId = null, pedidoId = null, referen
     const sena = redondear(cobro.sena)
     if (editarSena && (sena < 0 || sena > r.total)) { setMsg({ tipo: 'error', texto: `La seña tiene que estar entre $0 y el total (${fmtMoney(r.total)}).` }); return }
     setOcupado('cobro'); setMsg(null)
+    const recienCobrado = cobro.saldoCobrado && !reg.saldo_cobrado
     const cambios = {
       saldo_cobrado: cobro.saldoCobrado,
       saldo_fecha: cobro.saldoCobrado ? cobro.saldoFecha : null,
@@ -104,12 +106,26 @@ export default function CobroFacturas({ ventaId = null, pedidoId = null, referen
     }
     setCobro(null); setOcupado(null)
     await cargar()
-    setMsg({ tipo: 'ok', texto })
+    if (recienCobrado) setSiguiente(true)
+    else setMsg({ tipo: 'ok', texto })
     onCambio?.()
+  }
+
+  const generarTicket = async () => {
+    setOcupado('ticket'); setMsg(null)
+    try {
+      await ticketPedido(reg.id)
+      setMsg({ tipo: 'ok', texto: 'Ticket generado: se bajó el PDF y el cliente lo ve en su panel.' })
+      setSiguiente(false)
+    } catch (err) {
+      setMsg({ tipo: 'error', texto: 'No se pudo generar el ticket: ' + (err.message ?? err) })
+    }
+    setOcupado(null)
   }
 
   // ── Facturar ───────────────────────────────────────────────────────────────
   const abrirFactura = (concepto) => {
+    setSiguiente(false)
     const sugerido = concepto === 'sena' ? Math.min(r.senaSinFacturar, r.falta) : r.falta
     setFact({ concepto, importe: String(sugerido || ''), cf: receptorFicha.docTipo === DOC_CONSUMIDOR, confirmar: false, solicitudId: crypto.randomUUID() })
     setMsg(null)
@@ -120,7 +136,7 @@ export default function CobroFacturas({ ventaId = null, pedidoId = null, referen
 
   const emitir = async () => {
     setOcupado('factura'); setMsg(null)
-    const res = await emitirParte({ ventaId, pedidoId, concepto: fact.concepto, importe, detalle: DETALLE_FACTURA[fact.concepto](referencia), receptor, solicitudId: fact.solicitudId })
+    const res = await emitirParte({ ventaId, pedidoId, concepto: fact.concepto, importe, detalle: DETALLE_FACTURA[fact.concepto](referencia, titulo), receptor, solicitudId: fact.solicitudId })
     if (!res.ok) { setOcupado(null); setFact((f) => ({ ...f, confirmar: false })); setMsg({ tipo: 'error', texto: 'No se emitió la factura: ' + res.error }); await cargar(); return }
     const f = res.factura
     // Copia para el panel del cliente y aviso al portal. Si fallan, la factura ya está emitida igual.
@@ -132,6 +148,9 @@ export default function CobroFacturas({ ventaId = null, pedidoId = null, referen
     setMsg({ tipo: 'ok', texto: `Factura C ${numeroFactura(f)} emitida por ${fmtMoney(f.importe)}.` })
     onCambio?.()
   }
+
+  const partesFrenadas = modo === 'produccion' && !FACTURAR_PARTES_EN_PRODUCCION
+  const puedeFacturar = r.falta > 0 && !reg.factura_emitida && (!partesFrenadas || r.facturado === 0)
 
   const bajar = (f) => generarFacturaC({ venta: ventaParaFactura(f, base), arcaConfig: arcaParaFactura(f, arca ?? {}), branding: branding ?? {}, download: true })
 
@@ -174,6 +193,24 @@ export default function CobroFacturas({ ventaId = null, pedidoId = null, referen
         <div><button className="btn btn-sm" onClick={abrirCobro} disabled={!!ocupado}>{editarSena ? '💵 Cargar seña y saldo' : '💵 Marcar saldo cobrado'}</button></div>
       )}
 
+      {siguiente && (
+        <div role="status" style={{ border: '1px solid #86efac', background: '#f0fdf4', borderRadius: 8, padding: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div style={{ fontWeight: 700, color: '#15803d' }}>✓ Saldo cobrado. ¿Qué sigue?</div>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {puedeFacturar && (
+              <button className="btn btn-sm btn-primary" onClick={() => abrirFactura(r.facturado > 0 ? 'saldo' : 'total')}>
+                🧾 Facturar {r.facturado > 0 ? 'el saldo' : 'el total'} ({fmtMoney(r.falta)})
+              </button>
+            )}
+            {!esVenta && (
+              <button className="btn btn-sm" onClick={generarTicket} disabled={!!ocupado}>{ocupado === 'ticket' ? 'Generando…' : '📄 Generar ticket'}</button>
+            )}
+            <button className="btn btn-sm btn-ghost" onClick={() => setSiguiente(false)}>Listo, nada más</button>
+          </div>
+          {!puedeFacturar && r.falta === 0 && <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Ya está todo facturado.</div>}
+        </div>
+      )}
+
       {/* Facturación */}
       <div style={{ borderTop: '1px solid var(--border)', paddingTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
@@ -211,10 +248,10 @@ export default function CobroFacturas({ ventaId = null, pedidoId = null, referen
           <div style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
             <div style={{ fontWeight: 700, fontSize: 14 }}>Facturar {CONCEPTOS[fact.concepto].toLowerCase()}</div>
             <label><div style={lbl}>Importe ($)</div>
-              <input className="input" type="number" min={0} step="0.01" value={fact.importe} disabled={fact.confirmar}
+              <input className="input" type="number" min={0} step="0.01" value={fact.importe} disabled={fact.confirmar || (partesFrenadas && fact.concepto === 'total')}
                 onChange={(e) => setFact((f) => ({ ...f, importe: e.target.value }))} style={{ maxWidth: 180, fontSize: 15, fontWeight: 700 }} /></label>
             {errorImporte && <div style={{ fontSize: 12, color: '#dc2626' }}>{errorImporte}</div>}
-            <div style={{ fontSize: 13 }}>Detalle: <strong>{DETALLE_FACTURA[fact.concepto](referencia)}</strong></div>
+            <div style={{ fontSize: 13 }}>Detalle: <strong>{DETALLE_FACTURA[fact.concepto](referencia, titulo)}</strong></div>
             <div style={{ fontSize: 13 }}>
               A nombre de: <strong>{reg.cliente_nombre || 'Consumidor Final'}</strong>
               {' · '}{receptor.docTipo === DOC_CONSUMIDOR ? 'Consumidor Final' : `${NOMBRE_DOC[receptor.docTipo]} ${fmtCuit(receptor.docNro)} · ${receptor.condIva}`}
@@ -239,9 +276,12 @@ export default function CobroFacturas({ ventaId = null, pedidoId = null, referen
               </div>
             )}
           </div>
-        ) : r.falta > 0 && !reg.factura_emitida && modo === 'produccion' && !FACTURAR_PARTES_EN_PRODUCCION ? (
-          <div style={{ fontSize: 12, color: 'var(--text-muted)', background: 'var(--bg-muted)', borderRadius: 6, padding: '8px 10px' }}>
-            Facturar la seña y el saldo por separado se habilita cuando tu contador confirme cómo se describe cada factura. Mientras tanto podés cargar la seña y el saldo.
+        ) : r.falta > 0 && !reg.factura_emitida && partesFrenadas ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {r.facturado === 0 && <div><button className="btn btn-sm" onClick={() => abrirFactura('total')}>🧾 Facturar el total</button></div>}
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', background: 'var(--bg-muted)', borderRadius: 6, padding: '8px 10px' }}>
+              Facturar la seña y el saldo por separado se habilita cuando tu contador confirme cómo se describe cada factura.
+            </div>
           </div>
         ) : r.falta > 0 && !reg.factura_emitida ? (
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
