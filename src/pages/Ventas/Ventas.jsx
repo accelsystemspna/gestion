@@ -129,6 +129,7 @@ export default function Ventas() {
   const [nuevoCliSaving,   setNuevoCliSaving]   = useState(false)
   const [detalleVentaId, setDetalleVentaId] = useState(null)
   const [ventasHoy,      setVentasHoy]      = useState([])
+  const [cobrosHoy,      setCobrosHoy]      = useState([])   // señas y saldos de pedidos cobrados hoy
   const [savedVenta,     setSavedVenta]     = useState(null)
   const [saving,         setSaving]         = useState(false)
   const [arcaConfig,     setArcaConfig]     = useState(null)
@@ -250,6 +251,20 @@ export default function Ventas() {
       .order('numero', { ascending: false })
     if (error) console.error('[loadVentasHoy]', error)
     setVentasHoy(data ?? [])
+
+    // Cobros de pedidos del día: también es plata que entró. La seña guarda fecha y hora; el saldo, solo la fecha.
+    const inicio = new Date(); inicio.setHours(0, 0, 0, 0)
+    const fin = new Date(inicio); fin.setDate(fin.getDate() + 1)
+    const cols = 'id, codigo, cliente_nombre, titulo, total, sena_monto, sena_fecha, sena_forma_pago'
+    const [senas, saldos] = await Promise.all([
+      supabase.from('pedidos').select(cols).gt('sena_monto', 0).gte('sena_fecha', inicio.toISOString()).lt('sena_fecha', fin.toISOString()),
+      supabase.from('pedidos').select(cols + ', saldo_fecha, saldo_forma').eq('saldo_cobrado', true).eq('saldo_fecha', hoy),
+    ])
+    const cobros = [
+      ...(senas.data ?? []).map(p => ({ clave: 's' + p.id, tipo: 'Seña', pedido: p, monto: Number(p.sena_monto) || 0, forma: p.sena_forma_pago, hora: new Date(p.sena_fecha).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }) })),
+      ...(saldos.error ? [] : saldos.data ?? []).map(p => ({ clave: 'x' + p.id, tipo: 'Saldo', pedido: p, monto: Math.max((Number(p.total) || 0) - (Number(p.sena_monto) || 0), 0), forma: p.saldo_forma, hora: '' })),
+    ].filter(c => c.monto > 0)
+    setCobrosHoy(cobros)
   }, [])
 
   useEffect(() => { loadVentasHoy() }, [loadVentasHoy])
@@ -742,7 +757,8 @@ export default function Ventas() {
   }
 
   const compInfo = COMPROBANTES.find(c => c.value === comprobante) ?? COMPROBANTES[0]
-  const totalVentasHoy = ventasHoy.reduce((s, v) => s + (v.total ?? 0), 0)
+  const totalCobrosHoy = cobrosHoy.reduce((s, c) => s + c.monto, 0)
+  const totalVentasHoy = ventasHoy.reduce((s, v) => s + (v.total ?? 0), 0) + totalCobrosHoy
 
   // ════════════════════════════════════════════════════════════════════════
   return (
@@ -1475,7 +1491,7 @@ export default function Ventas() {
               <div>
                 <div style={{ fontWeight: 700, fontSize: 16 }}>Ventas del día</div>
                 <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
-                  {fmtDate(todayStr())} · <strong>{ventasHoy.length}</strong> ventas · <strong>{fmtMoney(totalVentasHoy)}</strong>
+                  {fmtDate(todayStr())} · <strong>{ventasHoy.length}</strong> ventas{cobrosHoy.length > 0 && <> · <strong>{cobrosHoy.length}</strong> cobros de pedidos</>} · <strong>{fmtMoney(totalVentasHoy)}</strong>
                 </div>
               </div>
               <button onClick={() => setShowHistorial(false)}
@@ -1484,7 +1500,7 @@ export default function Ventas() {
 
             {/* Lista de ventas */}
             <div style={{ flex: 1, overflowY: 'auto', padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {ventasHoy.length === 0 ? (
+              {ventasHoy.length === 0 && cobrosHoy.length > 0 ? null : ventasHoy.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)', fontSize: 13 }}>
                   <div style={{ fontSize: 32, marginBottom: 10 }}>🧾</div>
                   Sin ventas registradas hoy.
@@ -1524,6 +1540,35 @@ export default function Ventas() {
                     </div>
                   )
                 })
+              )}
+
+              {cobrosHoy.length > 0 && (
+                <>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '.04em', marginTop: 8 }}>
+                    Cobros de pedidos · {fmtMoney(totalCobrosHoy)}
+                  </div>
+                  {cobrosHoy.map(c => (
+                    <div key={c.clave}
+                      onClick={() => { setShowHistorial(false); navigate(`/pedidos?abrir=${c.pedido.id}`) }}
+                      style={{ padding: '10px 12px', border: '1px solid var(--border)', borderRadius: 8, cursor: 'pointer', background: 'var(--surface)', display: 'flex', gap: 10, alignItems: 'flex-start' }}
+                      onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--primary)'}
+                      onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}
+                    >
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: '#0e7490' }}>{c.tipo} · Pedido {c.pedido.codigo}</span>
+                        </div>
+                        <div style={{ fontSize: 13, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {c.pedido.cliente_nombre || 'Sin cliente'}{c.pedido.titulo ? ` · ${c.pedido.titulo}` : ''}
+                        </div>
+                        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
+                          {[c.hora, c.forma].filter(Boolean).join(' · ')}
+                        </div>
+                      </div>
+                      <div style={{ fontSize: 17, fontWeight: 800, color: '#0e7490', whiteSpace: 'nowrap' }}>{fmtMoney(c.monto)}</div>
+                    </div>
+                  ))}
+                </>
               )}
             </div>
           </div>
