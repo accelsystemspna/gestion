@@ -118,7 +118,9 @@ export default function Pedidos() {
               </div>
               <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
                 <div>Total: <strong style={{ color: 'var(--text)' }}>{fmtMoney(p.total)}</strong></div>
-                <div>Seña: {fmtMoney(p.sena_monto)} · <span style={{ color: Number(p.saldo) > 0 && p.sena_monto > 0 ? '#b45309' : undefined, fontWeight: 600 }}>Saldo: {fmtMoney(p.saldo)}</span></div>
+                <div>Seña: {fmtMoney(p.sena_monto)} · {p.saldo_cobrado
+                  ? <span style={{ color: '#15803d', fontWeight: 700 }}>Pagado</span>
+                  : <span style={{ color: Number(p.saldo) > 0 && p.sena_monto > 0 ? '#b45309' : undefined, fontWeight: 600 }}>Saldo: {fmtMoney(p.saldo)}</span>}</div>
               </div>
               <span style={{ color: 'var(--text-muted)' }}>›</span>
             </div>

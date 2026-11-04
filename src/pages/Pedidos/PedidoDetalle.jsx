@@ -312,7 +312,9 @@ export default function PedidoDetalle({ pedido, onCambio, onCerrar, onEliminado 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, fontSize: 13, padding: '10px 0', borderTop: '1px solid var(--border)' }}>
                 <div><div style={lbl}>Seña</div><strong>{fmtMoney(p.sena_monto)}</strong>
                   {p.sena_fecha && <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{new Date(p.sena_fecha).toLocaleDateString('es-AR')}{p.sena_forma_pago ? ` · ${p.sena_forma_pago}` : ''}</div>}</div>
-                <div><div style={lbl}>Saldo a cobrar</div><strong style={{ color: Number(p.saldo) > 0 ? '#b45309' : '#15803d' }}>{fmtMoney(p.saldo)}</strong></div>
+                <div><div style={lbl}>Saldo a cobrar</div>{p.saldo_cobrado
+                  ? <strong style={{ color: '#15803d' }}>Pagado</strong>
+                  : <strong style={{ color: Number(p.saldo) > 0 ? '#b45309' : '#15803d' }}>{fmtMoney(p.saldo)}</strong>}</div>
               </div>
 
               {Number(p.sena_monto) === 0 && !cerrado && (
