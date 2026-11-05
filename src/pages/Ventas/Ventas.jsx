@@ -264,7 +264,19 @@ export default function Ventas() {
       ...(senas.data ?? []).map(p => ({ clave: 's' + p.id, tipo: 'Seña', pedido: p, monto: Number(p.sena_monto) || 0, forma: p.sena_forma_pago, hora: new Date(p.sena_fecha).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }) })),
       ...(saldos.error ? [] : saldos.data ?? []).map(p => ({ clave: 'x' + p.id, tipo: 'Saldo', pedido: p, monto: Math.max((Number(p.total) || 0) - (Number(p.sena_monto) || 0), 0), forma: p.saldo_forma, hora: '' })),
     ].filter(c => c.monto > 0)
-    setCobrosHoy(cobros)
+    // Facturas de esos pedidos, para mostrarlos facturados como una venta
+    const ids = [...new Set(cobros.map(c => c.pedido.id))]
+    const { data: facts } = ids.length
+      ? await supabase.from('facturas').select('pedido_id, concepto, punto_venta, nro_factura')
+          .in('pedido_id', ids).eq('estado', 'emitida').eq('modo', 'produccion').order('created_at')
+      : { data: [] }
+    const numero = (f) => `${String(f.punto_venta ?? 0).padStart(4, '0')}-${String(f.nro_factura ?? 0).padStart(8, '0')}`
+    setCobrosHoy(cobros.map(c => {
+      const propias = (facts ?? []).filter(f => f.pedido_id === c.pedido.id)
+      // La seña se ve facturada con una factura de seña o por el total; el saldo, con una de saldo o por el total
+      const suya = propias.filter(f => f.concepto === 'total' || f.concepto === (c.tipo === 'Seña' ? 'sena' : 'saldo'))
+      return { ...c, facturas: suya.map(numero) }
+    }))
   }, [])
 
   useEffect(() => { loadVentasHoy() }, [loadVentasHoy])
@@ -1557,12 +1569,16 @@ export default function Ventas() {
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
                           <span style={{ fontSize: 12, fontWeight: 700, color: '#0e7490' }}>{c.tipo} · Pedido {c.pedido.codigo}</span>
+                          <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 7px', borderRadius: 10, background: ESTADO_S.pagado.bg, color: ESTADO_S.pagado.color }}>{ESTADO_S.pagado.label}</span>
+                          {c.facturas.length > 0 && (
+                            <span title={c.facturas.map(n => 'Factura C ' + n).join(', ')} style={{ fontSize: 10, fontWeight: 700, padding: '1px 7px', borderRadius: 10, background: '#dbeafe', color: '#1d4ed8' }}>🏛️ Facturado</span>
+                          )}
                         </div>
                         <div style={{ fontSize: 13, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {c.pedido.cliente_nombre || 'Sin cliente'}{c.pedido.titulo ? ` · ${c.pedido.titulo}` : ''}
                         </div>
                         <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
-                          {[c.hora, c.forma].filter(Boolean).join(' · ')}
+                          {[c.hora, c.forma, ...c.facturas.map(n => 'Factura C ' + n)].filter(Boolean).join(' · ')}
                         </div>
                       </div>
                       <div style={{ fontSize: 17, fontWeight: 800, color: '#0e7490', whiteSpace: 'nowrap' }}>{fmtMoney(c.monto)}</div>
