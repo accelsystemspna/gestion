@@ -10,6 +10,9 @@ function urlBase64ToUint8Array(base64String) {
 }
 
 export function pushSupported() {
+  // El programa de escritorio no admite notificaciones del navegador (el motor de Windows las
+  // rechaza siempre): ahí se avisa con el cartel y el sonido mientras el programa está abierto.
+  if (window.__GESTION_ESCRITORIO__ === true) return false
   return 'serviceWorker' in navigator && 'PushManager' in window && !!VAPID_PUBLIC_KEY
 }
 
