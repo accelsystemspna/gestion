@@ -157,6 +157,18 @@ export default function Layout() {
   const items = navItems.filter(item => !item.minAdmin || isAdmin)
 
   // ── Menú personalizado del usuario (se guarda en su perfil al cerrar el candado) ──
+  // ── Logo del negocio (Configuración → Marca) arriba del menú ──
+  const [logo, setLogo] = useState(null)
+  useEffect(() => {
+    if (!orgId) return
+    let vigente = true
+    supabase.from('branding').select('logo_url').eq('user_id', orgId).maybeSingle()
+      .then(({ data }) => { if (vigente) setLogo(data?.logo_url || null) })
+    const alGuardar = (e) => setLogo(e.detail?.logo_url || null)
+    window.addEventListener('branding-guardado', alGuardar)
+    return () => { vigente = false; window.removeEventListener('branding-guardado', alGuardar) }
+  }, [orgId])
+
   const [menuEditado, setMenuEditado] = useState(null)
   const [editandoMenu, setEditandoMenu] = useState(false)
   const [guardandoMenu, setGuardandoMenu] = useState(false)
@@ -174,8 +186,14 @@ export default function Layout() {
 
   const sidebarContent = (
     <>
-      <div style={{ padding: '22px 20px 14px', fontSize: 13, color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-        {negocioNombre || 'Panel de gestión'}
+      <div style={{ padding: logo ? '18px 20px 12px' : '22px 20px 14px', display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+        {logo && (
+          <img src={logo} alt="" onError={() => setLogo(null)}
+            style={{ maxHeight: 40, maxWidth: 110, objectFit: 'contain', flexShrink: 0, display: 'block' }} />
+        )}
+        <span style={{ fontSize: 13, color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}>
+          {negocioNombre || 'Panel de gestión'}
+        </span>
       </div>
 
       <MenuLateral

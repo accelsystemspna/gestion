@@ -63,6 +63,8 @@ export default function Branding() {
     const { error } = await supabase.from('branding').upsert(payload, { onConflict: 'user_id' })
     setSaving(false)
     setMsg(error ? { type: 'error', text: error.message } : { type: 'ok', text: 'Guardado correctamente' })
+    // El menú lateral muestra el logo: se entera del cambio sin recargar.
+    if (!error) window.dispatchEvent(new CustomEvent('branding-guardado', { detail: payload }))
   }
 
   return (
