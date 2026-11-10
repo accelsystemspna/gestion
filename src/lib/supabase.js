@@ -18,7 +18,10 @@ const esNode = typeof window === 'undefined'
 // sessionStorage (dura solo mientras esa pestaña siga abierta): al cerrar el
 // navegador hay que volver a iniciar sesión. AuthContext además fuerza un reingreso
 // si pasó más de un día, aunque la pestaña nunca se haya cerrado.
+// Instalada = app desde el navegador (PWA) o el programa de escritorio para Windows.
+// Ahí la sesión queda guardada aunque se cierre la ventana.
 export const esAppInstalada = !esNode && (
+  window.__GESTION_ESCRITORIO__ === true ||
   window.matchMedia?.('(display-mode: standalone)')?.matches === true ||
   window.navigator?.standalone === true
 )
