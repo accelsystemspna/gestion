@@ -1,28 +1,29 @@
-import { useState, useEffect, useRef } from 'react'
-import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { useState, useEffect, useRef, useMemo } from 'react'
+import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../lib/AuthContext'
 import { actualizarCostosCompartidos } from '../lib/materiales'
 import { supabase } from '../lib/supabase'
 import { fmtMoney } from '../lib/format'
 import { playCashRegisterSound, unlockAudio } from '../lib/sound'
 import { subscribeToPush, pushSupported } from '../lib/push'
-import IconoMenu from './IconoMenu'
+import MenuLateral from './MenuLateral'
+import { normalizarMenu } from '../lib/menu'
 
 const NOTIF_DISMISSED_KEY = 'notif_banner_dismissed'
 
 const navItems = [
-  { to: '/dashboard',     label: 'Panel',         icono: 'panel',         grupo: 'General', minAdmin: true },
-  { to: '/ventas',        label: 'Ventas',        icono: 'ventas',        grupo: 'General' },
-  { to: '/pedidos',       label: 'Pedidos',       icono: 'pedidos',       grupo: 'General' },
-  { to: '/presupuesto',   label: 'Presupuestos',  icono: 'presupuestos',  grupo: 'General' },
-  { to: '/clientes',      label: 'Clientes',      icono: 'clientes',      grupo: 'General' },
-  { to: '/productos',     label: 'Productos',     icono: 'productos',     grupo: 'Catálogo', minAdmin: true },
-  { to: '/materiales',    label: 'Materiales',    icono: 'materiales',    grupo: 'Catálogo', minAdmin: true },
-  { to: '/tiendas',       label: 'Tiendas',       icono: 'tiendas',       grupo: 'Catálogo', minAdmin: true },
-  { to: '/facturas',      label: 'Facturas',      icono: 'facturas',      grupo: 'Administración', minAdmin: true },
-  { to: '/configuracion', label: 'Configuración', icono: 'configuracion', grupo: 'Administración', minAdmin: true },
+  { to: '/dashboard',     label: 'Panel',         icono: 'panel', minAdmin: true },
+  { to: '/ventas',        label: 'Ventas',        icono: 'ventas' },
+  { to: '/pedidos',       label: 'Pedidos',       icono: 'pedidos' },
+  { to: '/presupuesto',   label: 'Presupuestos',  icono: 'presupuestos' },
+  { to: '/clientes',      label: 'Clientes',      icono: 'clientes' },
+  { to: '/productos',     label: 'Productos',     icono: 'productos', minAdmin: true },
+  { to: '/materiales',    label: 'Materiales',    icono: 'materiales', minAdmin: true },
+  { to: '/tiendas',       label: 'Tiendas',       icono: 'tiendas', minAdmin: true },
+  { to: '/facturas',      label: 'Facturas',      icono: 'facturas', minAdmin: true },
+  { to: '/configuracion', label: 'Configuración', icono: 'configuracion', minAdmin: true },
 ]
-const GRUPOS = ['General', 'Catálogo', 'Administración']
+const RUTAS = navItems.map((n) => n.to)
 
 export default function Layout() {
   const { user, profile, signOut, isAdmin, orgId, negocioNombre } = useAuth()
@@ -154,6 +155,21 @@ export default function Layout() {
   }
 
   const items = navItems.filter(item => !item.minAdmin || isAdmin)
+
+  // ── Menú personalizado del usuario (se guarda en su perfil al cerrar el candado) ──
+  const [menuEditado, setMenuEditado] = useState(null)
+  const [editandoMenu, setEditandoMenu] = useState(false)
+  const [guardandoMenu, setGuardandoMenu] = useState(false)
+  const menu = useMemo(() => normalizarMenu(menuEditado ?? profile?.menu_config, RUTAS), [menuEditado, profile])
+  const guardarMenu = async () => {
+    setGuardandoMenu(true)
+    const deFabrica = JSON.stringify(menu) === JSON.stringify(normalizarMenu(null, RUTAS))
+    const { error } = await supabase.from('profiles').update({ menu_config: deFabrica ? null : menu }).eq('id', user.id)
+    setGuardandoMenu(false)
+    if (error) { alert('No se pudo guardar el menú: ' + error.message); return }
+    setMenuEditado(menu)
+    setEditandoMenu(false)
+  }
   const pageTitle = navItems.find(n => location.pathname.startsWith(n.to))?.label ?? 'Gestión'
 
   const sidebarContent = (
@@ -162,40 +178,17 @@ export default function Layout() {
         {negocioNombre || 'Panel de gestión'}
       </div>
 
-      <nav style={{ flex: 1, padding: '0 10px 12px', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
-        {GRUPOS.map((g) => {
-          const delGrupo = items.filter((i) => i.grupo === g)
-          if (!delGrupo.length) return null
-          return (
-            <div key={g} style={{ marginBottom: 10 }}>
-              <div style={{ padding: '10px 10px 6px', fontSize: 11, fontWeight: 500, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-light)' }}>{g}</div>
-              {delGrupo.map((item) => (
-                <NavLink
-                  key={item.to}
-                  to={item.to}
-                  className="menu-item"
-                  style={({ isActive }) => ({
-                    display: 'flex', alignItems: 'center', gap: 12,
-                    padding: '8px 10px', borderRadius: 8, fontSize: 14,
-                    fontWeight: isActive ? 600 : 400,
-                    color: isActive ? 'var(--text)' : 'var(--text-muted)',
-                    background: isActive ? 'var(--accent-tenue)' : 'transparent',
-                    transition: 'background 0.12s, color 0.12s',
-                  })}
-                >
-                  <IconoMenu nombre={item.icono} />
-                  {item.label}
-                  {item.to === '/tiendas' && ventasWebPendientes > 0 && (
-                    <span style={{ marginLeft: 'auto', fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 600, color: 'var(--accent)' }}>
-                      {ventasWebPendientes}
-                    </span>
-                  )}
-                </NavLink>
-              ))}
-            </div>
-          )
-        })}
-      </nav>
+      <MenuLateral
+        menu={menu}
+        items={items}
+        editando={editandoMenu}
+        guardando={guardandoMenu}
+        insignias={{ '/tiendas': ventasWebPendientes }}
+        onCambio={setMenuEditado}
+        onAbrir={() => setEditandoMenu(true)}
+        onCerrar={guardarMenu}
+        onRestablecer={() => setMenuEditado(normalizarMenu(null, RUTAS))}
+      />
 
       <div style={{ padding: '14px 20px', borderTop: '1px solid var(--border)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
