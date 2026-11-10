@@ -186,15 +186,17 @@ export default function Layout() {
 
   const sidebarContent = (
     <>
-      <div style={{ padding: logo ? '18px 20px 12px' : '22px 20px 14px', display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
-        {logo && (
-          <img src={logo} alt="" onError={() => setLogo(null)}
-            style={{ maxHeight: 40, maxWidth: 110, objectFit: 'contain', flexShrink: 0, display: 'block' }} />
-        )}
-        <span style={{ fontSize: 13, color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}>
+      {/* Con logo cargado en Marca se muestra solo el logo; sin logo, el nombre del negocio */}
+      {logo ? (
+        <div style={{ padding: '20px 20px 14px' }}>
+          <img src={logo} alt={negocioNombre || 'Logo'} title={negocioNombre || undefined} onError={() => setLogo(null)}
+            style={{ maxHeight: 72, maxWidth: '100%', objectFit: 'contain', display: 'block' }} />
+        </div>
+      ) : (
+        <div style={{ padding: '22px 20px 14px', fontSize: 13, color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
           {negocioNombre || 'Panel de gestión'}
-        </span>
-      </div>
+        </div>
+      )}
 
       <MenuLateral
         menu={menu}
