@@ -188,9 +188,9 @@ export default function Layout() {
     <>
       {/* Con logo cargado en Marca se muestra solo el logo; sin logo, el nombre del negocio */}
       {logo ? (
-        <div style={{ padding: '20px 20px 14px' }}>
+        <div style={{ padding: '22px 20px 16px', display: 'flex', justifyContent: 'center' }}>
           <img src={logo} alt={negocioNombre || 'Logo'} title={negocioNombre || undefined} onError={() => setLogo(null)}
-            style={{ maxHeight: 72, maxWidth: '100%', objectFit: 'contain', display: 'block' }} />
+            style={{ maxHeight: 72, maxWidth: '85%', objectFit: 'contain', display: 'block' }} />
         </div>
       ) : (
         <div style={{ padding: '22px 20px 14px', fontSize: 13, color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
