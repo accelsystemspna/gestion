@@ -88,7 +88,7 @@ export default function ListasPrecios() {
       {loading ? (
         <div style={{ padding: 20, textAlign: 'center', color: 'var(--text-muted)' }}>Cargando...</div>
       ) : items.length === 0 ? (
-        <div style={{ padding: 30, textAlign: 'center', color: 'var(--text-muted)', border: '1px dashed var(--border)', borderRadius: 8 }}>
+        <div style={{ padding: 30, textAlign: 'center', color: 'var(--text-muted)', border: '1px dashed var(--border)', borderRadius: 'var(--radius-sm)' }}>
           No hay listas de precios. Creá la primera.
         </div>
       ) : (
@@ -96,20 +96,20 @@ export default function ListasPrecios() {
           {items.map((l) => {
             const campos = l.campos_extra || []
             return (
-              <div key={l.id} style={{ border: '1px solid var(--border)', borderRadius: 8, padding: '12px 16px', background: 'var(--bg-card)', display: 'flex', alignItems: 'center', gap: 16 }}>
+              <div key={l.id} style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '12px 16px', background: 'var(--bg-card)', display: 'flex', alignItems: 'center', gap: 16 }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <strong style={{ fontSize: 15 }}>{l.nombre}</strong>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
-                    <span style={{ fontSize: 12, padding: '2px 8px', borderRadius: 4, background: Number(l.adicional) >= 0 ? '#f0fdf4' : '#fef2f2', color: Number(l.adicional) >= 0 ? '#166534' : '#991b1b' }}>
+                    <span style={{ fontSize: 12, padding: '2px 8px', borderRadius: 'var(--radius-sm)', background: Number(l.adicional) >= 0 ? '#f0fdf4' : '#fef2f2', color: Number(l.adicional) >= 0 ? '#166534' : '#991b1b' }}>
                       {Number(l.adicional) >= 0 ? '+' : ''}{l.adicional}% base
                     </span>
                     {campos.map((c, i) => (
-                      <span key={i} style={{ fontSize: 12, padding: '2px 8px', borderRadius: 4, background: 'var(--bg-muted)', color: 'var(--text-muted)' }}>
+                      <span key={i} style={{ fontSize: 12, padding: '2px 8px', borderRadius: 'var(--radius-sm)', background: 'var(--bg-muted)', color: 'var(--text-muted)' }}>
                         {c.nombre}: {c.tipo === '%' ? `${c.valor}%` : fmtMoney(c.valor)}
                       </span>
                     ))}
                     {Number(l.redondeo_valor) > 0 && (
-                      <span style={{ fontSize: 12, padding: '2px 8px', borderRadius: 4, background: 'rgba(126,34,206,0.1)', color: '#a855f7' }}>
+                      <span style={{ fontSize: 12, padding: '2px 8px', borderRadius: 'var(--radius-sm)', background: 'rgba(126,34,206,0.1)', color: '#a855f7' }}>
                         redondeo {l.redondeo_tipo === 'arriba' ? '↑' : l.redondeo_tipo === 'abajo' ? '↓' : '≈'} ${l.redondeo_valor}
                       </span>
                     )}
@@ -216,7 +216,7 @@ function ListaForm({ initial, onCancel, onSave }) {
                 </select>
               </div>
               {Number(form.redondeo_valor) > 0 && (
-                <div style={{ fontSize: 12, padding: '6px 10px', borderRadius: 5, background: 'rgba(126,34,206,0.1)', color: '#a855f7', marginBottom: 4 }}>
+                <div style={{ fontSize: 12, padding: '6px 10px', borderRadius: 'var(--radius-sm)', background: 'rgba(126,34,206,0.1)', color: '#a855f7', marginBottom: 4 }}>
                   {(() => {
                     const rv = Number(form.redondeo_valor)
                     const ejemplos = [1234.5, 2780, 5130]
@@ -253,7 +253,7 @@ function ListaForm({ initial, onCancel, onSave }) {
                     ? ((Number(c.valor) || 0) * (c.incluye_iva ? 1.21 : 1)).toFixed(2)
                     : null
                   return (
-                    <div key={i} style={{ border: '1px solid var(--border)', borderRadius: 6, overflow: 'hidden' }}>
+                    <div key={i} style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', overflow: 'hidden' }}>
                       {/* Fila principal */}
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 76px 110px 32px', gap: 8, alignItems: 'center', padding: '8px 10px', background: 'var(--bg-card)' }}>
                         <input
@@ -306,7 +306,7 @@ function ListaForm({ initial, onCancel, onSave }) {
                           </div>
 
                           {/* Aclaración calculada */}
-                          <div style={{ fontSize: 12, padding: '6px 10px', borderRadius: 5, background: c.es_comision ? 'rgba(245,158,11,0.12)' : 'rgba(16,185,129,0.12)', color: c.es_comision ? 'var(--warning)' : 'var(--success)' }}>
+                          <div style={{ fontSize: 12, padding: '6px 10px', borderRadius: 'var(--radius-sm)', background: c.es_comision ? 'rgba(245,158,11,0.12)' : 'rgba(16,185,129,0.12)', color: c.es_comision ? 'var(--warning)' : 'var(--success)' }}>
                             {c.incluye_iva && (
                               <span>
                                 Tasa efectiva: {c.valor}% × 1.21 = <strong>{tasaEfectiva}%</strong>
@@ -356,7 +356,7 @@ function ListaForm({ initial, onCancel, onSave }) {
                 {showSugerencias && (
                   <div style={{
                     position: 'absolute', top: '100%', left: 0, zIndex: 20, marginTop: 4,
-                    background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 6,
+                    background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)',
                     boxShadow: '0 4px 12px rgba(0,0,0,0.1)', minWidth: 200,
                   }}>
                     {SUGERENCIAS.map((s) => (

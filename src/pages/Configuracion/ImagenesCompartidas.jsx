@@ -117,7 +117,7 @@ export default function ImagenesCompartidas() {
       {(pendiente || resultado) && (
         <div style={{
           display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap',
-          padding: '10px 14px', marginBottom: 14, borderRadius: 8,
+          padding: '10px 14px', marginBottom: 14, borderRadius: 'var(--radius-sm)',
           background: pendiente ? '#fffbeb' : '#f0fdf4',
           border: `1px solid ${pendiente ? '#fcd34d' : '#86efac'}`,
         }}>
@@ -135,7 +135,7 @@ export default function ImagenesCompartidas() {
       {loading ? (
         <div style={{ padding: 20, textAlign: 'center', color: 'var(--text-muted)' }}>Cargando...</div>
       ) : items.length === 0 ? (
-        <div style={{ padding: 30, textAlign: 'center', color: 'var(--text-muted)', border: '1px dashed var(--border)', borderRadius: 8 }}>
+        <div style={{ padding: 30, textAlign: 'center', color: 'var(--text-muted)', border: '1px dashed var(--border)', borderRadius: 'var(--radius-sm)' }}>
           Todavía no hay imágenes compartidas. Subí la primera.
         </div>
       ) : (
@@ -147,10 +147,10 @@ export default function ImagenesCompartidas() {
             {items.map((it, idx) => (
               <div key={it.id} style={{
                 display: 'flex', alignItems: 'center', gap: 12, padding: '8px 12px',
-                border: '1px solid var(--border)', borderRadius: 8, background: 'var(--bg-card)',
+                border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', background: 'var(--bg-card)',
                 opacity: it.activa ? 1 : 0.5, flexWrap: 'wrap',
               }}>
-                <img loading="lazy" decoding="async" src={it.url} alt="" style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: 6, border: '1px solid var(--border)', flexShrink: 0 }} />
+                <img loading="lazy" decoding="async" src={it.url} alt="" style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)', flexShrink: 0 }} />
                 <input
                   className="input"
                   defaultValue={it.nombre || ''}

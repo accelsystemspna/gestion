@@ -34,12 +34,12 @@ export default function AccesoCliente({ cliente, estado, onEnviado, compacto = f
   return (
     <div onClick={(e) => e.stopPropagation()} style={{ cursor: 'default' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-        <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 12, whiteSpace: 'nowrap', background: tienePin ? 'rgba(22,163,74,0.12)' : 'rgba(100,116,139,0.14)', color: tienePin ? '#15803d' : '#64748b' }}>
+        <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 'var(--radius-sm)', whiteSpace: 'nowrap', background: tienePin ? 'rgba(22,163,74,0.12)' : 'rgba(100,116,139,0.14)', color: tienePin ? '#15803d' : '#64748b' }}>
           {tienePin ? 'Ya tiene PIN' : 'Sin PIN'}
         </span>
         {cliente.telefono
           ? <button type="button" className="btn btn-sm" onClick={mandar} disabled={enviando}>
-              {enviando ? 'Generando…' : compacto ? '💬 Mandar' : tienePin ? '💬 Mandar link para cambiar PIN' : '💬 Mandar acceso por WhatsApp'}
+              {enviando ? 'Generando…' : compacto ? 'Mandar' : tienePin ? 'Mandar link para cambiar PIN' : 'Mandar acceso por WhatsApp'}
             </button>
           : !compacto && <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Falta cargar el celular para mandarle el acceso.</span>}
       </div>

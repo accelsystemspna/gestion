@@ -48,7 +48,7 @@ function Badge({ children, color, bg }) {
   return (
     <span style={{
       display: 'inline-block', fontSize: 11, fontWeight: 700, padding: '2px 8px',
-      borderRadius: 999, background: bg, color, whiteSpace: 'nowrap',
+      borderRadius: 'var(--radius-sm)', background: bg, color, whiteSpace: 'nowrap',
     }}>{children}</span>
   )
 }
@@ -70,7 +70,7 @@ function ItemsPedido({ items, grande = false, onProduccion = null, ocupado = fal
   return (
     <div style={{ display: 'flex', flexDirection: grande ? 'column' : 'row', gap: grande ? 10 : 8, flexWrap: 'wrap' }}>
       {sinIndice && (
-        <div style={{ fontSize: 12, color: '#78350f', background: '#fef3c7', borderRadius: 8, padding: '6px 10px', width: '100%' }}>
+        <div style={{ fontSize: 12, color: '#78350f', background: '#fef3c7', borderRadius: 'var(--radius-sm)', padding: '6px 10px', width: '100%' }}>
           Para cambiar la fabricación de este pedido tocá primero «Actualizar desde el portal».
         </div>
       )}
@@ -78,13 +78,13 @@ function ItemsPedido({ items, grande = false, onProduccion = null, ocupado = fal
         <div key={it.id} style={{
           display: 'flex', gap: 10, alignItems: 'center',
           ...(grande
-            ? { padding: '8px 10px', border: '1px solid var(--border)', borderRadius: 10, background: 'var(--surface)' }
-            : { padding: '4px 10px 4px 4px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--bg)' }),
+            ? { padding: '8px 10px', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', background: 'var(--surface)' }
+            : { padding: '4px 10px 4px 4px', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', background: 'var(--bg)' }),
         }}>
           {it.imagen ? (
             <ImageThumb src={it.imagen} size={foto} radius={6} alt={it.descripcion} />
           ) : (
-            <div style={{ width: foto, height: foto, borderRadius: 6, background: 'var(--bg-muted)', color: 'var(--text-muted)', fontSize: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', flexShrink: 0 }}>
+            <div style={{ width: foto, height: foto, borderRadius: 'var(--radius-sm)', background: 'var(--bg-muted)', color: 'var(--text-muted)', fontSize: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', flexShrink: 0 }}>
               Sin foto
             </div>
           )}
@@ -92,7 +92,7 @@ function ItemsPedido({ items, grande = false, onProduccion = null, ocupado = fal
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
               <span style={{ fontFamily: 'monospace', fontWeight: 800, fontSize: grande ? 15 : 13 }}>{it.codigo || 'Sin código'}</span>
               {ESTADOS_PRODUCCION[it.produccion] && (
-                <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 7px', borderRadius: 10, color: ESTADOS_PRODUCCION[it.produccion].color, background: ESTADOS_PRODUCCION[it.produccion].bg }}>
+                <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 7px', borderRadius: 'var(--radius-sm)', color: ESTADOS_PRODUCCION[it.produccion].color, background: ESTADOS_PRODUCCION[it.produccion].bg }}>
                   {ESTADOS_PRODUCCION[it.produccion].label}
                 </span>
               )}
@@ -116,7 +116,7 @@ function ItemsPedido({ items, grande = false, onProduccion = null, ocupado = fal
 
 function Kpi({ label, value, sub, color }) {
   return (
-    <div style={{ flex: '1 1 150px', padding: '12px 14px', border: '1px solid var(--border)', borderRadius: 10, background: 'var(--surface)' }}>
+    <div style={{ flex: '1 1 150px', padding: '12px 14px', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', background: 'var(--surface)' }}>
       <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{label}</div>
       <div style={{ fontSize: 22, fontWeight: 800, color: color || 'var(--text)', marginTop: 2 }}>{value}</div>
       {sub && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>{sub}</div>}
@@ -529,7 +529,7 @@ export default function Tiendas() {
   // porque si no queda tapado por ellas y parece que el botón no hizo nada.
   const avisoMsg = msg && (
     <div style={{
-      display: 'flex', justifyContent: 'space-between', gap: 10, padding: '10px 14px', marginBottom: 14, borderRadius: 8, fontSize: 13,
+      display: 'flex', justifyContent: 'space-between', gap: 10, padding: '10px 14px', marginBottom: 14, borderRadius: 'var(--radius-sm)', fontSize: 13,
       background: msg.tipo === 'error' ? '#fee2e2' : msg.tipo === 'aviso' ? '#fef3c7' : '#dcfce7',
       color: msg.tipo === 'error' ? '#7f1d1d' : msg.tipo === 'aviso' ? '#78350f' : '#14532d',
     }}>
@@ -553,7 +553,7 @@ export default function Tiendas() {
       </div>
 
       {errorSql && (
-        <div style={{ padding: '12px 14px', marginBottom: 14, borderRadius: 8, background: '#fef3c7', border: '1px solid #fcd34d', color: '#78350f', fontSize: 13 }}>
+        <div style={{ padding: '12px 14px', marginBottom: 14, borderRadius: 'var(--radius-sm)', background: '#fef3c7', border: '1px solid #fcd34d', color: '#78350f', fontSize: 13 }}>
           Falta correr un SQL en Supabase (SQL Editor): <strong>supabase_tiendas_pedidos.sql</strong> y, para el portal mayorista, <strong>supabase_mayorista_pedidos.sql</strong>. Detalle: {errorSql}
         </div>
       )}
@@ -577,7 +577,7 @@ export default function Tiendas() {
               return (
                 <div key={t.id} onClick={() => { setSel(String(t.id)); setFiltro('todos'); setTab('pedidos') }}
                   style={{
-                    cursor: 'pointer', padding: '12px 14px', borderRadius: 10, background: 'var(--surface)',
+                    cursor: 'pointer', padding: '12px 14px', borderRadius: 'var(--radius-sm)', background: 'var(--surface)',
                     border: `2px solid ${activa ? 'var(--primary)' : 'var(--border)'}`,
                     opacity: t.activa === false ? 0.55 : 1,
                   }}>
@@ -585,7 +585,7 @@ export default function Tiendas() {
                     <strong style={{ fontSize: 14 }}>{t.nombre}</strong>
                     {r.pendientes > 0 && (
                       <span title={`${r.pendientes} venta${r.pendientes !== 1 ? 's' : ''} pendiente${r.pendientes !== 1 ? 's' : ''}`}
-                        style={{ marginLeft: 'auto', background: '#dc2626', color: '#fff', borderRadius: 999, minWidth: 22, height: 22, padding: '0 7px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700 }}>
+                        style={{ marginLeft: 'auto', background: '#dc2626', color: '#fff', borderRadius: 'var(--radius-sm)', minWidth: 22, height: 22, padding: '0 7px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700 }}>
                         {r.pendientes}
                       </span>
                     )}
@@ -626,7 +626,7 @@ export default function Tiendas() {
                 fontWeight: tab === id ? 600 : 400, color: tab === id ? 'var(--primary)' : 'var(--text-muted)',
                 borderBottom: tab === id ? '2px solid var(--primary)' : '2px solid transparent', marginBottom: -1,
               }}>{label}{id === 'portal' && pendientesPortal > 0 && (
-                <span style={{ marginLeft: 6, background: '#dc2626', color: '#fff', borderRadius: 999, fontSize: 11, fontWeight: 700, padding: '1px 7px' }}>{pendientesPortal}</span>
+                <span style={{ marginLeft: 6, background: '#dc2626', color: '#fff', borderRadius: 'var(--radius-sm)', fontSize: 11, fontWeight: 700, padding: '1px 7px' }}>{pendientesPortal}</span>
               )}</button>
             ))}
           </div>
@@ -635,7 +635,7 @@ export default function Tiendas() {
           {tab !== 'woo' && tab !== 'portal' && tab !== 'ml' && <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginBottom: 12 }}>
             {tab === 'pedidos' && [['todos', 'Todos'], ...Object.entries(ESTADOS_WEB).map(([k, v]) => [k, v.label])].map(([k, label]) => (
               <button key={k} onClick={() => setFiltro(k)} className="btn btn-sm" style={{
-                background: filtro === k ? 'var(--primary)' : undefined, color: filtro === k ? '#fff' : undefined,
+                background: filtro === k ? 'var(--primary)' : undefined, color: filtro === k ? 'var(--on-primary)' : undefined,
                 borderColor: filtro === k ? 'var(--primary)' : undefined,
               }}>{label} ({conteos[k] ?? 0})</button>
             ))}
@@ -672,7 +672,7 @@ export default function Tiendas() {
           {/* ── PEDIDOS ─────────────────────────────────────────────────── */}
           {tab === 'pedidos' && (
             visibles.length === 0 ? (
-              <div style={{ padding: 30, textAlign: 'center', color: 'var(--text-muted)', border: '1px dashed var(--border)', borderRadius: 8 }}>
+              <div style={{ padding: 30, textAlign: 'center', color: 'var(--text-muted)', border: '1px dashed var(--border)', borderRadius: 'var(--radius-sm)' }}>
                 {ventasSel.length === 0 ? 'Todavía no entró ningún pedido de la web.' : 'No hay pedidos con ese filtro.'}
               </div>
             ) : (
@@ -684,7 +684,7 @@ export default function Tiendas() {
                   return (
                     <div key={v.id} onClick={() => setPedidoId(v.id)} title="Ver el detalle del pedido" style={{
                       display: 'flex', gap: 14, alignItems: 'center', flexWrap: 'wrap', padding: '10px 14px', cursor: 'pointer',
-                      border: '1px solid var(--border)', borderRadius: 10, background: 'var(--surface)',
+                      border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', background: 'var(--surface)',
                       opacity: e === 'cancelado' ? 0.6 : 1,
                     }}>
                       <div style={{ flex: '1 1 220px', minWidth: 0 }}>
@@ -731,7 +731,7 @@ export default function Tiendas() {
                   <Kpi label="Ticket promedio" value={fmtMoney(grupos.length ? grupos.reduce((s, g) => s + g.total, 0) / Math.max(1, grupos.reduce((s, g) => s + g.cantidadPedidos, 0)) : 0)} />
                 </div>
                 {gruposFiltrados.length === 0 ? (
-                  <div style={{ padding: 30, textAlign: 'center', color: 'var(--text-muted)', border: '1px dashed var(--border)', borderRadius: 8 }}>
+                  <div style={{ padding: 30, textAlign: 'center', color: 'var(--text-muted)', border: '1px dashed var(--border)', borderRadius: 'var(--radius-sm)' }}>
                     Todavía no hay compradores para mostrar.
                   </div>
                 ) : (
@@ -739,7 +739,7 @@ export default function Tiendas() {
                     {gruposFiltrados.slice(0, limite).map(g => (
                       <div key={g.key} onClick={() => setGrupoSel(g.key)} style={{
                         display: 'flex', gap: 14, alignItems: 'center', flexWrap: 'wrap', padding: '10px 14px', cursor: 'pointer',
-                        border: '1px solid var(--border)', borderRadius: 10, background: 'var(--surface)',
+                        border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', background: 'var(--surface)',
                       }}>
                         <div style={{ flex: '1 1 220px', minWidth: 0 }}>
                           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -805,8 +805,8 @@ export default function Tiendas() {
                         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.nombre}</span>
                         <span style={{ color: 'var(--text-muted)', flexShrink: 0 }}>×{p.cantidad} · {fmtMoney(p.total)}</span>
                       </div>
-                      <div style={{ height: 6, borderRadius: 3, background: 'var(--border)', marginTop: 3, overflow: 'hidden' }}>
-                        <div style={{ height: '100%', width: `${Math.max(4, (p.cantidad / max) * 100)}%`, background: 'var(--primary)', borderRadius: 3 }} />
+                      <div style={{ height: 6, borderRadius: 'var(--radius-sm)', background: 'var(--border)', marginTop: 3, overflow: 'hidden' }}>
+                        <div style={{ height: '100%', width: `${Math.max(4, (p.cantidad / max) * 100)}%`, background: 'var(--primary)', borderRadius: 'var(--radius-sm)' }} />
                       </div>
                     </div>
                   )
@@ -880,7 +880,7 @@ export default function Tiendas() {
                       const actual = i === idxActual
                       return (
                         <div key={f} style={{
-                          flex: '1 1 130px', padding: '8px 10px', borderRadius: 8, fontSize: 12, fontWeight: 700, textAlign: 'center',
+                          flex: '1 1 130px', padding: '8px 10px', borderRadius: 'var(--radius-sm)', fontSize: 12, fontWeight: 700, textAlign: 'center',
                           background: actual ? fase.bg : hecha ? '#dcfce7' : 'var(--bg-muted)',
                           color: actual ? fase.color : hecha ? '#15803d' : 'var(--text-muted)',
                           border: `2px solid ${actual ? fase.color : 'transparent'}`,
@@ -893,12 +893,12 @@ export default function Tiendas() {
                 )}
 
                 {e === 'listo' && !v.factura_emitida && (
-                  <div style={{ padding: '10px 12px', borderRadius: 8, background: '#ede9fe', color: '#4c1d95', fontSize: 13 }}>
+                  <div style={{ padding: '10px 12px', borderRadius: 'var(--radius-sm)', background: '#ede9fe', color: '#4c1d95', fontSize: 13 }}>
                     El pedido está armado. Ahora podés <strong>facturarlo</strong> y despacharlo.
                   </div>
                 )}
                 {(e === 'esperando_pago' || e === 'en_preparacion') && (
-                  <div style={{ padding: '10px 12px', borderRadius: 8, background: 'var(--bg-muted)', color: 'var(--text-muted)', fontSize: 13 }}>
+                  <div style={{ padding: '10px 12px', borderRadius: 'var(--radius-sm)', background: 'var(--bg-muted)', color: 'var(--text-muted)', fontSize: 13 }}>
                     {e === 'esperando_pago'
                       ? 'Falta confirmar el pago (transferencia) antes de empezar a preparar el pedido.'
                       : 'Se factura recién cuando el pedido esté listo para despachar.'}
@@ -912,11 +912,11 @@ export default function Tiendas() {
                     const prod = resumenProduccion(itemsPedido[v.id])
                     if (!prod) return null
                     return (
-                      <div style={{ marginBottom: 8, padding: '8px 12px', borderRadius: 8, fontSize: 13, fontWeight: 600,
+                      <div style={{ marginBottom: 8, padding: '8px 12px', borderRadius: 'var(--radius-sm)', fontSize: 13, fontWeight: 600,
                         background: prod.todoListo ? 'rgba(34,197,94,0.15)' : 'var(--bg-muted)', color: prod.todoListo ? '#15803d' : 'var(--text-muted)' }}>
                         {prod.todoListo
-                          ? '✅ Fabricación terminada: todo está listo para despachar.'
-                          : `🛠️ Fabricación: ${prod.listos} de ${prod.total} productos listos.`}
+                          ? 'Fabricación terminada: todo está listo para despachar.'
+                          : `Fabricación: ${prod.listos} de ${prod.total} productos listos.`}
                       </div>
                     )
                   })()}
@@ -936,7 +936,7 @@ export default function Tiendas() {
                 </div>
 
                 {esMay && (
-                  <div style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 14 }}>
+                  <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: 14 }}>
                     <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 10 }}>Seña, saldo y facturas</div>
                     <CobroFacturas key={v.id} ventaId={v.id} referencia={v.origen_numero || `V-${v.numero}`} onCambio={() => cargar(true)} />
                   </div>
@@ -1015,7 +1015,7 @@ export default function Tiendas() {
                 {esMay && (
                   <>
                     {bultos?.ventaId === v.id ? (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 10px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--bg-muted)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 10px', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', background: 'var(--bg-muted)' }}>
                         <span style={{ fontSize: 13, fontWeight: 600 }}>Cantidad de bultos</span>
                         <button className="btn btn-sm" aria-label="Un bulto menos" disabled={bultos.cargando || bultos.n <= 0}
                           onClick={() => setBultos((b) => ({ ...b, n: b.n - 1 }))}>−</button>
@@ -1036,16 +1036,16 @@ export default function Tiendas() {
                       </div>
                     ) : (
                       <button className="btn btn-sm" disabled={!!portalOcupado} onClick={() => elegirBultos(v)}>
-                        {portalOcupado === 'etiqueta' ? '…' : `🏷️ Imprimir etiqueta${cantBultos(v) ? ` · ${cantBultos(v)} ${cantBultos(v) === 1 ? 'bulto' : 'bultos'}` : ''}`}
+                        {portalOcupado === 'etiqueta' ? '…' : `Imprimir etiqueta${cantBultos(v) ? ` · ${cantBultos(v)} ${cantBultos(v) === 1 ? 'bulto' : 'bultos'}` : ''}`}
                       </button>
                     )}
                     {e !== 'cancelado' && (
                       <button className="btn btn-sm" disabled={!!portalOcupado} onClick={() => avisarCliente(v)}>
-                        {portalOcupado === 'aviso' ? '…' : '📣 Avisar al cliente'}
+                        {portalOcupado === 'aviso' ? '…' : 'Avisar al cliente'}
                       </button>
                     )}
                     <button className="btn btn-sm" disabled={!!portalOcupado} onClick={() => actualizarDesdePortal(v)}>
-                      {portalOcupado === 'sync' ? '…' : '🔄 Actualizar desde el portal'}
+                      {portalOcupado === 'sync' ? '…' : 'Actualizar desde el portal'}
                     </button>
                   </>
                 )}
@@ -1087,7 +1087,7 @@ export default function Tiendas() {
                   Avisar al cliente
                 </label>
                 {!v.factura_emitida && (
-                  <div style={{ padding: '8px 10px', borderRadius: 8, background: '#fef3c7', color: '#78350f', fontSize: 12 }}>
+                  <div style={{ padding: '8px 10px', borderRadius: 'var(--radius-sm)', background: '#fef3c7', color: '#78350f', fontSize: 12 }}>
                     Este pedido todavía no está facturado.
                   </div>
                 )}

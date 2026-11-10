@@ -59,7 +59,7 @@ export default function MercadoLibreCard() {
 
   const color = '#d97706'
   return (
-    <div style={{ marginTop: 24, padding: 18, borderRadius: 10, border: `1px solid ${color}55`, background: 'rgba(217,119,6,0.06)' }}>
+    <div style={{ marginTop: 24, padding: 18, borderRadius: 'var(--radius-sm)', border: `1px solid ${color}55`, background: 'rgba(217,119,6,0.06)' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
         <div style={{ flex: 1, minWidth: 220 }}>
           <h2 style={{ fontSize: 16, margin: 0, color }}>Mercado Libre</h2>
@@ -85,7 +85,7 @@ export default function MercadoLibreCard() {
       </div>
       {msg && (
         <div style={{
-          marginTop: 10, fontSize: 13, padding: '8px 12px', borderRadius: 6,
+          marginTop: 10, fontSize: 13, padding: '8px 12px', borderRadius: 'var(--radius-sm)',
           color: msg.tipo === 'ok' ? '#15803d' : 'var(--danger)',
           background: msg.tipo === 'ok' ? 'rgba(22,163,74,0.1)' : 'rgba(239,68,68,0.08)',
         }}>{msg.texto}</div>

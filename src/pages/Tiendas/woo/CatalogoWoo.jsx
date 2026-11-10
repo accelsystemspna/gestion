@@ -23,7 +23,7 @@ function useListado(tienda, accion, filtros) {
 }
 
 const Tabla = ({ columnas, children, minWidth = 700 }) => (
-  <div style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: 10, background: 'var(--surface)' }}>
+  <div style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', background: 'var(--surface)' }}>
     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth }}>
       <thead>
         <tr style={{ textAlign: 'left', color: 'var(--text-muted)', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
@@ -71,7 +71,7 @@ export function ProductosWoo({ tienda }) {
             <tr key={p.id}>
               <td style={td}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  {p.imagen ? <ImageThumb src={p.imagen} size={40} radius={6} alt={p.nombre} /> : <div style={{ width: 40, height: 40, borderRadius: 6, background: 'var(--bg-muted)' }} />}
+                  {p.imagen ? <ImageThumb src={p.imagen} size={40} radius={6} alt={p.nombre} /> : <div style={{ width: 40, height: 40, borderRadius: 'var(--radius-sm)', background: 'var(--bg-muted)' }} />}
                   {p.enlace ? <a href={p.enlace} target="_blank" rel="noreferrer" style={{ fontWeight: 700 }}>{p.nombre}</a> : <strong>{p.nombre}</strong>}
                 </div>
               </td>

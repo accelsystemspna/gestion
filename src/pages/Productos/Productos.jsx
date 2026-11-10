@@ -22,7 +22,7 @@ function OfertaBadge({ producto }) {
   return (
     <span style={{
       display: 'inline-flex', alignItems: 'center', fontSize: 11, fontWeight: 700,
-      padding: '1px 7px', borderRadius: 999, background: '#fff7ed', color: '#c2410c',
+      padding: '1px 7px', borderRadius: 'var(--radius-sm)', background: '#fff7ed', color: '#c2410c',
       border: '1px solid #fdba7444', marginLeft: 5, whiteSpace: 'nowrap',
     }}>
       {texto}
@@ -265,20 +265,20 @@ El producto es de otro negocio: no se edita, pero el stock lo llevás vos.`, Str
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <button className="btn btn-primary" onClick={() => { setFormKey(k => k + 1); setEditing({}) }}>+ Nuevo producto</button>
-          <button className="btn" onClick={() => setEditingCombo({})}>🧩 Nuevo combo</button>
+          <button className="btn" onClick={() => setEditingCombo({})}>Nuevo combo</button>
           <button
             className="btn"
             onClick={() => setExportModal('pdf')}
             disabled={exportingPDF || filtrados.length === 0}
           >
-            {exportingPDF ? 'Generando…' : '📄 Catálogo PDF'}
+            {exportingPDF ? 'Generando…' : 'Catálogo PDF'}
           </button>
           <button
             className="btn"
             onClick={() => setExportModal('csv')}
             disabled={filtrados.length === 0}
           >
-            📊 Exportar CSV
+            Exportar CSV
           </button>
           <button
             className="btn"
@@ -286,7 +286,7 @@ El producto es de otro negocio: no se edita, pero el stock lo llevás vos.`, Str
             disabled={syncingAll}
             title="Reenvía a WooCommerce el precio actual de todos los productos con tienda asignada"
           >
-            {syncingAll ? '🔄 Sincronizando…' : '🔄 Sincronizar con la web'}
+            {syncingAll ? 'Sincronizando…' : 'Sincronizar con la web'}
           </button>
         </div>
       </div>
@@ -393,8 +393,8 @@ El producto es de otro negocio: no se edita, pero el stock lo llevás vos.`, Str
       </div>
 
       {!listaSel && listas.length > 0 && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'var(--warning-bg)', border: '1px solid var(--warning-border)', borderRadius: 8, padding: '10px 16px', marginBottom: 12 }}>
-          <span style={{ fontSize: 18, lineHeight: 1 }}>⚠️</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'var(--warning-bg)', border: '1px solid var(--warning-border)', borderRadius: 'var(--radius-sm)', padding: '10px 16px', marginBottom: 12 }}>
+          
           <span style={{ fontWeight: 600, color: 'var(--warning)', fontSize: 13 }}>
             Seleccioná una lista de precios para ver los precios de venta.
           </span>
@@ -408,7 +408,7 @@ El producto es de otro negocio: no se edita, pero el stock lo llevás vos.`, Str
           {items.length === 0 ? 'No hay productos. Creá el primero.' : 'No hay productos que coincidan con los filtros.'}
         </div>
       ) : (
-        <div className="productos-table-wrap" style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: 8 }}>
+        <div className="productos-table-wrap" style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)' }}>
           <table className="table">
             <thead>
               <tr>
@@ -490,7 +490,7 @@ El producto es de otro negocio: no se edita, pero el stock lo llevás vos.`, Str
                       {rubro ? (
                         <span style={{
                           display: 'inline-flex', alignItems: 'center', gap: 5,
-                          fontSize: 12, padding: '2px 8px', borderRadius: 999,
+                          fontSize: 12, padding: '2px 8px', borderRadius: 'var(--radius-sm)',
                           background: `${rubro.color}18`, color: rubro.color,
                           border: `1px solid ${rubro.color}44`, fontWeight: 600,
                         }}>
@@ -534,8 +534,8 @@ El producto es de otro negocio: no se edita, pero el stock lo llevás vos.`, Str
                       >
                         {activo ? '● Activo' : '● Inactivo'}
                       </button>
-                      <button className="btn btn-sm btn-ghost" title="Generar etiqueta con código de barras" onClick={() => setBarcodeProduct(p)}>🏷️</button>
-                      {p.org_id === orgId && <button className="btn btn-sm btn-ghost" title="Publicar en Mercado Libre" onClick={() => setMlProduct(p)}>🛒</button>}
+                      <button className="btn btn-sm btn-ghost" title="Generar etiqueta con código de barras" onClick={() => setBarcodeProduct(p)}></button>
+                      {p.org_id === orgId && <button className="btn btn-sm btn-ghost" title="Publicar en Mercado Libre" onClick={() => setMlProduct(p)}></button>}
                       <button
                         className="btn btn-sm btn-ghost"
                         title="Configurar oferta"
@@ -580,18 +580,18 @@ El producto es de otro negocio: no se edita, pero el stock lo llevás vos.`, Str
 
                 <div className="producto-card-mobile-meta">
                   {rubro && (
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, padding: '2px 7px', borderRadius: 999, background: `${rubro.color}18`, color: rubro.color, border: `1px solid ${rubro.color}44`, fontWeight: 600 }}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, padding: '2px 7px', borderRadius: 'var(--radius-sm)', background: `${rubro.color}18`, color: rubro.color, border: `1px solid ${rubro.color}44`, fontWeight: 600 }}>
                       {rubro.emoji} {rubro.nombre}
                     </span>
                   )}
                   {cat && <span className="badge" style={{ fontSize: 11 }}>{cat.nombre}</span>}
                   {(p.alto_producto || p.ancho_producto) && (
                     <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-                      📐 {p.alto_producto || '—'} × {p.ancho_producto || '—'} cm
+                      {p.alto_producto || '—'} × {p.ancho_producto || '—'} cm
                     </span>
                   )}
                   <span style={{ fontSize: 11, color: stock < 0 ? '#d97706' : 'var(--text-muted)', fontWeight: stock < 0 ? 700 : 400 }}>
-                    {stock > 0 ? `📦 Stock: ${stock}` : stock === 0 ? '📦 Stock: 0' : `⚠️ A fabricar (${Math.abs(stock)})`}
+                    {stock > 0 ? `Stock: ${stock}` : stock === 0 ? 'Stock: 0' : `A fabricar (${Math.abs(stock)})`}
                   </span>
                 </div>
 
@@ -609,8 +609,8 @@ El producto es de otro negocio: no se edita, pero el stock lo llevás vos.`, Str
                   >
                     {activo ? '● Activo' : '● Inactivo'}
                   </button>
-                  <button className="btn btn-sm btn-ghost" onClick={() => setBarcodeProduct(p)}>🏷️</button>
-                  {p.org_id === orgId && <button className="btn btn-sm btn-ghost" title="Publicar en Mercado Libre" onClick={() => setMlProduct(p)}>🛒</button>}
+                  <button className="btn btn-sm btn-ghost" onClick={() => setBarcodeProduct(p)}></button>
+                  {p.org_id === orgId && <button className="btn btn-sm btn-ghost" title="Publicar en Mercado Libre" onClick={() => setMlProduct(p)}></button>}
                   <button
                     className="btn btn-sm btn-ghost"
                     onClick={() => setPromoProduct(p)}
@@ -708,7 +708,7 @@ function ExportModal({ mode, tieneLista, onCancel, onExport }) {
       <button
         onClick={() => toggle(field)}
         style={{
-          width: 44, height: 24, borderRadius: 12, border: 'none', cursor: 'pointer',
+          width: 44, height: 24, borderRadius: 'var(--radius-sm)', border: 'none', cursor: 'pointer',
           background: opts[field] ? 'var(--primary)' : '#cbd5e1',
           position: 'relative', flexShrink: 0, transition: 'background 0.2s',
         }}
@@ -716,7 +716,7 @@ function ExportModal({ mode, tieneLista, onCancel, onExport }) {
         <span style={{
           position: 'absolute', top: 3,
           left: opts[field] ? 22 : 4,
-          width: 18, height: 18, borderRadius: 9,
+          width: 18, height: 18, borderRadius: 'var(--radius-sm)',
           background: 'white', transition: 'left 0.2s',
         }} />
       </button>
@@ -728,7 +728,7 @@ function ExportModal({ mode, tieneLista, onCancel, onExport }) {
       <div className="modal" style={{ maxWidth: 420 }}>
         <div className="modal-header">
           <h3 style={{ fontSize: 16 }}>
-            {isPdf ? '📄 Opciones del catálogo PDF' : '📊 Opciones de exportación CSV'}
+            {isPdf ? 'Opciones del catálogo PDF' : 'Opciones de exportación CSV'}
           </h3>
           <button className="btn btn-ghost btn-sm" onClick={onCancel}>✕</button>
         </div>
@@ -782,7 +782,7 @@ function ExportModal({ mode, tieneLista, onCancel, onExport }) {
         <div className="modal-footer">
           <button className="btn" onClick={onCancel}>Cancelar</button>
           <button className="btn btn-primary" onClick={() => onExport(opts)}>
-            {isPdf ? '📄 Generar PDF' : '📊 Descargar CSV'}
+            {isPdf ? 'Generar PDF' : 'Descargar CSV'}
           </button>
         </div>
       </div>

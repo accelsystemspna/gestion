@@ -17,7 +17,7 @@ const inputStyle = {
   width: '100%',
   padding: '8px 10px',
   border: '1px solid var(--border)',
-  borderRadius: 6,
+  borderRadius: 'var(--radius-sm)',
   fontSize: 14,
   background: 'var(--surface)',
   color: 'inherit',
@@ -241,7 +241,7 @@ export default function NuevaVenta({ venta, onClose, onSaved }) {
     }}>
       <div style={{
         background: 'var(--bg)',
-        borderRadius: 12,
+        borderRadius: 'var(--radius-sm)',
         width: '100%',
         maxWidth: 900,
         display: 'flex',
@@ -263,7 +263,7 @@ export default function NuevaVenta({ venta, onClose, onSaved }) {
           <div style={{ flex: '1 1 480px', display: 'flex', flexDirection: 'column', gap: 16 }}>
 
             {/* Datos de cabecera */}
-            <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, padding: 16 }}>
+            <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: 16 }}>
               <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--text-muted)', marginBottom: 12 }}>DATOS DE LA VENTA</div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
@@ -283,7 +283,7 @@ export default function NuevaVenta({ venta, onClose, onSaved }) {
                     placeholder="Nombre o buscar..."
                   />
                   {showClienteSug && clienteResults.length > 0 && (
-                    <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 6, zIndex: 50, boxShadow: '0 4px 12px rgba(0,0,0,0.12)', marginTop: 2 }}>
+                    <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', zIndex: 50, boxShadow: '0 4px 12px rgba(0,0,0,0.12)', marginTop: 2 }}>
                       {clienteResults.map(c => (
                         <div
                           key={c.id}
@@ -334,11 +334,11 @@ export default function NuevaVenta({ venta, onClose, onSaved }) {
             </div>
 
             {/* Buscar productos del catálogo */}
-            <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, padding: 16 }}>
+            <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: 16 }}>
               <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--text-muted)', marginBottom: 10 }}>AGREGAR PRODUCTOS</div>
               {!lista && (
-                <div style={{ fontSize: 12, color: '#d97706', background: '#fffbeb', border: '1px solid #fcd34d', borderRadius: 6, padding: '6px 10px', marginBottom: 10 }}>
-                  ⚠️ Sin lista de precios — los productos se agregan al costo base. Podés editarlo manualmente.
+                <div style={{ fontSize: 12, color: '#d97706', background: '#fffbeb', border: '1px solid #fcd34d', borderRadius: 'var(--radius-sm)', padding: '6px 10px', marginBottom: 10 }}>
+                  Sin lista de precios — los productos se agregan al costo base. Podés editarlo manualmente.
                 </div>
               )}
               <div style={{ position: 'relative' }}>
@@ -347,11 +347,11 @@ export default function NuevaVenta({ venta, onClose, onSaved }) {
                   style={inputStyle}
                   value={search}
                   onChange={e => setSearch(e.target.value)}
-                  placeholder="🔍  Buscar por nombre o SKU..."
+                  placeholder=" Buscar por nombre o SKU..."
                   autoFocus
                 />
                 {searchResults.length > 0 && (
-                  <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, zIndex: 50, boxShadow: '0 6px 20px rgba(0,0,0,0.12)', marginTop: 4, maxHeight: 280, overflowY: 'auto' }}>
+                  <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', zIndex: 50, boxShadow: '0 6px 20px rgba(0,0,0,0.12)', marginTop: 4, maxHeight: 280, overflowY: 'auto' }}>
                     {searchResults.map(p => {
                       const precio = precioVenta(Number(p.costo_base), lista)
                       return (
@@ -364,7 +364,7 @@ export default function NuevaVenta({ venta, onClose, onSaved }) {
                         >
                           {p.imagen_url
                             ? <ImageThumb src={p.imagen_url} sku={p.sku} size={36} />
-                            : <div style={{ width: 36, height: 36, borderRadius: 4, background: 'var(--bg-muted)', flexShrink: 0 }} />
+                            : <div style={{ width: 36, height: 36, borderRadius: 'var(--radius-sm)', background: 'var(--bg-muted)', flexShrink: 0 }} />
                           }
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <div style={{ fontWeight: 600, fontSize: 14, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.nombre}</div>
@@ -381,13 +381,13 @@ export default function NuevaVenta({ venta, onClose, onSaved }) {
               {/* Botón ítem personalizado */}
               <button
                 onClick={() => { setShowCustom(v => !v); setCustomErr('') }}
-                style={{ marginTop: 10, padding: '7px 14px', background: 'transparent', border: '1px dashed var(--border)', borderRadius: 6, cursor: 'pointer', fontSize: 13, color: 'var(--text-muted)', width: '100%' }}
+                style={{ marginTop: 10, padding: '7px 14px', background: 'transparent', border: '1px dashed var(--border)', borderRadius: 'var(--radius-sm)', cursor: 'pointer', fontSize: 13, color: 'var(--text-muted)', width: '100%' }}
               >
                 {showCustom ? '— Cerrar ítem personalizado' : '+ Agregar ítem personalizado (corte especial, servicio, etc.)'}
               </button>
 
               {showCustom && (
-                <div style={{ marginTop: 10, padding: 12, background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8 }}>
+                <div style={{ marginTop: 10, padding: 12, background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)' }}>
                   <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: 8, marginBottom: 8 }}>
                     <div>
                       <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 3 }}>Descripción</label>
@@ -405,7 +405,7 @@ export default function NuevaVenta({ venta, onClose, onSaved }) {
                   {customErr && <div style={{ fontSize: 12, color: '#ef4444', marginBottom: 6 }}>{customErr}</div>}
                   <button
                     onClick={agregarCustom}
-                    style={{ padding: '7px 16px', background: 'var(--primary)', border: 'none', borderRadius: 6, color: 'white', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}
+                    style={{ padding: '7px 16px', background: 'var(--primary)', border: 'none', borderRadius: 'var(--radius-sm)', color: 'var(--on-primary)', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}
                   >
                     Agregar
                   </button>
@@ -432,7 +432,7 @@ export default function NuevaVenta({ venta, onClose, onSaved }) {
             </div>
 
             {items.length === 0 ? (
-              <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px dashed var(--border)', borderRadius: 8, color: 'var(--text-muted)', fontSize: 13, padding: 40, textAlign: 'center' }}>
+              <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px dashed var(--border)', borderRadius: 'var(--radius-sm)', color: 'var(--text-muted)', fontSize: 13, padding: 40, textAlign: 'center' }}>
                 Buscá un producto o agregá<br />un ítem personalizado
               </div>
             ) : (
@@ -450,7 +450,7 @@ export default function NuevaVenta({ venta, onClose, onSaved }) {
 
             {/* Total */}
             {items.length > 0 && (
-              <div style={{ background: 'var(--surface)', border: '2px solid var(--border)', borderRadius: 8, padding: '14px 16px', marginTop: 4 }}>
+              <div style={{ background: 'var(--surface)', border: '2px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '14px 16px', marginTop: 4 }}>
                 {items.map(item => (
                   <div key={item._key} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'var(--text-muted)', marginBottom: 4 }}>
                     <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 180 }}>{item.descripcion}</span>
@@ -473,20 +473,20 @@ export default function NuevaVenta({ venta, onClose, onSaved }) {
           {error && <div style={{ fontSize: 13, color: '#ef4444', flex: 1 }}>{error}</div>}
           {!error && <div style={{ flex: 1 }} />}
           <div style={{ display: 'flex', gap: 8 }}>
-            <button onClick={onClose} disabled={saving} style={{ padding: '9px 18px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 6, cursor: 'pointer', fontSize: 14 }}>
+            <button onClick={onClose} disabled={saving} style={{ padding: '9px 18px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', cursor: 'pointer', fontSize: 14 }}>
               Cancelar
             </button>
             <button
               onClick={() => handleSave('pendiente')}
               disabled={saving}
-              style={{ padding: '9px 18px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 6, cursor: 'pointer', fontSize: 14, fontWeight: 500 }}
+              style={{ padding: '9px 18px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', cursor: 'pointer', fontSize: 14, fontWeight: 500 }}
             >
               {saving ? 'Guardando…' : 'Guardar pendiente'}
             </button>
             <button
               onClick={() => handleSave('pagado')}
               disabled={saving}
-              style={{ padding: '9px 20px', background: 'var(--primary)', border: 'none', borderRadius: 6, color: 'white', cursor: 'pointer', fontSize: 14, fontWeight: 700 }}
+              style={{ padding: '9px 20px', background: 'var(--primary)', border: 'none', borderRadius: 'var(--radius-sm)', color: 'var(--on-primary)', cursor: 'pointer', fontSize: 14, fontWeight: 700 }}
             >
               {saving ? 'Guardando…' : '✓ Guardar como pagado'}
             </button>
@@ -501,13 +501,13 @@ export default function NuevaVenta({ venta, onClose, onSaved }) {
 function ItemRow({ item, onChange, onRemove }) {
   const subtotal = Number(item.cantidad) * Number(item.precio_unitario)
   return (
-    <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 12px' }}>
+    <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '10px 12px' }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 8 }}>
         <div style={{ flex: 1 }}>
           <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 1 }}>{item.descripcion}</div>
           {item.sku && <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{item.sku}</div>}
           {item.tipo === 'custom' && (
-            <span style={{ fontSize: 10, fontWeight: 600, background: '#f1f5f9', color: '#64748b', padding: '1px 6px', borderRadius: 4 }}>
+            <span style={{ fontSize: 10, fontWeight: 600, background: '#f1f5f9', color: '#64748b', padding: '1px 6px', borderRadius: 'var(--radius-sm)' }}>
               PERSONALIZADO
             </span>
           )}
@@ -528,7 +528,7 @@ function ItemRow({ item, onChange, onRemove }) {
             step="0.001"
             value={item.cantidad}
             onChange={e => onChange('cantidad', e.target.value)}
-            style={{ width: '100%', padding: '5px 8px', border: '1px solid var(--border)', borderRadius: 5, fontSize: 13, background: 'var(--bg)', color: 'inherit', textAlign: 'right' }}
+            style={{ width: '100%', padding: '5px 8px', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', fontSize: 13, background: 'var(--bg)', color: 'inherit', textAlign: 'right' }}
           />
         </div>
         <div style={{ flex: '0 0 100px' }}>
@@ -538,7 +538,7 @@ function ItemRow({ item, onChange, onRemove }) {
             min="0"
             value={item.precio_unitario}
             onChange={e => onChange('precio_unitario', e.target.value)}
-            style={{ width: '100%', padding: '5px 8px', border: '1px solid var(--border)', borderRadius: 5, fontSize: 13, background: 'var(--bg)', color: 'inherit', textAlign: 'right' }}
+            style={{ width: '100%', padding: '5px 8px', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', fontSize: 13, background: 'var(--bg)', color: 'inherit', textAlign: 'right' }}
           />
         </div>
         <div style={{ flex: 1, textAlign: 'right' }}>

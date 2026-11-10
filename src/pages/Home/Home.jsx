@@ -33,13 +33,13 @@ const FP_COLOR = {
   cuenta_corriente: '#d97706',
 }
 const FP_ICON = {
-  efectivo: '💵', debito: '💳', credito: '💳', transferencia: '🏦', cuenta_corriente: '📒',
+  efectivo: '', debito: '', credito: '', transferencia: '', cuenta_corriente: '',
 }
 
 // ── Sub-componentes ──────────────────────────────────────────────────────────
 function Card({ children, style = {} }) {
   return (
-    <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, ...style }}>
+    <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', ...style }}>
       {children}
     </div>
   )
@@ -59,17 +59,16 @@ function CardHeader({ title, sub, action }) {
 
 function KPICard({ icon, label, value, sub, color = 'var(--primary)', badge, badgeOk }) {
   return (
-    <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+    <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 6 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</span>
-        <span style={{ fontSize: 20 }}>{icon}</span>
       </div>
       <div style={{ fontSize: 28, fontWeight: 800, color, lineHeight: 1.1 }}>{value}</div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
         {sub && <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{sub}</span>}
         {badge !== undefined && (
           <span style={{
-            fontSize: 11, fontWeight: 700, padding: '1px 7px', borderRadius: 8,
+            fontSize: 11, fontWeight: 700, padding: '1px 7px', borderRadius: 'var(--radius-sm)',
             background: badgeOk ? '#dcfce7' : '#fee2e2',
             color:      badgeOk ? '#16a34a' : '#dc2626',
           }}>{badge}</span>
@@ -81,8 +80,8 @@ function KPICard({ icon, label, value, sub, color = 'var(--primary)', badge, bad
 
 function BarH({ value, max, color }) {
   return (
-    <div style={{ height: 6, borderRadius: 3, background: 'var(--border)', overflow: 'hidden', marginTop: 4 }}>
-      <div style={{ height: '100%', width: `${Math.max((value / Math.max(max, 1)) * 100, value > 0 ? 3 : 0)}%`, borderRadius: 3, background: color, transition: 'width 0.6s' }} />
+    <div style={{ height: 6, borderRadius: 'var(--radius-sm)', background: 'var(--border)', overflow: 'hidden', marginTop: 4 }}>
+      <div style={{ height: '100%', width: `${Math.max((value / Math.max(max, 1)) * 100, value > 0 ? 3 : 0)}%`, borderRadius: 'var(--radius-sm)', background: color, transition: 'width 0.6s' }} />
     </div>
   )
 }
@@ -326,8 +325,7 @@ export default function Dashboard() {
 
   if (loading) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh', flexDirection: 'column', gap: 14, color: 'var(--text-muted)' }}>
-      <div style={{ fontSize: 40 }}>📊</div>
-      <div style={{ fontSize: 14, fontWeight: 600 }}>Cargando dashboard...</div>
+            <div style={{ fontSize: 14, fontWeight: 600 }}>Cargando dashboard...</div>
     </div>
   )
 
@@ -360,27 +358,27 @@ export default function Dashboard() {
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
         <div>
           <h1 style={{ fontSize: 22, fontWeight: 800, marginBottom: 3 }}>
-            {saludo}, {(profile?.nombre || user?.email || '').split(' ')[0]} 👋
+            {saludo}, {(profile?.nombre || user?.email || '').split(' ')[0]} 
           </h1>
           <p style={{ color: 'var(--text-muted)', fontSize: 13 }}>
             {new Date().toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
           </p>
         </div>
-        <Link to="/ventas" style={{ padding: '9px 18px', background: 'var(--primary)', color: 'white', borderRadius: 7, fontWeight: 700, fontSize: 13, textDecoration: 'none' }}>
-          🛒 Ir al punto de venta
+        <Link to="/ventas" style={{ padding: '9px 18px', background: 'var(--primary)', color: 'var(--on-primary)', borderRadius: 'var(--radius-sm)', fontWeight: 700, fontSize: 13, textDecoration: 'none' }}>
+          Ir al punto de venta
         </Link>
       </div>
 
       {/* ── KPIs ─────────────────────────────────────────────────────────────── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(175px, 1fr))', gap: 12 }}>
         <KPICard
-          icon="📅" label="Ventas hoy"
+          icon="" label="Ventas hoy"
           value={kpi.hoyCount}
           sub={kpi.hoyCount > 0 ? fmtMoney(kpi.hoyTotal) : 'Sin ventas aún'}
           color="var(--primary)"
         />
         <KPICard
-          icon="📆" label={`Facturación ${nombreMes}`}
+          icon="" label={`Facturación ${nombreMes}`}
           value={fmtMoney(kpi.mesTotal)}
           sub={`${kpi.mesCount} ventas`}
           badge={varLabel}
@@ -388,25 +386,25 @@ export default function Dashboard() {
           color="#0891b2"
         />
         <KPICard
-          icon="🧾" label="Ticket promedio"
+          icon="" label="Ticket promedio"
           value={fmtMoney(kpi.ticketProm)}
           sub={`Este mes · ${kpi.mesCount} ventas`}
           color="#7c3aed"
         />
         <KPICard
-          icon="⏳" label="Pendientes de cobro"
+          icon="" label="Pendientes de cobro"
           value={kpi.pendCount}
           sub={kpi.pendCount > 0 ? fmtMoney(kpi.pendTotal) : 'Todo cobrado ✓'}
           color={kpi.pendCount > 0 ? '#d97706' : '#16a34a'}
         />
         <KPICard
-          icon="📦" label="Catálogo"
+          icon="" label="Catálogo"
           value={kpi.productos}
           sub={`${kpi.clientes} clientes registrados`}
           color="#475569"
         />
         <KPICard
-          icon="🏛️" label={`Facturado ARCA ${nombreMes}`}
+          icon="" label={`Facturado ARCA ${nombreMes}`}
           value={fmtMoney(kpi.facturadoTotal ?? 0)}
           sub={kpi.facturadoCount > 0
             ? `${kpi.facturadoCount} factura${kpi.facturadoCount !== 1 ? 's' : ''} · ${kpi.sinFacturar} sin facturar`
@@ -418,19 +416,19 @@ export default function Dashboard() {
       {/* ── Productos vendidos por período (filtro de fechas) ────────────────── */}
       <Card>
         <CardHeader
-          title="🔍 Productos vendidos"
+          title="Productos vendidos"
           sub={loadingRango ? 'Calculando…' : `${productosRango.length} producto${productosRango.length !== 1 ? 's' : ''} distintos · ${productosRango.reduce((s, p) => s + p.cantidad, 0)} unidades · ${fmtMoney(productosRango.reduce((s, p) => s + p.total, 0))}`}
         />
         <div style={{ padding: '12px 16px', display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', gap: 10, borderBottom: '1px solid var(--border)' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
             <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)' }}>Desde</label>
             <input type="date" value={rangoDesde} onChange={e => setRangoDesde(e.target.value)}
-              style={{ padding: '6px 9px', fontSize: 13, border: '1px solid var(--border)', borderRadius: 6, background: 'var(--surface)', color: 'inherit', outline: 'none' }} />
+              style={{ padding: '6px 9px', fontSize: 13, border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', background: 'var(--surface)', color: 'inherit', outline: 'none' }} />
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
             <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)' }}>Hasta</label>
             <input type="date" value={rangoHasta} onChange={e => setRangoHasta(e.target.value)}
-              style={{ padding: '6px 9px', fontSize: 13, border: '1px solid var(--border)', borderRadius: 6, background: 'var(--surface)', color: 'inherit', outline: 'none' }} />
+              style={{ padding: '6px 9px', fontSize: 13, border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', background: 'var(--surface)', color: 'inherit', outline: 'none' }} />
           </div>
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
             {[['hoy', 'Hoy'], ['7d', '7 días'], ['30d', '30 días'], ['mes', 'Este mes'], ['mesAnt', 'Mes anterior']].map(([v, l]) => (
@@ -463,7 +461,7 @@ export default function Dashboard() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                         {p.imagen_url
                           ? <ImageThumb src={p.imagen_url} sku={p.sku} size={32} radius={5} />
-                          : <div style={{ width: 32, height: 32, borderRadius: 5, background: 'var(--bg)', flexShrink: 0 }} />}
+                          : <div style={{ width: 32, height: 32, borderRadius: 'var(--radius-sm)', background: 'var(--bg)', flexShrink: 0 }} />}
                         <div>
                           <div style={{ fontWeight: 600 }}>{p.nombre}</div>
                           {p.sku && <div style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'monospace' }}>{p.sku}</div>}
@@ -486,7 +484,7 @@ export default function Dashboard() {
         {/* Tendencia 30 días */}
         <Card>
           <CardHeader
-            title="📈 Tendencia — últimos 30 días"
+            title="Tendencia — últimos 30 días"
             sub={sel30 ? (
               <span>
                 <strong style={{ color: 'var(--text)' }}>{sel30.label}</strong>: {fmtMoney(sel30.total)} · {sel30.count} venta{sel30.count !== 1 ? 's' : ''}
@@ -538,7 +536,7 @@ export default function Dashboard() {
 
         {/* Top productos */}
         <Card>
-          <CardHeader title="🏆 Top productos" sub="Últimos 30 días · por facturación" />
+          <CardHeader title="Top productos" sub="Últimos 30 días · por facturación" />
           <div style={{ padding: '10px 16px 14px', display: 'flex', flexDirection: 'column', gap: 9 }}>
             {topProd.length === 0 ? (
               <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: 13, padding: '20px 0' }}>Sin datos en el período</div>
@@ -570,7 +568,7 @@ export default function Dashboard() {
         {/* Semana actual */}
         <Card>
           <CardHeader
-            title="📊 Esta semana"
+            title="Esta semana"
             sub={sel7 ? (
               <span>
                 <strong style={{ color: 'var(--text)' }}>{sel7.label}</strong>: {fmtMoney(sel7.total)} · {sel7.count} venta{sel7.count !== 1 ? 's' : ''}
@@ -620,14 +618,14 @@ export default function Dashboard() {
 
         {/* Formas de pago */}
         <Card>
-          <CardHeader title="💳 Formas de pago" sub={`${nombreMes} · ${kpi.mesCount} ventas`} />
+          <CardHeader title="Formas de pago" sub={`${nombreMes} · ${kpi.mesCount} ventas`} />
           <div style={{ padding: '10px 16px 14px', display: 'flex', flexDirection: 'column', gap: 10 }}>
             {pagoList.length === 0 ? (
               <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: 13, padding: '16px 0' }}>Sin ventas este mes</div>
             ) : pagoList.map(p => (
               <div key={p.fp}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3 }}>
-                  <span style={{ fontSize: 13, fontWeight: 600 }}>{FP_ICON[p.fp] ?? '💰'} {FP_LABEL[p.fp] ?? p.fp}</span>
+                  <span style={{ fontSize: 13, fontWeight: 600 }}>{FP_LABEL[p.fp] ?? p.fp}</span>
                   <div style={{ display: 'flex', gap: 10, fontSize: 12 }}>
                     <span style={{ color: 'var(--text-muted)' }}>{p.count} ventas</span>
                     <span style={{ fontWeight: 700 }}>{fmtMoney(p.total)}</span>
@@ -642,7 +640,7 @@ export default function Dashboard() {
         {/* Actividad por hora */}
         <Card>
           <CardHeader
-            title="🕐 Actividad por hora"
+            title="Actividad por hora"
             sub={selHora ? (
               <span>
                 <strong style={{ color: 'var(--text)' }}>{selHora.h}hs</strong>: {fmtMoney(selHora.total)} · {selHora.count} venta{selHora.count !== 1 ? 's' : ''}
@@ -696,13 +694,13 @@ export default function Dashboard() {
         {/* Últimas ventas */}
         <Card style={{ overflow: 'hidden' }}>
           <CardHeader
-            title="🧾 Últimas ventas"
+            title="Últimas ventas"
             sub="Más recientes primero"
             action={<Link to="/ventas?historial=1" style={{ fontSize: 12, color: 'var(--primary)', fontWeight: 600, textDecoration: 'none' }}>Ver todas →</Link>}
           />
           {ultimas.length === 0 ? (
             <div style={{ padding: 32, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
-              <div style={{ fontSize: 28, marginBottom: 8 }}>🛒</div>Sin ventas recientes
+              Sin ventas recientes
             </div>
           ) : (
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
@@ -731,7 +729,7 @@ export default function Dashboard() {
                         {fmtMoney(v.total)}
                       </td>
                       <td style={{ padding: '8px 12px' }}>
-                        <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 8, background: est.bg, color: est.color, whiteSpace: 'nowrap' }}>
+                        <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 'var(--radius-sm)', background: est.bg, color: est.color, whiteSpace: 'nowrap' }}>
                           {est.label}
                         </span>
                       </td>
@@ -746,13 +744,12 @@ export default function Dashboard() {
         {/* Clientes con deuda (cuentas corrientes) */}
         <Card>
           <CardHeader
-            title="⚠️ Cuentas corrientes pendientes"
+            title="Cuentas corrientes pendientes"
             sub={deudas.length > 0 ? `${deudas.length} cliente${deudas.length !== 1 ? 's' : ''} · ${fmtMoney(totalDeuda)} total` : undefined}
           />
           {deudas.length === 0 ? (
             <div style={{ padding: 32, textAlign: 'center', fontSize: 13 }}>
-              <div style={{ fontSize: 30, marginBottom: 8 }}>✅</div>
-              <div style={{ color: '#16a34a', fontWeight: 600 }}>Todos los clientes al día</div>
+                            <div style={{ color: '#16a34a', fontWeight: 600 }}>Todos los clientes al día</div>
             </div>
           ) : (
             <div style={{ padding: '4px 16px 12px' }}>
@@ -788,21 +785,21 @@ export default function Dashboard() {
         <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>Accesos rápidos</div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
           {[
-            { to: '/ventas',        icon: '🛒', label: 'Nueva venta',    primary: true },
-            { to: '/productos',     icon: '📦', label: 'Productos' },
-            { to: '/presupuesto',   icon: '📄', label: 'Presupuesto' },
-            { to: '/clientes',      icon: '👥', label: 'Clientes' },
-            { to: '/configuracion', icon: '⚙️', label: 'Configuración' },
+            { to: '/ventas',        icon: '', label: 'Nueva venta',    primary: true },
+            { to: '/productos',     icon: '', label: 'Productos' },
+            { to: '/presupuesto',   icon: '', label: 'Presupuesto' },
+            { to: '/clientes',      icon: '', label: 'Clientes' },
+            { to: '/configuracion', icon: '', label: 'Configuración' },
           ].map(a => (
             <Link key={a.to} to={a.to} style={{
               display: 'flex', alignItems: 'center', gap: 7,
-              padding: '8px 16px', borderRadius: 7,
+              padding: '8px 16px', borderRadius: 'var(--radius-sm)',
               background: a.primary ? 'var(--primary)' : 'var(--bg)',
               border: `1px solid ${a.primary ? 'var(--primary)' : 'var(--border)'}`,
               color: a.primary ? 'white' : 'var(--text)',
               fontSize: 13, fontWeight: 600, textDecoration: 'none',
             }}>
-              {a.icon} {a.label}
+              {a.label}
             </Link>
           ))}
         </div>

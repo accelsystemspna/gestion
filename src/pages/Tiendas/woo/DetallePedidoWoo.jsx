@@ -111,7 +111,7 @@ export default function DetallePedidoWoo({ tienda, wooId, onClose, onCambio }) {
                   {o.transaction_id ? ` · transacción ${o.transaction_id}` : ''}
                 </span>
               </div>
-              <a className="btn btn-sm" href={urlAdminPedido(tienda, o.id)} target="_blank" rel="noreferrer">Abrir en WooCommerce ↗</a>
+              <a className="btn btn-sm" href={urlAdminPedido(tienda, o.id)} target="_blank" rel="noreferrer">Abrir en WooCommerce </a>
             </div>
             <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', marginTop: 10, fontSize: 12, color: 'var(--text-muted)' }}>
               <span>Creado: {fmtFechaHora(fila.fecha_creado)}</span>
@@ -160,7 +160,7 @@ export default function DetallePedidoWoo({ tienda, wooId, onClose, onCambio }) {
                   <div key={li.id} style={{ display: 'flex', gap: 12, alignItems: 'center', padding: '10px 0', borderBottom: '1px solid var(--border)' }}>
                     {li.image?.src
                       ? <ImageThumb src={li.image.src} size={56} radius={8} alt={li.name} />
-                      : <div style={{ width: 56, height: 56, borderRadius: 8, background: 'var(--bg-muted)', fontSize: 10, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Sin foto</div>}
+                      : <div style={{ width: 56, height: 56, borderRadius: 'var(--radius-sm)', background: 'var(--bg-muted)', fontSize: 10, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Sin foto</div>}
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontWeight: 700 }}>{li.name}</div>
                       <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{li.sku ? `SKU ${li.sku}` : 'Sin SKU'}{(li.meta_data || []).filter(m => !String(m.key).startsWith('_')).map(m => ` · ${m.display_key || m.key}: ${m.display_value || m.value}`).join('')}</div>
@@ -204,7 +204,7 @@ export default function DetallePedidoWoo({ tienda, wooId, onClose, onCambio }) {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {notas.map((n) => (
                   <div key={n.id} style={{
-                    padding: '8px 12px', borderRadius: 8, fontSize: 13,
+                    padding: '8px 12px', borderRadius: 'var(--radius-sm)', fontSize: 13,
                     background: n.customer_note ? '#e0f2fe' : 'var(--bg-muted)', color: n.customer_note ? '#0c4a6e' : 'var(--text)',
                     borderLeft: `3px solid ${n.customer_note ? '#0284c7' : 'var(--border)'}`,
                   }}>
@@ -220,7 +220,7 @@ export default function DetallePedidoWoo({ tienda, wooId, onClose, onCambio }) {
 
           <details style={{ fontSize: 12, color: 'var(--text-muted)' }}>
             <summary style={{ cursor: 'pointer' }}>Ver datos completos del pedido (tal cual los manda WooCommerce)</summary>
-            <pre style={{ maxHeight: 320, overflow: 'auto', padding: 10, background: 'var(--bg-muted)', borderRadius: 8, fontSize: 11 }}>{JSON.stringify(o, null, 2)}</pre>
+            <pre style={{ maxHeight: 320, overflow: 'auto', padding: 10, background: 'var(--bg-muted)', borderRadius: 'var(--radius-sm)', fontSize: 11 }}>{JSON.stringify(o, null, 2)}</pre>
           </details>
         </div>
       )}

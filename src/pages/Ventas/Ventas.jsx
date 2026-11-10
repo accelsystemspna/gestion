@@ -41,17 +41,17 @@ const padNum   = (n) => String(n ?? 0).padStart(4, '0')
 
 // ── Constantes de dominio ────────────────────────────────────────────────────
 const COMPROBANTES = [
-  { value: 'ticket',    label: 'Ticket',    color: '#6366f1', bg: '#eef2ff' },
+  { value: 'ticket',    label: 'Ticket',    color: 'var(--text)', bg: 'var(--bg-card)' },
   { value: 'factura_b', label: 'Factura B', color: '#0891b2', bg: '#ecfeff' },
   { value: 'factura_c', label: 'Factura C', color: '#0284c7', bg: '#e0f2fe' },
 ]
 
 const FORMAS_PAGO = [
-  { value: 'efectivo',         label: '💵 Efectivo' },
-  { value: 'debito',           label: '💳 Débito' },
-  { value: 'credito',          label: '💳 Crédito' },
-  { value: 'transferencia',    label: '🏦 Transferencia' },
-  { value: 'cuenta_corriente', label: '📒 Cta. corriente' },
+  { value: 'efectivo',         label: 'Efectivo' },
+  { value: 'debito',           label: 'Débito' },
+  { value: 'credito',          label: 'Crédito' },
+  { value: 'transferencia',    label: 'Transferencia' },
+  { value: 'cuenta_corriente', label: 'Cta. corriente' },
 ]
 
 const ESTADO_S = {
@@ -63,21 +63,21 @@ const ESTADO_S = {
 }
 
 const CANAL_S = {
-  web_minorista: { label: '🛒 Web minorista', color: '#0891b2', bg: '#cffafe' },
-  web_mayorista: { label: '🏢 Web mayorista', color: '#7c3aed', bg: '#f5f3ff' },
+  web_minorista: { label: 'Web minorista', color: '#0891b2', bg: '#cffafe' },
+  web_mayorista: { label: 'Web mayorista', color: '#7c3aed', bg: '#f5f3ff' },
 }
 
 // ── Estilos inline reutilizables ──────────────────────────────────────────────
 const inp = (ex = {}) => ({
   padding: '7px 10px', fontSize: 14, border: '1px solid var(--border)',
-  borderRadius: 6, background: 'var(--surface)', color: 'inherit',
+  borderRadius: 'var(--radius-sm)', background: 'var(--surface)', color: 'inherit',
   width: '100%', boxSizing: 'border-box', outline: 'none', ...ex,
 })
 
 const tabBtn = (active) => ({
-  padding: '4px 13px', borderRadius: 14, border: `1px solid ${active ? 'var(--primary)' : 'var(--border)'}`,
+  padding: '4px 13px', borderRadius: 'var(--radius-sm)', border: `1px solid ${active ? 'var(--primary)' : 'var(--border)'}`,
   background: active ? 'var(--primary)' : 'var(--surface)',
-  color: active ? 'white' : 'var(--text-muted)',
+  color: active ? 'var(--on-primary)' : 'var(--text-muted)',
   fontSize: 12, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
 })
 
@@ -779,6 +779,16 @@ export default function Ventas() {
       {/* ══════════════════════════════════════════════════════════
           BARRA SUPERIOR
       ══════════════════════════════════════════════════════════ */}
+      <div className="solapas" role="tablist" style={{ padding: '0 14px', marginBottom: 0, flexShrink: 0, background: 'var(--surface)' }}>
+        <button role="tab" aria-selected={!showHistorial && !showHistorialCompleto} className={`solapa${!showHistorial && !showHistorialCompleto ? ' activa' : ''}`}
+          onClick={() => { setShowHistorial(false); setShowHistorialCompleto(false) }}>Nueva venta</button>
+        <button role="tab" aria-selected={showHistorial} className={`solapa${showHistorial ? ' activa' : ''}`}
+          onClick={() => { setShowHistorialCompleto(false); setShowHistorial(true) }}>
+          Ventas del día{(ventasHoy.length + cobrosHoy.length) > 0 && <span className="cuenta">{ventasHoy.length + cobrosHoy.length}</span>}
+        </button>
+        <button role="tab" aria-selected={showHistorialCompleto} className={`solapa${showHistorialCompleto ? ' activa' : ''}`}
+          onClick={() => { setShowHistorial(false); setShowHistorialCompleto(true) }}>Historial</button>
+      </div>
       <div className="pos-topbar" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 14px', borderBottom: '1px solid var(--border)', background: 'var(--surface)', flexShrink: 0, flexWrap: 'wrap' }}>
 
         {/* Fecha */}
@@ -793,8 +803,8 @@ export default function Ventas() {
           <div style={{ position: 'relative', flex: 1 }}>
             {cliente ? (
               /* ── Cliente seleccionado ── */
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 10px', border: '1px solid var(--primary)', borderRadius: 6, background: 'var(--bg-highlight)' }}>
-                <div style={{ width: 30, height: 30, borderRadius: '50%', background: 'var(--primary)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 800, flexShrink: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 10px', border: '1px solid var(--primary)', borderRadius: 'var(--radius-sm)', background: 'var(--bg-highlight)' }}>
+                <div style={{ width: 30, height: 30, background: 'var(--primary)', color: 'var(--on-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 800, flexShrink: 0 }}>
                   {cliente.nombre.charAt(0).toUpperCase()}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -813,13 +823,13 @@ export default function Ventas() {
                 <input
                   autoFocus
                   style={inp({ paddingLeft: 34 })}
-                  placeholder="👤 Buscar cliente..."
+                  placeholder="Buscar cliente..."
                   value={cliSearch}
                   onChange={e => setCliSearch(e.target.value)}
                   onBlur={() => { if (!cliSearch.trim()) setCliEditMode(false) }}
                 />
                 {cliSearch.trim() && (
-                  <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 100, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 6, boxShadow: '0 4px 16px rgba(0,0,0,0.12)', marginTop: 2 }}>
+                  <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 100, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', boxShadow: '0 4px 16px rgba(0,0,0,0.12)', marginTop: 2 }}>
                     <div
                       onClick={() => { setCliente(null); setCliSearch(''); setCliEditMode(false); setCliResults([]) }}
                       style={{ padding: '8px 12px', borderBottom: '1px solid var(--border)', cursor: 'pointer', fontSize: 13, color: 'var(--text-muted)', fontStyle: 'italic' }}
@@ -859,12 +869,9 @@ export default function Ventas() {
               /* ── Consumidor Final (por defecto) ── */
               <div
                 onClick={() => setCliEditMode(true)}
-                style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 10px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--surface)', cursor: 'pointer' }}
+                style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 10px', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', background: 'var(--surface)', cursor: 'pointer' }}
                 title="Clic para asignar un cliente"
               >
-                <div style={{ width: 30, height: 30, borderRadius: '50%', background: '#e2e8f0', color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, flexShrink: 0 }}>
-                  👤
-                </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-muted)' }}>Consumidor Final</div>
                   <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Clic para asignar cliente</div>
@@ -879,7 +886,7 @@ export default function Ventas() {
             <button
               onClick={abrirNuevoCliente}
               title="Crear nuevo cliente"
-              style={{ flexShrink: 0, padding: '7px 11px', borderRadius: 6, border: '1px solid var(--primary)', background: 'var(--bg-card)', color: 'var(--primary)', fontSize: 13, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
+              style={{ flexShrink: 0, padding: '7px 11px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--primary)', background: 'var(--bg-card)', color: 'var(--primary)', fontSize: 13, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
             >
               + Nuevo
             </button>
@@ -893,7 +900,7 @@ export default function Ventas() {
             onChange={e => setListaSel(e.target.value)}
             style={inp({ width: 160, borderColor: !listaSel ? '#f59e0b' : undefined, fontWeight: !listaSel ? 700 : undefined, color: !listaSel ? 'var(--warning)' : undefined })}
           >
-            <option value="">⚠ Elegir lista...</option>
+            <option value="">Elegir lista...</option>
             {listas.map(l => <option key={l.id} value={l.id}>{l.nombre}</option>)}
           </select>
         </div>
@@ -916,22 +923,6 @@ export default function Ventas() {
           </label>
         )}
 
-        {/* Ventas del día */}
-        <button onClick={() => setShowHistorial(true)}
-          className="pos-btn-hoy"
-          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 13px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--surface)', cursor: 'pointer', fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', flexShrink: 0 }}>
-          🧾 Hoy
-          {ventasHoy.length > 0 && (
-            <span style={{ background: 'var(--primary)', color: 'white', borderRadius: 10, fontSize: 11, padding: '1px 7px', fontWeight: 700 }}>{ventasHoy.length}</span>
-          )}
-        </button>
-
-        {/* Historial completo */}
-        <button onClick={() => setShowHistorialCompleto(true)}
-          className="pos-btn-historial"
-          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 13px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--surface)', cursor: 'pointer', fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', flexShrink: 0 }}>
-          📋 Historial
-        </button>
       </div>
 
       {/* ══════════════════════════════════════════════════════════
@@ -943,13 +934,13 @@ export default function Ventas() {
           onClick={() => setMobilePestaña('productos')}
           className={`pos-tab-btn${mobilePestaña === 'productos' ? ' activo' : ''}`}
         >
-          📦 Productos
+          Productos
         </button>
         <button
           onClick={() => setMobilePestaña('carrito')}
           className={`pos-tab-btn${mobilePestaña === 'carrito' ? ' activo' : ''}`}
         >
-          🛒 Carrito {items.length > 0 && `(${items.length})`}
+          Carrito {items.length > 0 && `(${items.length})`}
         </button>
       </div>
 
@@ -965,7 +956,7 @@ export default function Ventas() {
             <input
               ref={prodSearchRef}
               style={inp()}
-              placeholder="🔍 Buscar por nombre o código..."
+              placeholder="Buscar por nombre o código..."
               value={prodSearch}
               onChange={e => setProdSearch(e.target.value)}
             />
@@ -1014,7 +1005,7 @@ export default function Ventas() {
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ fontSize: 13, fontWeight: inCart ? 700 : 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: inCart ? 'var(--primary)' : 'var(--text)' }}>
                             {p.nombre}{ofertaTexto && (
-                              <span title="Oferta activa" style={{ fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 999, background: '#fff7ed', color: '#c2410c', border: '1px solid #fdba7444', marginLeft: 5 }}>
+                              <span title="Oferta activa" style={{ fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 'var(--radius-sm)', background: '#fff7ed', color: '#c2410c', border: '1px solid #fdba7444', marginLeft: 5 }}>
                                 {ofertaTexto}
                               </span>
                             )}
@@ -1022,7 +1013,7 @@ export default function Ventas() {
                           {p.sku && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>{p.sku}</div>}
                           {(Number(p.stock_actual) || 0) <= 0 && (
                             <div style={{ fontSize: 10, color: '#d97706', fontWeight: 700, marginTop: 1 }} title="Sin stock — se fabrica al vender">
-                              ⚠ a fabricar
+                              a fabricar
                             </div>
                           )}
                         </div>
@@ -1030,7 +1021,7 @@ export default function Ventas() {
                           {listaSel ? fmtMoney(precio) : '—'}
                         </div>
                         {inCart && (
-                          <div style={{ width: 22, height: 22, borderRadius: '50%', background: 'var(--primary)', color: 'white', fontSize: 11, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          <div style={{ width: 22, height: 22, borderRadius: '50%', background: 'var(--primary)', color: 'var(--on-primary)', fontSize: 11, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                             {cartQty}
                           </div>
                         )}
@@ -1045,10 +1036,10 @@ export default function Ventas() {
           {/* ── Ítem libre inline + botón cotizador ── */}
           <div style={{ borderTop: '2px dashed var(--border)', padding: '7px 14px', flexShrink: 0, background: 'var(--bg-muted)' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 }}>
-              <div style={{ fontSize: 10, fontWeight: 800, color: '#6366f1', textTransform: 'uppercase', letterSpacing: '0.06em' }}>✏️ Ítem libre</div>
+              <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Ítem libre</div>
               <button onClick={() => setShowCotizador(true)}
-                style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '4px 11px', borderRadius: 6, border: '1px solid var(--warning-border)', background: 'var(--warning-bg)', color: 'var(--warning)', fontSize: 11, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                ✂️ Cotizar corte especial
+                style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '4px 11px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--warning-border)', background: 'var(--warning-bg)', color: 'var(--warning)', fontSize: 11, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                Cotizar corte especial
               </button>
             </div>
             <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
@@ -1057,24 +1048,24 @@ export default function Ventas() {
                 value={inlineLibre.descripcion}
                 onChange={e => { setInlineLibre(p => ({ ...p, descripcion: e.target.value })); setInlineErr('') }}
                 onKeyDown={e => e.key === 'Enter' && addInlineLibre()}
-                style={{ flex: 1, padding: '6px 9px', fontSize: 13, border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg-card)', color: 'inherit', outline: 'none', minWidth: 0 }}
+                style={{ flex: 1, padding: '6px 9px', fontSize: 13, border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', background: 'var(--bg-card)', color: 'inherit', outline: 'none', minWidth: 0 }}
               />
               <input
                 type="number" placeholder="$" step="0.01"
                 value={inlineLibre.precio}
                 onChange={e => { setInlineLibre(p => ({ ...p, precio: e.target.value })); setInlineErr('') }}
                 onKeyDown={e => e.key === 'Enter' && addInlineLibre()}
-                style={{ width: 80, padding: '6px 9px', fontSize: 13, border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg-card)', color: 'inherit', outline: 'none', textAlign: 'right' }}
+                style={{ width: 80, padding: '6px 9px', fontSize: 13, border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', background: 'var(--bg-card)', color: 'inherit', outline: 'none', textAlign: 'right' }}
               />
               <input
                 type="number" placeholder="×1" min={1}
                 value={inlineLibre.cantidad}
                 onChange={e => setInlineLibre(p => ({ ...p, cantidad: e.target.value }))}
                 onKeyDown={e => e.key === 'Enter' && addInlineLibre()}
-                style={{ width: 50, padding: '6px 7px', fontSize: 13, border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg-card)', color: 'inherit', outline: 'none', textAlign: 'center' }}
+                style={{ width: 50, padding: '6px 7px', fontSize: 13, border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', background: 'var(--bg-card)', color: 'inherit', outline: 'none', textAlign: 'center' }}
               />
               <button onClick={addInlineLibre}
-                style={{ padding: '6px 13px', borderRadius: 6, border: 'none', background: '#6366f1', color: 'white', fontSize: 13, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                style={{ padding: '6px 13px', borderRadius: 'var(--radius-sm)', border: 'none', background: 'var(--primary)', color: 'var(--on-primary)', fontSize: 13, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}>
                 + Agregar
               </button>
             </div>
@@ -1089,8 +1080,8 @@ export default function Ventas() {
 
           {/* Aviso: sin lista */}
           {!listaSel && (
-            <div style={{ margin: '8px 12px 0', padding: '8px 12px', borderRadius: 7, background: 'var(--warning-bg)', border: '1px solid var(--warning-border)', display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-              <span style={{ fontSize: 16 }}>⚠️</span>
+            <div style={{ margin: '8px 12px 0', padding: '8px 12px', borderRadius: 'var(--radius-sm)', background: 'var(--warning-bg)', border: '1px solid var(--warning-border)', display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+              
               <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--warning)' }}>Elegí una lista de precios para poder agregar productos.</span>
             </div>
           )}
@@ -1099,13 +1090,13 @@ export default function Ventas() {
           <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 5 }}>
             {items.length === 0 ? (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 10, color: 'var(--text-muted)' }}>
-                <span style={{ fontSize: 40 }}>🛒</span>
+                
                 <span style={{ fontSize: 13 }}>El carrito está vacío</span>
                 <span style={{ fontSize: 12 }}>Hacé clic en un producto para agregar</span>
               </div>
             ) : (
               items.map(item => (
-                <div className="pos-cart-row" key={item._key} style={{ display: 'flex', gap: 8, padding: '8px 10px', borderRadius: 7, border: '1px solid var(--border)', background: 'var(--surface)', alignItems: 'center' }}>
+                <div className="pos-cart-row" key={item._key} style={{ display: 'flex', gap: 8, padding: '8px 10px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)', background: 'var(--surface)', alignItems: 'center' }}>
                   {descPct > 0 && (
                     <input type="checkbox" className="pos-cart-check" checked={item.aplicaDescuento !== false} onChange={() => toggleDescItem(item._key)}
                       title="Aplicar descuento a este ítem" style={{ width: 16, height: 16, flexShrink: 0, cursor: 'pointer' }} />
@@ -1128,7 +1119,7 @@ export default function Ventas() {
                       <input type="number" min={0} step="0.01" value={item.precio}
                         onChange={e => setPrecio(item._key, e.target.value)}
                         title="Editar precio unitario"
-                        style={{ width: 72, padding: '2px 5px', fontSize: 12, border: `1px solid ${item.precioManual ? 'var(--primary)' : 'var(--border)'}`, borderRadius: 4, background: 'var(--surface)', color: 'inherit', outline: 'none' }}
+                        style={{ width: 72, padding: '2px 5px', fontSize: 12, border: `1px solid ${item.precioManual ? 'var(--primary)' : 'var(--border)'}`, borderRadius: 'var(--radius-sm)', background: 'var(--surface)', color: 'inherit', outline: 'none' }}
                       />
                       <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>c/u{item.precioManual ? ' ✎' : ''}</span>
                     </div>
@@ -1136,11 +1127,11 @@ export default function Ventas() {
                   {/* Controles de cantidad */}
                   <div className="pos-cart-qty" style={{ display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0 }}>
                     <button onClick={() => updateQty(item._key, -1)}
-                      style={{ width: 26, height: 26, borderRadius: 4, border: '1px solid var(--border)', background: 'var(--surface)', cursor: 'pointer', fontSize: 15, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text)' }}>−</button>
+                      style={{ width: 26, height: 26, borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)', background: 'var(--surface)', cursor: 'pointer', fontSize: 15, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text)' }}>−</button>
                     <input type="number" value={item.cantidad} onChange={e => setQty(item._key, e.target.value)}
-                      style={{ width: 40, textAlign: 'center', padding: '2px 4px', fontSize: 13, border: '1px solid var(--border)', borderRadius: 4, background: 'var(--surface)', color: 'inherit', outline: 'none' }} />
+                      style={{ width: 40, textAlign: 'center', padding: '2px 4px', fontSize: 13, border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', background: 'var(--surface)', color: 'inherit', outline: 'none' }} />
                     <button onClick={() => updateQty(item._key, +1)}
-                      style={{ width: 26, height: 26, borderRadius: 4, border: 'none', background: 'var(--primary)', color: 'white', cursor: 'pointer', fontSize: 15, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
+                      style={{ width: 26, height: 26, borderRadius: 'var(--radius-sm)', border: 'none', background: 'var(--primary)', color: 'var(--on-primary)', cursor: 'pointer', fontSize: 15, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
                   </div>
                   <div className="pos-cart-total" style={{ fontSize: 14, fontWeight: 700, minWidth: 64, textAlign: 'right', flexShrink: 0 }}>{fmtMoney(item.precio * item.cantidad)}</div>
                   <button className="pos-cart-remove" onClick={() => removeItem(item._key)}
@@ -1159,13 +1150,13 @@ export default function Ventas() {
                 <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)' }}>Descuento (%)</label>
                 <input type="number" min={0} max={100} placeholder="0"
                   value={descuento} onChange={e => setDescuento(e.target.value)}
-                  style={{ padding: '6px 9px', fontSize: 14, border: '1px solid var(--border)', borderRadius: 6, background: 'var(--surface)', color: 'inherit', width: '100%', boxSizing: 'border-box', outline: 'none' }}
+                  style={{ padding: '6px 9px', fontSize: 14, border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', background: 'var(--surface)', color: 'inherit', width: '100%', boxSizing: 'border-box', outline: 'none' }}
                 />
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
                 <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)' }}>Forma de pago</label>
                 <select value={formaPago} onChange={e => setFormaPago(e.target.value)}
-                  style={{ padding: '6px 9px', fontSize: 13, border: '1px solid var(--border)', borderRadius: 6, background: 'var(--surface)', color: 'inherit', width: '100%', boxSizing: 'border-box', outline: 'none' }}>
+                  style={{ padding: '6px 9px', fontSize: 13, border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', background: 'var(--surface)', color: 'inherit', width: '100%', boxSizing: 'border-box', outline: 'none' }}>
                   {FORMAS_PAGO.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
                 </select>
               </div>
@@ -1175,7 +1166,7 @@ export default function Ventas() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
                 <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)' }}>Motivo del descuento (opcional)</label>
                 <input type="text" placeholder="Ej: pago en efectivo" value={razonDescuento} onChange={e => setRazonDescuento(e.target.value)}
-                  style={{ padding: '6px 9px', fontSize: 13, border: '1px solid var(--border)', borderRadius: 6, background: 'var(--surface)', color: 'inherit', width: '100%', boxSizing: 'border-box', outline: 'none' }}
+                  style={{ padding: '6px 9px', fontSize: 13, border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', background: 'var(--surface)', color: 'inherit', width: '100%', boxSizing: 'border-box', outline: 'none' }}
                 />
                 <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
                   Tildá arriba, en cada ítem del carrito, cuáles reciben el descuento ({itemsConDescuento.length} de {items.length} lo tienen aplicado).
@@ -1200,8 +1191,8 @@ export default function Ventas() {
 
             {/* CTA */}
             <button onClick={confirmarVenta} disabled={items.length === 0 || saving}
-              style={{ width: '100%', padding: '13px', borderRadius: 8, border: 'none', background: items.length === 0 ? '#e2e8f0' : 'var(--primary)', color: items.length === 0 ? '#94a3b8' : 'white', fontSize: 16, fontWeight: 800, cursor: items.length === 0 ? 'not-allowed' : 'pointer', transition: 'all 0.15s', letterSpacing: '0.01em' }}>
-              {saving ? '⏳ Procesando...' : '✔ Confirmar venta'}
+              style={{ width: '100%', padding: '13px', borderRadius: 'var(--radius-sm)', border: 'none', background: items.length === 0 ? '#e2e8f0' : 'var(--primary)', color: items.length === 0 ? '#94a3b8' : 'var(--on-primary)', fontSize: 16, fontWeight: 800, cursor: items.length === 0 ? 'not-allowed' : 'pointer', transition: 'all 0.15s', letterSpacing: '0.01em' }}>
+              {saving ? 'Procesando...' : 'Confirmar venta'}
             </button>
           </div>
         </div>
@@ -1212,8 +1203,8 @@ export default function Ventas() {
       ══════════════════════════════════════════════════════════ */}
       {showCustom && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ background: 'var(--bg)', borderRadius: 10, padding: 24, width: 380, boxShadow: '0 8px 32px rgba(0,0,0,0.2)' }}>
-            <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 16 }}>✏️ Agregar ítem libre</div>
+          <div style={{ background: 'var(--bg)', borderRadius: 'var(--radius-sm)', padding: 24, width: 380, boxShadow: '0 8px 32px rgba(0,0,0,0.2)' }}>
+            <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 16 }}>Agregar ítem libre</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
                 <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)' }}>Descripción</label>
@@ -1236,9 +1227,9 @@ export default function Ventas() {
             </div>
             <div style={{ display: 'flex', gap: 8, marginTop: 16, justifyContent: 'flex-end' }}>
               <button onClick={() => { setShowCustom(false); setCustomErr('') }}
-                style={{ padding: '8px 16px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--surface)', cursor: 'pointer', fontSize: 13 }}>Cancelar</button>
+                style={{ padding: '8px 16px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)', background: 'var(--surface)', cursor: 'pointer', fontSize: 13 }}>Cancelar</button>
               <button onClick={addCustom}
-                style={{ padding: '8px 16px', borderRadius: 6, border: 'none', background: 'var(--primary)', color: 'white', cursor: 'pointer', fontSize: 13, fontWeight: 700 }}>Agregar</button>
+                style={{ padding: '8px 16px', borderRadius: 'var(--radius-sm)', border: 'none', background: 'var(--primary)', color: 'var(--on-primary)', cursor: 'pointer', fontSize: 13, fontWeight: 700 }}>Agregar</button>
             </div>
           </div>
         </div>
@@ -1249,12 +1240,12 @@ export default function Ventas() {
       ══════════════════════════════════════════════════════════ */}
       {showCotizador && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-          <div style={{ background: 'var(--bg)', borderRadius: 12, width: '100%', maxWidth: 700, maxHeight: '90vh', display: 'flex', flexDirection: 'column', boxShadow: '0 16px 48px rgba(0,0,0,0.3)' }}>
+          <div style={{ background: 'var(--bg)', borderRadius: 'var(--radius-sm)', width: '100%', maxWidth: 700, maxHeight: '90vh', display: 'flex', flexDirection: 'column', boxShadow: '0 16px 48px rgba(0,0,0,0.3)' }}>
 
             {/* Header */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 18px', borderBottom: '1px solid var(--border)', flexShrink: 0, background: 'var(--warning-bg)', borderRadius: '12px 12px 0 0' }}>
               <div>
-                <div style={{ fontWeight: 800, fontSize: 15, color: 'var(--warning)' }}>✂️ Cotizador de corte especial</div>
+                <div style={{ fontWeight: 800, fontSize: 15, color: 'var(--warning)' }}>Cotizador de corte especial</div>
                 <div style={{ fontSize: 12, color: '#b45309', marginTop: 2 }}>Calculá el costo y agregalo directo al carrito</div>
               </div>
               <button onClick={() => setShowCotizador(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 20, color: 'var(--text-muted)' }}>✕</button>
@@ -1287,7 +1278,7 @@ export default function Ventas() {
                     const mat  = materiales.find(m => m.id === Number(p.material_id))
                     const tipo = mat?.tipo_medida || 'placa'
                     return (
-                      <div key={i} style={{ border: '1px solid var(--border)', borderRadius: 6, overflow: 'hidden' }}>
+                      <div key={i} style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', overflow: 'hidden' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 9px', background: cotExpPiezas[i] ? 'var(--bg-highlight)' : 'var(--surface)', cursor: 'pointer' }}
                           onClick={() => setCotExpPiezas(e => ({ ...e, [i]: !e[i] }))}>
                           <span style={{ fontSize: 10, color: 'var(--text-muted)', width: 10 }}>{cotExpPiezas[i] ? '▾' : '▸'}</span>
@@ -1326,7 +1317,7 @@ export default function Ventas() {
                     )
                   })}
                   <div style={{ textAlign: 'right' }}>
-                    <button onClick={addCotPieza} style={{ fontSize: 11, padding: '3px 10px', borderRadius: 5, border: '1px solid var(--border)', background: 'var(--surface)', cursor: 'pointer', fontWeight: 600 }}>+ Agregar pieza</button>
+                    <button onClick={addCotPieza} style={{ fontSize: 11, padding: '3px 10px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)', background: 'var(--surface)', cursor: 'pointer', fontWeight: 600 }}>+ Agregar pieza</button>
                   </div>
                 </div>
 
@@ -1336,7 +1327,7 @@ export default function Ventas() {
                   {cotTarifas.map((ts, i) => {
                     const tar = tarifas.find(t => t.id === Number(ts.tarifa_id))
                     return (
-                      <div key={i} style={{ border: '1px solid var(--border)', borderRadius: 6, overflow: 'hidden' }}>
+                      <div key={i} style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', overflow: 'hidden' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 9px', background: cotExpTarifas[i] ? 'var(--bg-highlight)' : 'var(--surface)', cursor: 'pointer' }}
                           onClick={() => setCotExpTarifas(e => ({ ...e, [i]: !e[i] }))}>
                           <span style={{ fontSize: 10, color: 'var(--text-muted)', width: 10 }}>{cotExpTarifas[i] ? '▾' : '▸'}</span>
@@ -1375,7 +1366,7 @@ export default function Ventas() {
                     )
                   })}
                   <div style={{ textAlign: 'right' }}>
-                    <button onClick={addCotTarifa} style={{ fontSize: 11, padding: '3px 10px', borderRadius: 5, border: '1px solid var(--border)', background: 'var(--surface)', cursor: 'pointer', fontWeight: 600 }}>+ Agregar tarifa</button>
+                    <button onClick={addCotTarifa} style={{ fontSize: 11, padding: '3px 10px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)', background: 'var(--surface)', cursor: 'pointer', fontWeight: 600 }}>+ Agregar tarifa</button>
                   </div>
                 </div>
               </div>
@@ -1395,13 +1386,13 @@ export default function Ventas() {
                 </div>
 
                 {/* Costo base */}
-                <div style={{ background: '#ecfeff', border: '1px solid #a5f3fc', borderRadius: 6, padding: '7px 9px' }}>
+                <div style={{ background: 'var(--accent-tenue)', border: '1px solid var(--border)', padding: '7px 9px' }}>
                   <div style={{ fontSize: 10, color: '#0369a1', fontWeight: 700, textTransform: 'uppercase' }}>Costo base</div>
                   <div style={{ fontSize: 18, fontWeight: 800, color: '#0369a1' }}>{fmtMoney(cotDesglose.costoBase)}</div>
                 </div>
 
                 {/* Precio con lista */}
-                <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 6, padding: '7px 9px' }}>
+                <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '7px 9px' }}>
                   <div style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>
                     Precio {lista ? `(${lista.nombre})` : 'sin lista'}
                   </div>
@@ -1419,8 +1410,8 @@ export default function Ventas() {
                 <button
                   onClick={agregarCotizadorAlCarrito}
                   disabled={cotDesglose.precioUnitario <= 0}
-                  style={{ width: '100%', padding: '10px 8px', borderRadius: 7, border: 'none', background: cotDesglose.precioUnitario > 0 ? '#f59e0b' : '#e2e8f0', color: cotDesglose.precioUnitario > 0 ? 'white' : '#94a3b8', fontSize: 13, fontWeight: 800, cursor: cotDesglose.precioUnitario > 0 ? 'pointer' : 'not-allowed' }}>
-                  🛒 Agregar al carrito
+                  style={{ width: '100%', padding: '10px 8px', borderRadius: 'var(--radius-sm)', border: 'none', background: cotDesglose.precioUnitario > 0 ? '#f59e0b' : '#e2e8f0', color: cotDesglose.precioUnitario > 0 ? 'white' : '#94a3b8', fontSize: 13, fontWeight: 800, cursor: cotDesglose.precioUnitario > 0 ? 'pointer' : 'not-allowed' }}>
+                  Agregar al carrito
                 </button>
               </div>
             </div>
@@ -1429,16 +1420,16 @@ export default function Ventas() {
       )}
 
       {/* ══════════════════════════════════════════════════════════
-          MODAL — Venta confirmada ✅
+          MODAL — Venta confirmada 
       ══════════════════════════════════════════════════════════ */}
       {showSuccess && savedVenta && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ background: 'var(--bg)', borderRadius: 14, padding: '28px 32px', width: 460, boxShadow: '0 16px 48px rgba(0,0,0,0.3)' }}>
+          <div style={{ background: 'var(--bg)', borderRadius: 'var(--radius-sm)', padding: '28px 32px', width: 460, boxShadow: '0 16px 48px rgba(0,0,0,0.3)' }}>
             <div style={{ textAlign: 'center', marginBottom: 22 }}>
-              <div style={{ fontSize: 52 }}>✅</div>
+              
               <div style={{ fontSize: 22, fontWeight: 800, marginTop: 10 }}>¡Venta confirmada!</div>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 6 }}>
-                <span style={{ fontSize: 13, fontWeight: 700, color: compInfo.color, background: compInfo.bg, padding: '2px 10px', borderRadius: 5 }}>
+                <span style={{ fontSize: 13, fontWeight: 700, color: compInfo.color, background: compInfo.bg, padding: '2px 10px', borderRadius: 'var(--radius-sm)' }}>
                   {compInfo.label} #{padNum(savedVenta.numero)}
                 </span>
                 <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>{savedVenta.hora}</span>
@@ -1446,7 +1437,7 @@ export default function Ventas() {
             </div>
 
             {/* Resumen */}
-            <div style={{ background: 'var(--surface)', borderRadius: 9, padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 7, fontSize: 13 }}>
+            <div style={{ background: 'var(--surface)', borderRadius: 'var(--radius-sm)', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 7, fontSize: 13 }}>
               {[
                 ['Cliente',       savedVenta.cliente_nombre],
                 ['Productos',     `${savedVenta.items.length} ítem${savedVenta.items.length !== 1 ? 's' : ''}`],
@@ -1465,8 +1456,8 @@ export default function Ventas() {
 
             {/* CAE si fue emitida a ARCA */}
             {savedVenta.arcaResult?.ok && (
-              <div style={{ marginTop: 12, background: '#f0fdf4', border: '1px solid #86efac', borderRadius: 8, padding: '10px 14px' }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: '#15803d', marginBottom: 4 }}>✅ FACTURA C EMITIDA — ARCA</div>
+              <div style={{ marginTop: 12, background: '#f0fdf4', border: '1px solid #86efac', borderRadius: 'var(--radius-sm)', padding: '10px 14px' }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: '#15803d', marginBottom: 4 }}>FACTURA C EMITIDA — ARCA</div>
                 <div style={{ fontSize: 12, fontFamily: 'monospace', color: '#166534' }}>
                   Nro: {String(arcaConfig?.punto_venta ?? 3).padStart(4,'0')}-{String(savedVenta.arcaResult.nroFactura ?? 0).padStart(8,'0')}
                 </div>
@@ -1478,11 +1469,11 @@ export default function Ventas() {
             {/* Acciones */}
             <div style={{ display: 'flex', gap: 8, marginTop: 18 }}>
               <button onClick={() => { setDetalleVentaId(savedVenta.id); setShowDetalle(true) }}
-                style={{ flex: 1, padding: '10px', borderRadius: 7, border: '1px solid var(--border)', background: 'var(--surface)', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
-                📄 Ver comprobante
+                style={{ flex: 1, padding: '10px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)', background: 'var(--surface)', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
+                Ver comprobante
               </button>
               <button onClick={nuevaVenta}
-                style={{ flex: 1, padding: '10px', borderRadius: 7, border: 'none', background: 'var(--primary)', color: 'white', cursor: 'pointer', fontSize: 14, fontWeight: 800 }}>
+                style={{ flex: 1, padding: '10px', borderRadius: 'var(--radius-sm)', border: 'none', background: 'var(--primary)', color: 'var(--on-primary)', cursor: 'pointer', fontSize: 14, fontWeight: 800 }}>
                 + Nueva venta
               </button>
             </div>
@@ -1514,7 +1505,7 @@ export default function Ventas() {
             <div style={{ flex: 1, overflowY: 'auto', padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: 8 }}>
               {ventasHoy.length === 0 && cobrosHoy.length > 0 ? null : ventasHoy.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)', fontSize: 13 }}>
-                  <div style={{ fontSize: 32, marginBottom: 10 }}>🧾</div>
+                  
                   Sin ventas registradas hoy.
                 </div>
               ) : (
@@ -1525,7 +1516,7 @@ export default function Ventas() {
                   return (
                     <div key={v.id}
                       onClick={() => { setDetalleVentaId(v.id); setShowDetalle(true); setShowHistorial(false) }}
-                      style={{ padding: '10px 12px', border: '1px solid var(--border)', borderRadius: 8, cursor: 'pointer', background: 'var(--surface)', display: 'flex', gap: 10, alignItems: 'flex-start', transition: 'border-color 0.12s' }}
+                      style={{ padding: '10px 12px', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', cursor: 'pointer', background: 'var(--surface)', display: 'flex', gap: 10, alignItems: 'flex-start', transition: 'border-color 0.12s' }}
                       onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--primary)'}
                       onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}
                     >
@@ -1534,9 +1525,9 @@ export default function Ventas() {
                           <span style={{ fontSize: 12, fontWeight: 700, color: comp?.color ?? '#64748b' }}>
                             {comp?.label ?? 'Ticket'} #{padNum(v.numero)}
                           </span>
-                          <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 7px', borderRadius: 10, background: est.bg, color: est.color }}>{est.label}</span>
+                          <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 7px', borderRadius: 'var(--radius-sm)', background: est.bg, color: est.color }}>{est.label}</span>
                           {v.factura_emitida && (
-                            <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 7px', borderRadius: 10, background: '#dbeafe', color: '#1d4ed8' }}>🏛️ Facturado</span>
+                            <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 7px', borderRadius: 'var(--radius-sm)', background: '#dbeafe', color: '#1d4ed8' }}>Facturado</span>
                           )}
                           <span style={{ fontSize: 11, color: 'var(--text-muted)', marginLeft: 'auto', flexShrink: 0 }}>{fmtDate(v.fecha)}</span>
                         </div>
@@ -1562,16 +1553,16 @@ export default function Ventas() {
                   {cobrosHoy.map(c => (
                     <div key={c.clave}
                       onClick={() => { setShowHistorial(false); navigate(`/pedidos?abrir=${c.pedido.id}`) }}
-                      style={{ padding: '10px 12px', border: '1px solid var(--border)', borderRadius: 8, cursor: 'pointer', background: 'var(--surface)', display: 'flex', gap: 10, alignItems: 'flex-start' }}
+                      style={{ padding: '10px 12px', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', cursor: 'pointer', background: 'var(--surface)', display: 'flex', gap: 10, alignItems: 'flex-start' }}
                       onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--primary)'}
                       onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}
                     >
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
-                          <span style={{ fontSize: 12, fontWeight: 700, color: '#0e7490' }}>{c.tipo} · Pedido {c.pedido.codigo}</span>
-                          <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 7px', borderRadius: 10, background: ESTADO_S.pagado.bg, color: ESTADO_S.pagado.color }}>{ESTADO_S.pagado.label}</span>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent)' }}>{c.tipo} · Pedido {c.pedido.codigo}</span>
+                          <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 7px', borderRadius: 'var(--radius-sm)', background: ESTADO_S.pagado.bg, color: ESTADO_S.pagado.color }}>{ESTADO_S.pagado.label}</span>
                           {c.facturas.length > 0 && (
-                            <span title={c.facturas.map(n => 'Factura C ' + n).join(', ')} style={{ fontSize: 10, fontWeight: 700, padding: '1px 7px', borderRadius: 10, background: '#dbeafe', color: '#1d4ed8' }}>🏛️ Facturado</span>
+                            <span title={c.facturas.map(n => 'Factura C ' + n).join(', ')} style={{ fontSize: 10, fontWeight: 700, padding: '1px 7px', borderRadius: 'var(--radius-sm)', background: '#dbeafe', color: '#1d4ed8' }}>Facturado</span>
                           )}
                         </div>
                         <div style={{ fontSize: 13, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -1581,7 +1572,7 @@ export default function Ventas() {
                           {[c.hora, c.forma, ...c.facturas.map(n => 'Factura C ' + n)].filter(Boolean).join(' · ')}
                         </div>
                       </div>
-                      <div style={{ fontSize: 17, fontWeight: 800, color: '#0e7490', whiteSpace: 'nowrap' }}>{fmtMoney(c.monto)}</div>
+                      <div style={{ fontSize: 17, fontWeight: 800, color: 'var(--accent)', whiteSpace: 'nowrap' }}>{fmtMoney(c.monto)}</div>
                     </div>
                   ))}
                 </>
@@ -1602,7 +1593,7 @@ export default function Ventas() {
             {/* Header */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 18px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
               <div>
-                <div style={{ fontWeight: 700, fontSize: 16 }}>📋 Historial de ventas</div>
+                <div style={{ fontWeight: 700, fontSize: 16 }}>Historial de ventas</div>
                 <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
                   {hcLoading ? 'Cargando...' : `${hcFiltradas.length} venta${hcFiltradas.length !== 1 ? 's' : ''} · ${fmtMoney(hcFiltradas.reduce((s, v) => s + (v.total ?? 0), 0))}`}
                 </div>
@@ -1614,7 +1605,7 @@ export default function Ventas() {
             {/* Filtros */}
             <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--border)', display: 'flex', gap: 7, flexWrap: 'wrap', flexShrink: 0, background: 'var(--surface)' }}>
               <input
-                placeholder="🔍 Cliente o N° de venta..."
+                placeholder="Cliente o N° de venta..."
                 value={hcBusqueda}
                 onChange={e => setHcBusqueda(e.target.value)}
                 style={inp({ flex: 1, minWidth: 160 })}
@@ -1633,7 +1624,7 @@ export default function Ventas() {
               {(hcDesde || hcHasta || hcEstado || hcBusqueda) && (
                 <button
                   onClick={() => { setHcDesde(''); setHcHasta(''); setHcEstado(''); setHcBusqueda('') }}
-                  style={{ padding: '7px 11px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--bg)', cursor: 'pointer', fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+                  style={{ padding: '7px 11px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)', background: 'var(--bg)', cursor: 'pointer', fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
                   ✕ Limpiar
                 </button>
               )}
@@ -1643,11 +1634,11 @@ export default function Ventas() {
             <div style={{ flex: 1, overflowY: 'auto', padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: 8 }}>
               {hcLoading ? (
                 <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)', fontSize: 13 }}>
-                  <div style={{ fontSize: 28, marginBottom: 8 }}>⏳</div>Cargando ventas...
+                  Cargando ventas...
                 </div>
               ) : hcFiltradas.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)', fontSize: 13 }}>
-                  <div style={{ fontSize: 32, marginBottom: 10 }}>📋</div>
+                  
                   Sin ventas que coincidan.
                 </div>
               ) : hcFiltradas.map(v => {
@@ -1658,7 +1649,7 @@ export default function Ventas() {
                 return (
                   <div key={v.id}
                     onClick={() => { setDetalleVentaId(v.id); setShowDetalle(true); setShowHistorialCompleto(false) }}
-                    style={{ padding: '10px 12px', border: '1px solid var(--border)', borderRadius: 8, cursor: 'pointer', background: 'var(--surface)', display: 'flex', gap: 10, alignItems: 'flex-start' }}
+                    style={{ padding: '10px 12px', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', cursor: 'pointer', background: 'var(--surface)', display: 'flex', gap: 10, alignItems: 'flex-start' }}
                     onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--primary)'}
                     onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}
                   >
@@ -1667,12 +1658,12 @@ export default function Ventas() {
                         <span style={{ fontSize: 12, fontWeight: 700, color: comp?.color ?? '#64748b' }}>
                           {comp?.label ?? 'Ticket'} #{padNum(v.numero)}
                         </span>
-                        <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 7px', borderRadius: 10, background: est.bg, color: est.color }}>{est.label}</span>
+                        <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 7px', borderRadius: 'var(--radius-sm)', background: est.bg, color: est.color }}>{est.label}</span>
                         {canal && (
-                          <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 7px', borderRadius: 10, background: canal.bg, color: canal.color }}>{canal.label}</span>
+                          <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 7px', borderRadius: 'var(--radius-sm)', background: canal.bg, color: canal.color }}>{canal.label}</span>
                         )}
                         {v.factura_emitida && (
-                          <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 7px', borderRadius: 10, background: '#dbeafe', color: '#1d4ed8' }}>🏛️ Facturado</span>
+                          <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 7px', borderRadius: 'var(--radius-sm)', background: '#dbeafe', color: '#1d4ed8' }}>Facturado</span>
                         )}
                         <span style={{ fontSize: 11, color: 'var(--text-muted)', marginLeft: 'auto', flexShrink: 0 }}>{fmtDate(v.fecha)}</span>
                       </div>
@@ -1698,9 +1689,9 @@ export default function Ventas() {
       ══════════════════════════════════════════════════════════ */}
       {showNuevoCliente && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 400, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ background: 'var(--bg)', borderRadius: 10, padding: 24, width: 420, boxShadow: '0 8px 32px rgba(0,0,0,0.2)' }}>
+          <div style={{ background: 'var(--bg)', borderRadius: 'var(--radius-sm)', padding: 24, width: 420, boxShadow: '0 8px 32px rgba(0,0,0,0.2)' }}>
 
-            <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 4 }}>👤 Nuevo cliente</div>
+            <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 4 }}>Nuevo cliente</div>
             <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 18 }}>
               Se creará y quedará seleccionado en la venta actual
             </div>
@@ -1745,16 +1736,16 @@ export default function Ventas() {
             <div style={{ display: 'flex', gap: 8, marginTop: 20, justifyContent: 'flex-end' }}>
               <button
                 onClick={() => setShowNuevoCliente(false)}
-                style={{ padding: '8px 16px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--surface)', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}
+                style={{ padding: '8px 16px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)', background: 'var(--surface)', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}
               >
                 Cancelar
               </button>
               <button
                 onClick={guardarNuevoCliente}
                 disabled={!nuevoCliForm.nombre.trim() || nuevoCliSaving}
-                style={{ padding: '8px 20px', borderRadius: 6, border: 'none', background: !nuevoCliForm.nombre.trim() ? '#e2e8f0' : 'var(--primary)', color: !nuevoCliForm.nombre.trim() ? '#94a3b8' : 'white', cursor: !nuevoCliForm.nombre.trim() ? 'not-allowed' : 'pointer', fontSize: 13, fontWeight: 700 }}
+                style={{ padding: '8px 20px', borderRadius: 'var(--radius-sm)', border: 'none', background: !nuevoCliForm.nombre.trim() ? '#e2e8f0' : 'var(--primary)', color: !nuevoCliForm.nombre.trim() ? '#94a3b8' : 'var(--on-primary)', cursor: !nuevoCliForm.nombre.trim() ? 'not-allowed' : 'pointer', fontSize: 13, fontWeight: 700 }}
               >
-                {nuevoCliSaving ? 'Guardando…' : '✔ Crear cliente'}
+                {nuevoCliSaving ? 'Guardando…' : 'Crear cliente'}
               </button>
             </div>
           </div>

@@ -468,11 +468,11 @@ export default function Presupuesto() {
         <h1 style={{ fontSize:20, fontWeight:700, margin:0 }}>Nuevo presupuesto</h1>
         <div className="pres-topbar-actions" style={{ display:'flex', gap:8 }}>
           <button className="btn" onClick={abrirHistorial}>
-            📋 Historial
+            Historial
           </button>
           <button className="btn" onClick={guardar} disabled={saving || !cliSeleccionado}
             title={!cliSeleccionado ? 'Elegí o creá un cliente para guardar' : ''}>
-            {saving ? 'Guardando...' : '💾 Guardar'}
+            {saving ? 'Guardando...' : 'Guardar'}
           </button>
           <button
             className="btn btn-primary"
@@ -480,7 +480,7 @@ export default function Presupuesto() {
             disabled={exporting || !listaSel}
             title={!listaSel ? 'Seleccioná una lista de precios primero' : ''}
           >
-            {exporting ? 'Generando...' : '📄 Exportar PDF'}
+            {exporting ? 'Generando...' : 'Exportar PDF'}
           </button>
         </div>
       </div>
@@ -488,7 +488,7 @@ export default function Presupuesto() {
       {/* ── Aviso lista no seleccionada ─────────────────────────────────── */}
       {!listaSel && listas.length > 0 && (
         <div style={{ display:'flex', alignItems:'center', gap:10, background:'#fffbeb', borderBottom:'1px solid #fcd34d', padding:'7px 20px', flexShrink:0 }}>
-          <span style={{ fontSize:16 }}>⚠️</span>
+          
           <span style={{ fontWeight:600, color:'#92400e', fontSize:13 }}>Seleccioná una lista de precios antes de continuar. El PDF no se puede exportar sin lista.</span>
         </div>
       )}
@@ -573,7 +573,7 @@ export default function Presupuesto() {
                   if (tipo === 'longitud') return `${mat.nombre} — ${p.metros || 0} m`
                 })() : `Insumo ${i + 1}`
                 return (
-                  <div key={i} style={{ border:'1px solid var(--border)', borderRadius:6, overflow:'hidden' }}>
+                  <div key={i} style={{ border:'1px solid var(--border)', borderRadius: 'var(--radius-sm)', overflow:'hidden' }}>
                     <div
                       style={{ display:'flex', alignItems:'center', gap:8, padding:'6px 10px', background: expPiezas[i] ? 'var(--bg-highlight)' : 'var(--surface)', cursor:'pointer' }}
                       onClick={() => setExpPiezas(prev => ({ ...prev, [i]: !prev[i] }))}
@@ -596,7 +596,7 @@ export default function Presupuesto() {
                           </F>
                           {!p.material_id ? (
                             <div style={{ gridColumn:'span 2', padding:'6px 0', fontSize:11, color:'var(--text-muted)', textAlign:'center' }}>
-                              👆 Primero seleccioná el insumo
+                              Primero seleccioná el insumo
                             </div>
                           ) : (<>
                             {tipo === 'placa' && <>
@@ -631,7 +631,7 @@ export default function Presupuesto() {
                 const tar = tarifas.find((tf) => tf.id === Number(ts.tarifa_id))
                 const lbl = tar ? `${tar.nombre} — ${ts.fab_minutos}m ${ts.fab_segundos}s` : `Tarifa ${i + 1}`
                 return (
-                  <div key={i} style={{ border:'1px solid var(--border)', borderRadius:6, overflow:'hidden' }}>
+                  <div key={i} style={{ border:'1px solid var(--border)', borderRadius: 'var(--radius-sm)', overflow:'hidden' }}>
                     <div
                       style={{ display:'flex', alignItems:'center', gap:8, padding:'6px 10px', background: expTarifas[i] ? 'var(--bg-highlight)' : 'var(--surface)', cursor:'pointer' }}
                       onClick={() => setExpTarifas(prev => ({ ...prev, [i]: !prev[i] }))}
@@ -654,7 +654,7 @@ export default function Presupuesto() {
                           </F>
                           {!ts.tarifa_id ? (
                             <div style={{ gridColumn:'span 2', display:'flex', alignItems:'center', fontSize:11, color:'var(--text-muted)', paddingLeft:4 }}>
-                              👆 Primero seleccioná la tarifa
+                              Primero seleccioná la tarifa
                             </div>
                           ) : (<>
                             <F label="Minutos">
@@ -694,7 +694,7 @@ export default function Presupuesto() {
               <span style={{ fontSize:11 }}>{showCatalogo ? '▾' : '▸'}</span>
               Agregar productos del catálogo
               {extras.length > 0 && (
-                <span style={{ fontSize:11, background:'var(--primary)', color:'#fff', borderRadius:10, padding:'1px 8px' }}>{extras.length}</span>
+                <span style={{ fontSize:11, background:'var(--primary)', color:'var(--on-primary)', borderRadius: 'var(--radius-sm)', padding:'1px 8px' }}>{extras.length}</span>
               )}
             </button>
 
@@ -703,7 +703,7 @@ export default function Presupuesto() {
                 <div style={{ position:'relative' }}>
                   <input className="input" style={si()} placeholder="Buscar por nombre o SKU..." value={search} onChange={e=>setSearch(e.target.value)} />
                   {productosFiltrados.length > 0 && (
-                    <div style={{ position:'absolute', top:'100%', left:0, right:0, zIndex:20, background:'var(--bg-card)', border:'1px solid var(--border)', borderRadius:6, maxHeight:220, overflowY:'auto', boxShadow:'0 4px 12px rgba(0,0,0,0.08)', marginTop:2 }}>
+                    <div style={{ position:'absolute', top:'100%', left:0, right:0, zIndex:20, background:'var(--bg-card)', border:'1px solid var(--border)', borderRadius: 'var(--radius-sm)', maxHeight:220, overflowY:'auto', boxShadow:'0 4px 12px rgba(0,0,0,0.08)', marginTop:2 }}>
                       {productosFiltrados.map(p => {
                         const base = precioVenta(Number(p.costo_base), lista)
                         const oferta = etiquetaOferta(promoDeProducto(p, 'local'))
@@ -716,13 +716,13 @@ export default function Presupuesto() {
                           >
                             {p.imagen_url
                               ? <ImageThumb src={p.imagen_url} sku={p.sku} size={36} />
-                              : <div style={{ width:36, height:36, borderRadius:4, background:'var(--bg-muted)', flexShrink:0 }} />
+                              : <div style={{ width:36, height:36, borderRadius: 'var(--radius-sm)', background:'var(--bg-muted)', flexShrink:0 }} />
                             }
                             <div style={{ flex:1, minWidth:0 }}>
                               <div>
                                 <strong style={{ fontSize:14 }}>{p.nombre}</strong>
                                 {oferta && (
-                                  <span style={{ fontSize:10, fontWeight:700, padding:'1px 6px', borderRadius:999, background:'#fff7ed', color:'#c2410c', border:'1px solid #fdba7444', marginLeft:5 }}>
+                                  <span style={{ fontSize:10, fontWeight:700, padding:'1px 6px', borderRadius: 'var(--radius-sm)', background:'#fff7ed', color:'#c2410c', border:'1px solid #fdba7444', marginLeft:5 }}>
                                     {oferta}
                                   </span>
                                 )}
@@ -815,10 +815,10 @@ export default function Presupuesto() {
               {libre.imagen_url ? (
                 <ImageThumb src={libre.imagen_url} size={32} />
               ) : (
-                <div style={{ width:32, height:32, borderRadius:4, background:'var(--bg-muted)', flexShrink:0 }} />
+                <div style={{ width:32, height:32, borderRadius: 'var(--radius-sm)', background:'var(--bg-muted)', flexShrink:0 }} />
               )}
               <label className="btn btn-sm btn-ghost" style={{ cursor:'pointer' }}>
-                {subiendoLibre ? 'Subiendo...' : libre.imagen_url ? '📷 Cambiar foto' : '📷 Agregar foto (opcional)'}
+                {subiendoLibre ? 'Subiendo...' : libre.imagen_url ? 'Cambiar foto' : 'Agregar foto (opcional)'}
                 <input type="file" accept="image/*" style={{ display:'none' }} disabled={subiendoLibre} onChange={subirImagenLibre} />
               </label>
               {libre.imagen_url && (
@@ -857,18 +857,18 @@ export default function Presupuesto() {
           {lista && ventaMedida !== desglose.total && (
             <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, color:'var(--text-muted)' }}>
               <span style={{ display:'flex', alignItems:'center', gap:4 }}>
-                <span style={{ fontSize:11, background:'var(--primary-faint)', color:'var(--primary)', borderRadius:4, padding:'1px 5px', fontWeight:600 }}>{lista.nombre}</span>
+                <span style={{ fontSize:11, background:'var(--primary-faint)', color:'var(--primary)', borderRadius: 'var(--radius-sm)', padding:'1px 5px', fontWeight:600 }}>{lista.nombre}</span>
                 incremento
               </span>
               <span style={{ fontWeight:600, color:'var(--success)' }}>+{fmtMoney(ventaMedida - desglose.total)}</span>
             </div>
           )}
           {!lista && (
-            <div style={{ fontSize:12, color:'var(--warning)' }}>⚠️ Seleccioná una lista para ver el precio final</div>
+            <div style={{ fontSize:12, color:'var(--warning)' }}>Seleccioná una lista para ver el precio final</div>
           )}
 
           {/* Precio unitario */}
-          <div style={{ background:'var(--bg-highlight)', border:'1px solid var(--primary)', borderRadius:6, padding:'8px 10px' }}>
+          <div style={{ background:'var(--bg-highlight)', border:'1px solid var(--primary)', borderRadius: 'var(--radius-sm)', padding:'8px 10px' }}>
             <div style={{ fontSize:11, color:'var(--primary)', fontWeight:600, textTransform:'uppercase' }}>Precio unitario</div>
             <div style={{ fontSize:22, fontWeight:700, color:'var(--primary)', lineHeight:1.2 }}>{fmtMoney(ventaMedida)}</div>
           </div>
@@ -906,7 +906,7 @@ export default function Presupuesto() {
             {/* Header */}
             <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'14px 18px', borderBottom:'1px solid var(--border)', flexShrink:0 }}>
               <div>
-                <div style={{ fontWeight:700, fontSize:16 }}>📋 Presupuestos guardados</div>
+                <div style={{ fontWeight:700, fontSize:16 }}>Presupuestos guardados</div>
                 <div style={{ fontSize:12, color:'var(--text-muted)', marginTop:2 }}>
                   {histLoading ? 'Cargando...' : `${historial.length} guardado${historial.length !== 1 ? 's' : ''}`}
                 </div>
@@ -921,7 +921,7 @@ export default function Presupuesto() {
                 <div style={{ textAlign:'center', padding:40, color:'var(--text-muted)', fontSize:13 }}>Cargando...</div>
               ) : historial.length === 0 ? (
                 <div style={{ textAlign:'center', padding:40, color:'var(--text-muted)', fontSize:13 }}>
-                  <div style={{ fontSize:32, marginBottom:10 }}>📄</div>
+                  
                   No hay presupuestos guardados.
                 </div>
               ) : historial.map(p => {
@@ -930,14 +930,14 @@ export default function Presupuesto() {
                 const listaObj = listas.find(l => l.id === p.lista_id)
                 const pedido = pedidoDe[p.id]
                 return (
-                  <div key={p.id} style={{ padding:'11px 13px', border:'1px solid var(--border)', borderRadius:8, background:'var(--surface)', display:'flex', gap:10, alignItems:'flex-start' }}>
+                  <div key={p.id} style={{ padding:'11px 13px', border:'1px solid var(--border)', borderRadius: 'var(--radius-sm)', background:'var(--surface)', display:'flex', gap:10, alignItems:'flex-start' }}>
                     <div style={{ flex:1, minWidth:0 }}>
                       <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:3 }}>
                         <span style={{ fontSize:13, fontWeight:700 }}>
                           {p.cliente || 'Sin cliente'}
                         </span>
                         {listaObj && (
-                          <span style={{ fontSize:10, background:'var(--primary-faint)', color:'var(--primary)', borderRadius:4, padding:'1px 6px', fontWeight:600 }}>
+                          <span style={{ fontSize:10, background:'var(--primary-faint)', color:'var(--primary)', borderRadius: 'var(--radius-sm)', padding:'1px 6px', fontWeight:600 }}>
                             {listaObj.nombre}
                           </span>
                         )}
@@ -954,7 +954,7 @@ export default function Presupuesto() {
                       {pedido && (
                         <button
                           onClick={() => { setShowHistorial(false); navigate(`/pedidos?abrir=${pedido.id}`) }}
-                          style={{ marginTop:6, background:'rgba(14,116,144,0.1)', border:'none', color:'#0e7490', borderRadius:6, padding:'4px 8px', cursor:'pointer', fontSize:11, fontWeight:700, textAlign:'left' }}>
+                          style={{ marginTop:6, background:'var(--accent-tenue)', border:'none', color:'var(--accent)', padding:'4px 8px', cursor:'pointer', fontSize:11, fontWeight:700, textAlign:'left' }}>
                           Pedido {pedido.codigo} · {ESTADOS[pedido.estado]?.label ?? pedido.estado} ›
                         </button>
                       )}
@@ -964,29 +964,29 @@ export default function Presupuesto() {
                         <button
                           onClick={() => pasarAPedido(p)}
                           disabled={pasando}
-                          style={{ background:'#0e7490', border:'none', color:'white', borderRadius:6, padding:'6px 12px', cursor:'pointer', fontSize:12, fontWeight:700 }}>
-                          📋 Pasar a pedido
+                          style={{ background:'var(--primary)', border:'none', color:'var(--on-primary)', padding:'6px 12px', cursor:'pointer', fontSize:12, fontWeight:700 }}>
+                          Pasar a pedido
                         </button>
                       )}
                       <button
                         onClick={() => convertirEnVenta(p)}
-                        style={{ background:'#16a34a', border:'none', color:'white', borderRadius:6, padding:'6px 12px', cursor:'pointer', fontSize:12, fontWeight:700, display:'flex', alignItems:'center', gap:5 }}>
-                        🛒 Confirmar venta
+                        style={{ background:'#16a34a', border:'none', color:'white', borderRadius: 'var(--radius-sm)', padding:'6px 12px', cursor:'pointer', fontSize:12, fontWeight:700, display:'flex', alignItems:'center', gap:5 }}>
+                        Confirmar venta
                       </button>
                       <button
                         onClick={() => cargarPresupuesto(p)}
-                        style={{ background:'var(--primary)', border:'none', color:'white', borderRadius:6, padding:'5px 12px', cursor:'pointer', fontSize:12, fontWeight:700 }}>
+                        style={{ background:'var(--primary)', border:'none', color:'var(--on-primary)', borderRadius: 'var(--radius-sm)', padding:'5px 12px', cursor:'pointer', fontSize:12, fontWeight:700 }}>
                         Editar
                       </button>
                       <button
                         onClick={() => reexportarPDF(p)}
                         disabled={reexportandoId === p.id}
-                        style={{ background:'#f0fdf4', border:'1px solid #86efac', color:'#15803d', borderRadius:6, padding:'4px 10px', cursor:'pointer', fontSize:12, fontWeight:600 }}>
-                        {reexportandoId === p.id ? '...' : '📄 PDF'}
+                        style={{ background:'#f0fdf4', border:'1px solid #86efac', color:'#15803d', borderRadius: 'var(--radius-sm)', padding:'4px 10px', cursor:'pointer', fontSize:12, fontWeight:600 }}>
+                        {reexportandoId === p.id ? '...' : 'PDF'}
                       </button>
                       <button
                         onClick={() => eliminarPresupuesto(p.id)}
-                        style={{ background:'none', border:'1px solid #fca5a5', color:'#dc2626', borderRadius:6, padding:'4px 10px', cursor:'pointer', fontSize:12, fontWeight:600 }}>
+                        style={{ background:'none', border:'1px solid #fca5a5', color:'#dc2626', borderRadius: 'var(--radius-sm)', padding:'4px 10px', cursor:'pointer', fontSize:12, fontWeight:600 }}>
                         Eliminar
                       </button>
                     </div>

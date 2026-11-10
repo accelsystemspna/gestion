@@ -9,9 +9,9 @@ const PROMO_TIPOS = {
   segunda_unidad_pct: { label: '2da unidad a % del precio' },
 }
 const PROMO_CANALES = {
-  local: '🏪 Solo local',
-  web:   '🌐 Solo web',
-  ambos: '🏪🌐 Ambos',
+  local: 'Solo local',
+  web:   'Solo web',
+  ambos: 'Ambos',
 }
 
 export default function PromoModal({ producto, tiendas, listas, onClose, onSaved }) {
@@ -102,7 +102,7 @@ export default function PromoModal({ producto, tiendas, listas, onClose, onSaved
                   {Object.entries(PROMO_CANALES).map(([k, label]) => (
                     <button key={k} type="button" onClick={() => set('promo_canal', k)}
                       style={{
-                        flex: 1, padding: '7px 8px', borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: 'pointer',
+                        flex: 1, padding: '7px 8px', borderRadius: 'var(--radius-sm)', fontSize: 12, fontWeight: 700, cursor: 'pointer',
                         border: `1px solid ${form.promo_canal === k ? 'var(--primary)' : 'var(--border)'}`,
                         background: form.promo_canal === k ? 'var(--primary-faint)' : 'var(--surface)',
                         color: form.promo_canal === k ? 'var(--primary)' : 'var(--text)',

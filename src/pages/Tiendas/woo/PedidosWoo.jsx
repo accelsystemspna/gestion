@@ -88,7 +88,7 @@ export default function PedidosWoo({ tienda, ventasPorRef, onCambio }) {
           if (k !== 'todos' && k !== estado && n === 0) return null
           return (
             <button key={k} onClick={() => setEstado(k)} className="btn btn-sm" style={{
-              background: activo ? 'var(--primary)' : undefined, color: activo ? '#fff' : undefined, borderColor: activo ? 'var(--primary)' : undefined,
+              background: activo ? 'var(--primary)' : undefined, color: activo ? 'var(--on-primary)' : undefined, borderColor: activo ? 'var(--primary)' : undefined,
             }}>{k === 'todos' ? 'Todos' : estadoWooInfo(k).label} ({n})</button>
           )
         })}
@@ -109,7 +109,7 @@ export default function PedidosWoo({ tienda, ventasPorRef, onCambio }) {
             : 'No hay pedidos con ese filtro.'}
         </Vacio>
       ) : (
-        <div style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: 10, background: 'var(--surface)' }}>
+        <div style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', background: 'var(--surface)' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 780 }}>
             <thead>
               <tr style={{ textAlign: 'left', color: 'var(--text-muted)', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
@@ -135,8 +135,8 @@ export default function PedidosWoo({ tienda, ventasPorRef, onCambio }) {
                       {items.length === 0 ? '—' : (
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                           {items.slice(0, 3).map(it => it.image?.src
-                            ? <img key={it.id} src={it.image.src} alt="" title={`${it.quantity} × ${it.name}`} style={{ width: 34, height: 34, borderRadius: 6, objectFit: 'cover', border: '1px solid var(--border)' }} />
-                            : <span key={it.id} style={{ width: 34, height: 34, borderRadius: 6, background: 'var(--bg-muted)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 10 }}>{it.quantity}×</span>)}
+                            ? <img key={it.id} src={it.image.src} alt="" title={`${it.quantity} × ${it.name}`} style={{ width: 34, height: 34, borderRadius: 'var(--radius-sm)', objectFit: 'cover', border: '1px solid var(--border)' }} />
+                            : <span key={it.id} style={{ width: 34, height: 34, borderRadius: 'var(--radius-sm)', background: 'var(--bg-muted)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 10 }}>{it.quantity}×</span>)}
                           <span style={{ fontSize: 12, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {items.length === 1 ? `${items[0].quantity} × ${items[0].name}` : `${items.length} productos`}
                           </span>

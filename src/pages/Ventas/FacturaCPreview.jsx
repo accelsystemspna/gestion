@@ -38,13 +38,13 @@ export default function FacturaCPreview({ venta, items, arcaConfig, branding, fa
         {/* Acciones top */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10, padding: '0 4px' }}>
           <div style={{ fontWeight: 700, color: 'white', fontSize: 14 }}>
-            {esPreview ? '🔍 Vista previa de Factura C' : '✅ Factura C emitida'}
+            {esPreview ? 'Vista previa de Factura C' : 'Factura C emitida'}
           </div>
           <button className="btn btn-sm" onClick={onClose} style={{ background: 'rgba(255,255,255,0.15)', color: 'white', border: '1px solid rgba(255,255,255,0.3)' }}>✕ Cerrar</button>
         </div>
 
         {/* ── FACTURA ────────────────────────────────────────────────────────── */}
-        <div style={{ background: 'white', borderRadius: 10, overflow: 'hidden', boxShadow: '0 8px 32px rgba(0,0,0,0.35)', position: 'relative' }}>
+        <div style={{ background: 'white', borderRadius: 'var(--radius-sm)', overflow: 'hidden', boxShadow: '0 8px 32px rgba(0,0,0,0.35)', position: 'relative' }}>
 
           {/* Marca de agua VISTA PREVIA */}
           {esPreview && (
@@ -62,7 +62,7 @@ export default function FacturaCPreview({ venta, items, arcaConfig, branding, fa
             {/* Izquierda: logo + razón social */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
               {logoUrl && (
-                <img src={logoUrl} alt="logo" style={{ width: 52, height: 52, objectFit: 'contain', borderRadius: 6, background: 'rgba(255,255,255,0.12)', padding: 4 }} />
+                <img src={logoUrl} alt="logo" style={{ width: 52, height: 52, objectFit: 'contain', borderRadius: 'var(--radius-sm)', background: 'rgba(255,255,255,0.12)', padding: 4 }} />
               )}
               <div>
                 <div style={{ fontSize: 16, fontWeight: 800, lineHeight: 1.2 }}>{razon}</div>
@@ -73,7 +73,7 @@ export default function FacturaCPreview({ venta, items, arcaConfig, branding, fa
             </div>
 
             {/* Centro: letra de comprobante */}
-            <div style={{ textAlign: 'center', border: '3px solid rgba(255,255,255,0.6)', borderRadius: 8, padding: '8px 18px' }}>
+            <div style={{ textAlign: 'center', border: '3px solid rgba(255,255,255,0.6)', borderRadius: 'var(--radius-sm)', padding: '8px 18px' }}>
               <div style={{ fontSize: 28, fontWeight: 900, lineHeight: 1 }}>C</div>
               <div style={{ fontSize: 9, opacity: 0.8, marginTop: 2, letterSpacing: 1 }}>FACTURA</div>
             </div>
@@ -90,7 +90,7 @@ export default function FacturaCPreview({ venta, items, arcaConfig, branding, fa
           {/* Alerta homologación */}
           {modo === 'homologacion' && (
             <div style={{ background: '#fef9c3', borderBottom: '1px solid #fcd34d', padding: '6px 20px', fontSize: 11, color: '#92400e', display: 'flex', alignItems: 'center', gap: 6 }}>
-              🧪 <strong>Modo Homologación</strong> — Esta factura es de prueba y no tiene validez fiscal.
+              <strong>Modo Homologación</strong> — Esta factura es de prueba y no tiene validez fiscal.
             </div>
           )}
 
@@ -141,14 +141,14 @@ export default function FacturaCPreview({ venta, items, arcaConfig, branding, fa
 
           {/* ── TOTAL ──────────────────────────────────────────────────────── */}
           <div style={{ padding: '12px 20px', display: 'flex', justifyContent: 'flex-end' }}>
-            <div style={{ background: BG, color: 'white', borderRadius: 8, padding: '10px 20px', minWidth: 200, textAlign: 'right' }}>
+            <div style={{ background: BG, color: 'white', borderRadius: 'var(--radius-sm)', padding: '10px 20px', minWidth: 200, textAlign: 'right' }}>
               <div style={{ fontSize: 11, opacity: 0.75, marginBottom: 2 }}>TOTAL</div>
               <div style={{ fontSize: 22, fontWeight: 900 }}>{fmtMoney(total)}</div>
             </div>
           </div>
 
           {/* ── CAE ────────────────────────────────────────────────────────── */}
-          <div style={{ margin: '0 20px 16px', borderRadius: 8, border: `1px solid ${esPreview ? '#e2e8f0' : '#86efac'}`, background: esPreview ? '#f8fafc' : '#f0fdf4', padding: '10px 16px' }}>
+          <div style={{ margin: '0 20px 16px', borderRadius: 'var(--radius-sm)', border: `1px solid ${esPreview ? '#e2e8f0' : '#86efac'}`, background: esPreview ? '#f8fafc' : '#f0fdf4', padding: '10px 16px' }}>
             {esPreview ? (
               <div style={{ color: '#94a3b8', fontSize: 11, textAlign: 'center' }}>
                 El CAE será asignado por ARCA al momento de la emisión
@@ -164,7 +164,7 @@ export default function FacturaCPreview({ venta, items, arcaConfig, branding, fa
                   <div style={{ fontWeight: 600 }}>{fmtFecha(venta?.cae_vto)}</div>
                 </div>
                 <div style={{ marginLeft: 'auto', fontSize: 10, color: '#16a34a', fontWeight: 700 }}>
-                  ✅ Comprobante autorizado por ARCA
+                  Comprobante autorizado por ARCA
                 </div>
               </div>
             )}
@@ -184,7 +184,7 @@ export default function FacturaCPreview({ venta, items, arcaConfig, branding, fa
           </button>
           {onEmitir && (
             <button className="btn btn-primary" onClick={onEmitir} disabled={emitiendo} style={{ minWidth: 160 }}>
-              {emitiendo ? 'Enviando a ARCA…' : '🏛️ Confirmar y emitir'}
+              {emitiendo ? 'Enviando a ARCA…' : 'Confirmar y emitir'}
             </button>
           )}
         </div>

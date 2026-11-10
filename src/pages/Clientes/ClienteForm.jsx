@@ -21,7 +21,7 @@ const inputStyle = {
   width: '100%',
   padding: '8px 10px',
   border: '1px solid var(--border)',
-  borderRadius: 6,
+  borderRadius: 'var(--radius-sm)',
   fontSize: 14,
   background: 'var(--surface)',
   color: 'inherit',
@@ -185,7 +185,7 @@ export default function ClienteForm({ cliente, onClose, onSaved, etiquetas = [] 
       <div
         style={{
           background: 'var(--bg)',
-          borderRadius: 10,
+          borderRadius: 'var(--radius-sm)',
           width: '100%',
           maxWidth: 500,
           maxHeight: '90vh',
@@ -265,7 +265,7 @@ export default function ClienteForm({ cliente, onClose, onSaved, etiquetas = [] 
                     />
                     <button
                       onClick={() => setEtiquetaCustom(false)}
-                      style={{ padding: '8px 10px', border: '1px solid var(--border)', borderRadius: 6, cursor: 'pointer', background: 'var(--surface)', fontSize: 13 }}
+                      style={{ padding: '8px 10px', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', cursor: 'pointer', background: 'var(--surface)', fontSize: 13 }}
                     >
                       ←
                     </button>
@@ -284,7 +284,7 @@ export default function ClienteForm({ cliente, onClose, onSaved, etiquetas = [] 
                     </select>
                     <button
                       onClick={() => { setEtiquetaCustom(true); setForm((f) => ({ ...f, etiqueta: '' })) }}
-                      style={{ padding: '8px 10px', border: '1px solid var(--border)', borderRadius: 6, cursor: 'pointer', background: 'var(--surface)', fontSize: 13 }}
+                      style={{ padding: '8px 10px', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', cursor: 'pointer', background: 'var(--surface)', fontSize: 13 }}
                       title="Nueva categoría"
                     >
                       +
@@ -322,7 +322,7 @@ export default function ClienteForm({ cliente, onClose, onSaved, etiquetas = [] 
               <div
                 style={{
                   border: '1px solid var(--border)',
-                  borderRadius: 8,
+                  borderRadius: 'var(--radius-sm)',
                   padding: 14,
                   marginBottom: 16,
                   background: 'var(--surface)',
@@ -382,7 +382,7 @@ export default function ClienteForm({ cliente, onClose, onSaved, etiquetas = [] 
                     padding: '8px 14px',
                     background: 'var(--primary)',
                     border: 'none',
-                    borderRadius: 6,
+                    borderRadius: 'var(--radius-sm)',
                     color: 'white',
                     cursor: 'pointer',
                     fontSize: 13,
@@ -406,7 +406,7 @@ export default function ClienteForm({ cliente, onClose, onSaved, etiquetas = [] 
                       key={c.id}
                       style={{
                         border: '1px solid var(--border)',
-                        borderRadius: 8,
+                        borderRadius: 'var(--radius-sm)',
                         padding: '10px 12px',
                         display: 'flex',
                         gap: 10,
@@ -453,7 +453,7 @@ export default function ClienteForm({ cliente, onClose, onSaved, etiquetas = [] 
                 padding: '8px 16px',
                 background: 'var(--surface)',
                 border: '1px solid var(--border)',
-                borderRadius: 6,
+                borderRadius: 'var(--radius-sm)',
                 cursor: 'pointer',
                 fontSize: 14,
               }}
@@ -467,7 +467,7 @@ export default function ClienteForm({ cliente, onClose, onSaved, etiquetas = [] 
                 padding: '8px 20px',
                 background: 'var(--primary)',
                 border: 'none',
-                borderRadius: 6,
+                borderRadius: 'var(--radius-sm)',
                 color: 'white',
                 cursor: 'pointer',
                 fontSize: 14,

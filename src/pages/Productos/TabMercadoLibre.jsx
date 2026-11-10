@@ -133,8 +133,8 @@ export default function TabMercadoLibre({ form, set, setForm, listas, costoBase 
               const [txt, color, bg] = ESTADOS[p.estado] || [p.estado || '—', '#64748b', 'rgba(100,116,139,0.14)']
               const ocup = ocupado === 'upd' + p.item_id
               return (
-                <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', padding: '8px 10px', border: '1px solid var(--border)', borderRadius: 8 }}>
-                  <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 999, color, background: bg }}>{txt}</span>
+                <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', padding: '8px 10px', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)' }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 'var(--radius-sm)', color, background: bg }}>{txt}</span>
                   <a href={p.permalink} target="_blank" rel="noreferrer" style={{ fontSize: 13, fontWeight: 600, flex: 1, minWidth: 180 }}>{p.titulo}</a>
                   <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{fmtMoney(p.precio)} · stock {p.stock ?? '—'} · {p.vendidos ?? 0} vendidos</span>
                   {p.estado === 'active' && <button type="button" className="btn btn-sm" disabled={ocup} onClick={() => actualizar(p, { estado: 'paused' }, 'Pausada')}>Pausar</button>}
@@ -178,15 +178,15 @@ export default function TabMercadoLibre({ form, set, setForm, listas, costoBase 
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           {imagenes.map((url, i) => (
             <div key={url} style={{ position: 'relative' }}>
-              <img loading="lazy" decoding="async" src={url} alt="" style={{ width: i === 0 ? 120 : 84, height: i === 0 ? 120 : 84, objectFit: 'cover', borderRadius: 8, border: i === 0 ? '2px solid var(--primary)' : '1px solid var(--border)', display: 'block' }} />
-              {i === 0 && <span style={{ position: 'absolute', bottom: 4, left: 4, fontSize: 10, fontWeight: 700, background: 'var(--primary)', color: '#fff', padding: '1px 6px', borderRadius: 4 }}>Portada</span>}
-              {i > 0 && <button type="button" onClick={() => comoPortada(url)} title="Usar de portada" style={{ position: 'absolute', bottom: 3, left: 3, fontSize: 10, border: 'none', borderRadius: 4, padding: '1px 5px', cursor: 'pointer' }}>★</button>}
+              <img loading="lazy" decoding="async" src={url} alt="" style={{ width: i === 0 ? 120 : 84, height: i === 0 ? 120 : 84, objectFit: 'cover', borderRadius: 'var(--radius-sm)', border: i === 0 ? '2px solid var(--primary)' : '1px solid var(--border)', display: 'block' }} />
+              {i === 0 && <span style={{ position: 'absolute', bottom: 4, left: 4, fontSize: 10, fontWeight: 700, background: 'var(--primary)', color: 'var(--on-primary)', padding: '1px 6px', borderRadius: 'var(--radius-sm)' }}>Portada</span>}
+              {i > 0 && <button type="button" onClick={() => comoPortada(url)} title="Usar de portada" style={{ position: 'absolute', bottom: 3, left: 3, fontSize: 10, border: 'none', borderRadius: 'var(--radius-sm)', padding: '1px 5px', cursor: 'pointer' }}>★</button>}
               <button type="button" onClick={() => quitar(url)} style={{ position: 'absolute', top: -6, right: -6, background: 'var(--danger)', color: '#fff', border: 'none', borderRadius: '50%', width: 18, height: 18, fontSize: 11, cursor: 'pointer' }}>✕</button>
             </div>
           ))}
           <label style={{ cursor: subiendo ? 'not-allowed' : 'pointer' }}>
             <input type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={(e) => subir(e, imagenes.length ? 'galeria' : 'portada')} disabled={subiendo} />
-            <div style={{ width: 84, height: 84, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', border: '1px dashed var(--primary)', borderRadius: 8, background: 'var(--bg-highlight)', color: 'var(--primary)', fontSize: 11 }}>
+            <div style={{ width: 84, height: 84, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', border: '1px dashed var(--primary)', borderRadius: 'var(--radius-sm)', background: 'var(--bg-highlight)', color: 'var(--primary)', fontSize: 11 }}>
               <span style={{ fontSize: 20 }}>+</span>{subiendo ? 'Subiendo...' : 'Agregar'}
             </div>
           </label>
@@ -224,7 +224,7 @@ export default function TabMercadoLibre({ form, set, setForm, listas, costoBase 
           Vacía = la de tus publicaciones anteriores. Marca, medidas, peso y SKU salen del producto; envío, garantía y material se copian de una publicación tuya. Acá podés pisar o completar atributos.
         </div>
         {faltantes.length > 0 && (
-          <div style={{ fontSize: 12, color: '#92400e', background: 'rgba(217,119,6,0.1)', padding: '6px 10px', borderRadius: 6, marginBottom: 8 }}>
+          <div style={{ fontSize: 12, color: '#92400e', background: 'rgba(217,119,6,0.1)', padding: '6px 10px', borderRadius: 'var(--radius-sm)', marginBottom: 8 }}>
             Esta categoría pide además: {faltantes.map((a) => a.nombre).join(', ')}.
           </div>
         )}
@@ -247,12 +247,12 @@ export default function TabMercadoLibre({ form, set, setForm, listas, costoBase 
       {/* Acciones */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', borderTop: '1px solid var(--border)', paddingTop: 14 }}>
         <button type="button" className="btn" disabled={!guardado || !!ocupado} onClick={() => accion('validar')}>{ocupado === 'validar' ? 'Validando...' : 'Validar con Mercado Libre'}</button>
-        <button type="button" className="btn btn-primary" disabled={!guardado || !!ocupado} onClick={() => accion('publicar')}>{ocupado === 'publicar' ? 'Publicando...' : '🛒 Publicar en Mercado Libre'}</button>
+        <button type="button" className="btn btn-primary" disabled={!guardado || !!ocupado} onClick={() => accion('publicar')}>{ocupado === 'publicar' ? 'Publicando...' : 'Publicar en Mercado Libre'}</button>
         {!guardado && <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Guardá el producto primero.</span>}
         {guardado && <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Validar y publicar usan lo que ves en esta pestaña ahora mismo; tocá Guardar para que también quede guardado en el producto.</span>}
       </div>
       {msg && (
-        <div style={{ fontSize: 13, padding: '8px 12px', borderRadius: 6, color: msg.tipo === 'ok' ? '#15803d' : 'var(--danger)', background: msg.tipo === 'ok' ? 'rgba(22,163,74,0.1)' : 'rgba(239,68,68,0.08)' }}>{msg.texto}</div>
+        <div style={{ fontSize: 13, padding: '8px 12px', borderRadius: 'var(--radius-sm)', color: msg.tipo === 'ok' ? '#15803d' : 'var(--danger)', background: msg.tipo === 'ok' ? 'rgba(22,163,74,0.1)' : 'rgba(239,68,68,0.08)' }}>{msg.texto}</div>
       )}
     </div>
   )

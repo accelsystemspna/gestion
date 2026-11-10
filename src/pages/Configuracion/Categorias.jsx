@@ -130,7 +130,7 @@ export default function Categorias() {
       {loading ? (
         <div style={{ padding: 20, textAlign: 'center', color: 'var(--text-muted)' }}>Cargando...</div>
       ) : categorias.length === 0 ? (
-        <div style={{ padding: 30, textAlign: 'center', color: 'var(--text-muted)', border: '1px dashed var(--border)', borderRadius: 8 }}>
+        <div style={{ padding: 30, textAlign: 'center', color: 'var(--text-muted)', border: '1px dashed var(--border)', borderRadius: 'var(--radius-sm)' }}>
           No hay categorías creadas.
         </div>
       ) : (
@@ -156,7 +156,7 @@ export default function Categorias() {
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {cats.map((cat) => (
-                  <div key={cat.id} style={{ border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden' }}>
+                  <div key={cat.id} style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', overflow: 'hidden' }}>
                     <div style={{ display: 'flex', alignItems: 'center', padding: '12px 16px', background: 'var(--bg-card)' }}>
                       <button
                         onClick={() => toggleExpand(cat.id)}
@@ -166,19 +166,19 @@ export default function Categorias() {
                       </button>
                       <div style={{ flex: 1 }}>
                         <strong>{cat.nombre}</strong>
-                        <span style={{ marginLeft: 8, fontSize: 12, background: 'var(--primary)', color: '#fff', padding: '2px 8px', borderRadius: 4, fontFamily: 'monospace' }}>
+                        <span style={{ marginLeft: 8, fontSize: 12, background: 'var(--primary)', color: 'var(--on-primary)', padding: '2px 8px', borderRadius: 'var(--radius-sm)', fontFamily: 'monospace' }}>
                           {cat.sku_prefijo}
                         </span>
                         <span style={{ marginLeft: 8, fontSize: 12, color: 'var(--text-muted)' }}>{cat.tipo_fabricacion}</span>
                         {cat.mostrar_en_catalogo === false && (
-                          <span title="Los productos de esta categoría no salen en el catálogo público" style={{ marginLeft: 6, fontSize: 11, fontWeight: 700, color: '#b45309', background: 'rgba(217,119,6,0.14)', padding: '1px 6px', borderRadius: 4 }}>Oculta en catálogo</span>
+                          <span title="Los productos de esta categoría no salen en el catálogo público" style={{ marginLeft: 6, fontSize: 11, fontWeight: 700, color: '#b45309', background: 'rgba(217,119,6,0.14)', padding: '1px 6px', borderRadius: 'var(--radius-sm)' }}>Oculta en catálogo</span>
                         )}
                         {cat.es_mayorista && (
-                          <span style={{ marginLeft: 6, fontSize: 11, fontWeight: 700, color: '#0f766e', background: 'rgba(15,118,110,0.12)', padding: '1px 6px', borderRadius: 4 }}>Mayorista</span>
+                          <span style={{ marginLeft: 6, fontSize: 11, fontWeight: 700, color: '#0f766e', background: 'rgba(15,118,110,0.12)', padding: '1px 6px', borderRadius: 'var(--radius-sm)' }}>Mayorista</span>
                         )}
                       </div>
                       {cat.org_id !== orgId ? (
-                        <span title="Categoría activada por el Principal: se puede usar pero no editar" style={{ fontSize: 11, fontWeight: 700, color: '#6d28d9', background: 'rgba(109,40,217,0.1)', padding: '2px 8px', borderRadius: 4 }}>Compartida</span>
+                        <span title="Categoría activada por el Principal: se puede usar pero no editar" style={{ fontSize: 11, fontWeight: 700, color: '#6d28d9', background: 'rgba(109,40,217,0.1)', padding: '2px 8px', borderRadius: 'var(--radius-sm)' }}>Compartida</span>
                       ) : (
                         <div style={{ display: 'flex', gap: 6 }}>
                           <button className="btn btn-sm btn-ghost" onClick={() => setEditingCat({ ...cat, rubro_id: cat.rubro_id || '' })}>Editar</button>
@@ -317,7 +317,7 @@ function CategoriaForm({ initial, rubros, onCancel, onSave }) {
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                 <label style={{
                   display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer',
-                  padding: '6px 12px', borderRadius: 6, fontSize: 13, userSelect: 'none',
+                  padding: '6px 12px', borderRadius: 'var(--radius-sm)', fontSize: 13, userSelect: 'none',
                   border: `1px solid ${!form.rubro_id ? 'var(--primary)' : 'var(--border)'}`,
                   background: !form.rubro_id ? 'var(--primary-faint)' : 'var(--bg-cell)',
                   color: !form.rubro_id ? 'var(--primary)' : 'var(--text-muted)',
@@ -330,7 +330,7 @@ function CategoriaForm({ initial, rubros, onCancel, onSave }) {
                   return (
                     <label key={r.id} style={{
                       display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer',
-                      padding: '6px 12px', borderRadius: 6, fontSize: 13, userSelect: 'none',
+                      padding: '6px 12px', borderRadius: 'var(--radius-sm)', fontSize: 13, userSelect: 'none',
                       border: `1px solid ${sel ? r.color : 'var(--border)'}`,
                       background: sel ? `${r.color}22` : 'var(--bg-cell)',
                       color: sel ? r.color : 'var(--text)',

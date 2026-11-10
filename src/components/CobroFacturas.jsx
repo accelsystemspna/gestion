@@ -66,7 +66,7 @@ export default function CobroFacturas({ ventaId = null, pedidoId = null, referen
     })
   }, [cargar])
 
-  if (falta) return <div style={{ fontSize: 13, color: '#92400e', background: '#fffbeb', border: '1px solid #fcd34d', borderRadius: 8, padding: '10px 12px' }}>{falta}</div>
+  if (falta) return <div style={{ fontSize: 13, color: '#92400e', background: '#fffbeb', border: '1px solid #fcd34d', borderRadius: 'var(--radius-sm)', padding: '10px 12px' }}>{falta}</div>
   if (!reg) return <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>Cargando cobro…</div>
 
   const modo = arca?.modo === 'produccion' ? 'produccion' : 'homologacion'
@@ -166,7 +166,7 @@ export default function CobroFacturas({ ventaId = null, pedidoId = null, referen
       </div>
 
       {cobro ? (
-        <div style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
           {editarSena && (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
               <label><div style={lbl}>Seña ($)</div><input className="input" type="number" min={0} value={cobro.sena} onChange={(e) => setCobro((c) => ({ ...c, sena: e.target.value }))} /></label>
@@ -190,20 +190,20 @@ export default function CobroFacturas({ ventaId = null, pedidoId = null, referen
           </div>
         </div>
       ) : (
-        <div><button className="btn btn-sm" onClick={abrirCobro} disabled={!!ocupado}>{editarSena ? '💵 Cargar seña y saldo' : '💵 Marcar saldo cobrado'}</button></div>
+        <div><button className="btn btn-sm" onClick={abrirCobro} disabled={!!ocupado}>{editarSena ? 'Cargar seña y saldo' : 'Marcar saldo cobrado'}</button></div>
       )}
 
       {siguiente && (
-        <div role="status" style={{ border: '1px solid #86efac', background: '#f0fdf4', borderRadius: 8, padding: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div role="status" style={{ border: '1px solid #86efac', background: '#f0fdf4', borderRadius: 'var(--radius-sm)', padding: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
           <div style={{ fontWeight: 700, color: '#15803d' }}>✓ Saldo cobrado. ¿Qué sigue?</div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             {puedeFacturar && (
               <button className="btn btn-sm btn-primary" onClick={() => abrirFactura(r.facturado > 0 ? 'saldo' : 'total')}>
-                🧾 Facturar {r.facturado > 0 ? 'el saldo' : 'el total'} ({fmtMoney(r.falta)})
+                Facturar {r.facturado > 0 ? 'el saldo' : 'el total'} ({fmtMoney(r.falta)})
               </button>
             )}
             {!esVenta && (
-              <button className="btn btn-sm" onClick={generarTicket} disabled={!!ocupado}>{ocupado === 'ticket' ? 'Generando…' : '📄 Generar ticket'}</button>
+              <button className="btn btn-sm" onClick={generarTicket} disabled={!!ocupado}>{ocupado === 'ticket' ? 'Generando…' : 'Generar ticket'}</button>
             )}
             <button className="btn btn-sm btn-ghost" onClick={() => setSiguiente(false)}>Listo, nada más</button>
           </div>
@@ -217,11 +217,11 @@ export default function CobroFacturas({ ventaId = null, pedidoId = null, referen
           <div style={lbl}>Facturación</div>
           <div style={{ fontSize: 13 }}>Facturado <strong>{fmtMoney(r.facturado)}</strong> de {fmtMoney(r.total)} · Falta <strong style={{ color: r.falta > 0 ? '#b45309' : '#15803d' }}>{fmtMoney(r.falta)}</strong></div>
         </div>
-        <div style={{ height: 6, background: 'var(--bg-muted)', borderRadius: 4, overflow: 'hidden' }} aria-hidden="true">
+        <div style={{ height: 6, background: 'var(--bg-muted)', borderRadius: 'var(--radius-sm)', overflow: 'hidden' }} aria-hidden="true">
           <div style={{ width: `${pct}%`, height: '100%', background: r.falta > 0 ? '#f59e0b' : '#16a34a' }} />
         </div>
         {modo === 'homologacion' && (
-          <div style={{ fontSize: 12, color: '#92400e', background: '#fffbeb', border: '1px solid #fcd34d', borderRadius: 6, padding: '6px 10px' }}>
+          <div style={{ fontSize: 12, color: '#92400e', background: '#fffbeb', border: '1px solid #fcd34d', borderRadius: 'var(--radius-sm)', padding: '6px 10px' }}>
             Modo prueba (homologación): estas facturas no tienen validez fiscal y no van al panel del cliente ni al portal.
           </div>
         )}
@@ -229,7 +229,7 @@ export default function CobroFacturas({ ventaId = null, pedidoId = null, referen
         {facturas.length > 0 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             {facturas.map((f) => (
-              <div key={f.id} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, padding: '6px 8px', border: '1px solid var(--border)', borderRadius: 6, opacity: f.estado === 'fallida' ? 0.6 : 1 }}>
+              <div key={f.id} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, padding: '6px 8px', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', opacity: f.estado === 'fallida' ? 0.6 : 1 }}>
                 <span style={{ fontWeight: 700, minWidth: 44 }}>{CONCEPTOS[f.concepto]}</span>
                 <span style={{ flex: 1, minWidth: 0 }}>
                   {f.estado === 'emitida' ? `Factura C ${numeroFactura(f)} · ${fmtFecha(f.fecha)}` : f.estado === 'pendiente' ? 'Emitiéndose…' : `No se emitió: ${f.error || 'ARCA la rechazó'}`}
@@ -245,7 +245,7 @@ export default function CobroFacturas({ ventaId = null, pedidoId = null, referen
         {!arca ? (
           <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Para facturar, cargá los datos de ARCA en Configuración.</div>
         ) : fact ? (
-          <div style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
             <div style={{ fontWeight: 700, fontSize: 14 }}>Facturar {CONCEPTOS[fact.concepto].toLowerCase()}</div>
             <label><div style={lbl}>Importe ($)</div>
               <input className="input" type="number" min={0} step="0.01" value={fact.importe} disabled={fact.confirmar || (partesFrenadas && fact.concepto === 'total')}
@@ -262,7 +262,7 @@ export default function CobroFacturas({ ventaId = null, pedidoId = null, referen
               </label>
             )}
             {fact.confirmar ? (
-              <div style={{ background: modo === 'produccion' ? '#fef2f2' : '#fffbeb', border: `1px solid ${modo === 'produccion' ? '#fecaca' : '#fcd34d'}`, borderRadius: 6, padding: '8px 10px', fontSize: 13 }}>
+              <div style={{ background: modo === 'produccion' ? '#fef2f2' : '#fffbeb', border: `1px solid ${modo === 'produccion' ? '#fecaca' : '#fcd34d'}`, borderRadius: 'var(--radius-sm)', padding: '8px 10px', fontSize: 13 }}>
                 Se emite en ARCA {modo === 'produccion' ? <strong>en producción (factura real)</strong> : 'en homologación (de prueba)'} una Factura C por <strong>{fmtMoney(importe)}</strong>. Una vez emitida no se puede anular desde el programa.
                 <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 8 }}>
                   <button className="btn btn-sm" onClick={() => setFact((f) => ({ ...f, confirmar: false }))} disabled={!!ocupado}>Volver</button>
@@ -278,15 +278,15 @@ export default function CobroFacturas({ ventaId = null, pedidoId = null, referen
           </div>
         ) : r.falta > 0 && !reg.factura_emitida && partesFrenadas ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {r.facturado === 0 && <div><button className="btn btn-sm" onClick={() => abrirFactura('total')}>🧾 Facturar el total</button></div>}
-            <div style={{ fontSize: 12, color: 'var(--text-muted)', background: 'var(--bg-muted)', borderRadius: 6, padding: '8px 10px' }}>
+            {r.facturado === 0 && <div><button className="btn btn-sm" onClick={() => abrirFactura('total')}>Facturar el total</button></div>}
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', background: 'var(--bg-muted)', borderRadius: 'var(--radius-sm)', padding: '8px 10px' }}>
               Facturar la seña y el saldo por separado se habilita cuando tu contador confirme cómo se describe cada factura.
             </div>
           </div>
         ) : r.falta > 0 && !reg.factura_emitida ? (
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            {r.senaSinFacturar > 0 && <button className="btn btn-sm" onClick={() => abrirFactura('sena')}>🧾 Facturar seña</button>}
-            <button className="btn btn-sm" onClick={() => abrirFactura(r.facturado > 0 ? 'saldo' : 'total')}>🧾 Facturar {r.facturado > 0 ? 'saldo' : 'total'}</button>
+            {r.senaSinFacturar > 0 && <button className="btn btn-sm" onClick={() => abrirFactura('sena')}>Facturar seña</button>}
+            <button className="btn btn-sm" onClick={() => abrirFactura(r.facturado > 0 ? 'saldo' : 'total')}>Facturar {r.facturado > 0 ? 'saldo' : 'total'}</button>
           </div>
         ) : null}
       </div>

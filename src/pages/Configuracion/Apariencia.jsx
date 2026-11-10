@@ -60,7 +60,6 @@ export default function Apariencia() {
         {/* Modo oscuro */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-            <span style={{ fontSize: 22 }}>{dark ? '🌙' : '☀️'}</span>
             <div>
               <div style={{ fontWeight: 600, fontSize: 14 }}>Modo oscuro</div>
               <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 1 }}>

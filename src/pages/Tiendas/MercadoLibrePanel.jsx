@@ -91,7 +91,7 @@ export default function MercadoLibrePanel() {
 
       {msg && (
         <div style={{
-          marginBottom: 12, fontSize: 13, padding: '8px 12px', borderRadius: 6,
+          marginBottom: 12, fontSize: 13, padding: '8px 12px', borderRadius: 'var(--radius-sm)',
           color: msg.tipo === 'ok' ? '#15803d' : 'var(--danger)',
           background: msg.tipo === 'ok' ? 'rgba(22,163,74,0.1)' : 'rgba(239,68,68,0.08)',
         }}>{msg.texto}</div>
@@ -100,7 +100,7 @@ export default function MercadoLibrePanel() {
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginBottom: 12 }}>
         {filtros.map(([k, label]) => (
           <button key={k} onClick={() => setFiltro(k)} className="btn btn-sm" style={{
-            background: filtro === k ? 'var(--primary)' : undefined, color: filtro === k ? '#fff' : undefined,
+            background: filtro === k ? 'var(--primary)' : undefined, color: filtro === k ? 'var(--on-primary)' : undefined,
             borderColor: filtro === k ? 'var(--primary)' : undefined,
           }}>{label} ({conteos[k] ?? 0})</button>
         ))}
@@ -116,11 +116,11 @@ export default function MercadoLibrePanel() {
       {loading ? (
         <div style={{ padding: 30, textAlign: 'center', color: 'var(--text-muted)' }}>Cargando...</div>
       ) : pubs.length === 0 ? (
-        <div style={{ padding: 30, textAlign: 'center', color: 'var(--text-muted)', border: '1px dashed var(--border)', borderRadius: 8 }}>
+        <div style={{ padding: 30, textAlign: 'center', color: 'var(--text-muted)', border: '1px dashed var(--border)', borderRadius: 'var(--radius-sm)' }}>
           Todavía no trajiste tus publicaciones. Tocá <strong>Traer publicaciones de ML</strong> (la cuenta tiene que estar conectada en Configuración → Integraciones).
         </div>
       ) : (
-        <div style={{ border: '1px solid var(--border)', borderRadius: 8, overflowX: 'auto' }}>
+        <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', overflowX: 'auto' }}>
           <table className="table">
             <thead>
               <tr>
@@ -139,7 +139,7 @@ export default function MercadoLibrePanel() {
                 const prod = p.producto_id ? prods[p.producto_id] : null
                 return (
                   <tr key={p.id}>
-                    <td>{p.thumbnail && <img loading="lazy" decoding="async" src={p.thumbnail} alt="" style={{ width: 44, height: 44, objectFit: 'cover', borderRadius: 6 }} />}</td>
+                    <td>{p.thumbnail && <img loading="lazy" decoding="async" src={p.thumbnail} alt="" style={{ width: 44, height: 44, objectFit: 'cover', borderRadius: 'var(--radius-sm)' }} />}</td>
                     <td>
                       <a href={p.permalink} target="_blank" rel="noreferrer" style={{ fontWeight: 600, color: 'var(--text)' }}>{p.titulo}</a>
                       <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{p.item_id}{p.sku ? ` · SKU ${p.sku}` : ' · sin SKU'}</div>
@@ -151,7 +151,7 @@ export default function MercadoLibrePanel() {
                     <td style={{ textAlign: 'right' }}>{fmtMoney(p.precio)}</td>
                     <td style={{ textAlign: 'right' }}>{p.stock ?? '—'}</td>
                     <td style={{ textAlign: 'right' }}>{p.vendidos ?? 0}</td>
-                    <td><span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 999, color: est.color, background: est.bg }}>{est.label}</span></td>
+                    <td><span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 'var(--radius-sm)', color: est.color, background: est.bg }}>{est.label}</span></td>
                   </tr>
                 )
               })}

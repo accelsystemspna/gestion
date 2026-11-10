@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from 'react'
 import { celularValido, filtrarClientes } from '../lib/accesoCliente'
 
-const avatar = (tam, fuente) => ({ width: tam, height: tam, borderRadius: '50%', background: 'var(--primary)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: fuente, fontWeight: 800, flexShrink: 0 })
+const avatar = (tam, fuente) => ({ width: tam, height: tam, borderRadius: '50%', background: 'var(--primary)', color: 'var(--on-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: fuente, fontWeight: 800, flexShrink: 0 })
 
 /**
  * Busca un cliente por nombre o celular. Si no está, se ofrece crearlo con lo que se escribió.
@@ -16,7 +16,7 @@ export default function ClienteSelector({ clientes, cargando, texto, seleccionad
 
   if (seleccionado) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '6px 10px', border: '1px solid var(--primary)', borderRadius: 6, background: 'var(--bg-highlight)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '6px 10px', border: '1px solid var(--primary)', borderRadius: 'var(--radius-sm)', background: 'var(--bg-highlight)' }}>
         <div style={avatar(26, 12)}>{(seleccionado.nombre || '?').charAt(0).toUpperCase()}</div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 13, fontWeight: 600 }}>{seleccionado.nombre}</div>
@@ -50,7 +50,7 @@ export default function ClienteSelector({ clientes, cargando, texto, seleccionad
       />
       {/* Dropdown con position:fixed — escapa cualquier overflow:hidden del árbol padre */}
       {abierto && rect && (
-        <div style={{ position: 'fixed', top: rect.top, left: rect.left, width: rect.width, zIndex: 9999, border: '1px solid var(--border)', borderRadius: 8, background: 'var(--bg-card)', boxShadow: '0 8px 24px rgba(0,0,0,0.14)', maxHeight: 300, overflowY: 'auto' }}>
+        <div style={{ position: 'fixed', top: rect.top, left: rect.left, width: rect.width, zIndex: 9999, border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', background: 'var(--bg-card)', boxShadow: '0 8px 24px rgba(0,0,0,0.14)', maxHeight: 300, overflowY: 'auto' }}>
           {cargando ? (
             <div style={{ padding: '10px 12px', fontSize: 12, color: 'var(--text-muted)' }}>Cargando clientes...</div>
           ) : sugerencias.map((c) => (

@@ -19,9 +19,9 @@ const PROMO_TIPOS = {
   segunda_unidad_pct: { label: '2da unidad a % del precio' },
 }
 const PROMO_CANALES = {
-  local: '🏪 Solo local',
-  web:   '🌐 Solo web',
-  ambos: '🏪🌐 Ambos',
+  local: 'Solo local',
+  web:   'Solo web',
+  ambos: 'Ambos',
 }
 
 // Devuelve el ID de 11 caracteres de un link de YouTube (Short, watch, youtu.be
@@ -198,7 +198,7 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
   const [skuError, setSkuError] = useState(null)
   const [expandedPieza, setExpandedPieza] = useState(0)
   const [expandedTarifa, setExpandedTarifa] = useState(0)
-  const [savedFlash, setSavedFlash] = useState(false)  // ✅ flash "Guardado"
+  const [savedFlash, setSavedFlash] = useState(false)  // flash "Guardado"
   const [tab, setTab] = useState('general')  // 'general' | 'web'
   const [compartidas, setCompartidas] = useState([])
   useEffect(() => { cargarImagenesCompartidas({ force: true }).then(setCompartidas) }, [])
@@ -575,7 +575,7 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
     if (mode === 'next') {
       // Notificar al padre que recargue la lista, pero SIN cerrar el modal
       onSavedNext?.()
-      // Mostrar flash "Guardado ✅" por 1.8 s
+      // Mostrar flash "Guardado " por 1.8 s
       setSavedFlash(true)
       setTimeout(() => setSavedFlash(false), 1800)
       // Mantener categoría seleccionada y generar nuevo SKU automáticamente
@@ -660,7 +660,7 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
       <div style={{ fontSize:12, fontWeight:700, color:'var(--text-muted)', textTransform:'uppercase', letterSpacing:'0.04em' }}>Materiales / Piezas</div>
       <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
         {form.piezas.map((pieza, idx) => (
-          <div key={idx} style={{ border:'1px solid var(--border)', borderRadius:6, overflow:'hidden' }}>
+          <div key={idx} style={{ border:'1px solid var(--border)', borderRadius: 'var(--radius-sm)', overflow:'hidden' }}>
             <div style={{ display:'flex', alignItems:'center', padding:'5px 8px', background: expandedPieza === idx ? 'var(--bg-highlight)' : 'var(--bg-card)', gap:6 }}>
               <span style={{ fontSize:12, fontWeight:600, minWidth:48, color:'var(--text-muted)' }}>Pieza {idx+1}</span>
               <span style={{ flex:1, fontSize:12 }}>{getPiezaLabel(pieza)}</span>
@@ -684,7 +684,7 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
                       </F>
                       {sinInsumo ? (
                         <div style={{ gridColumn:'span 2', padding:'6px 0', fontSize:11, color:'var(--text-muted)', textAlign:'center' }}>
-                          👆 Primero seleccioná el insumo
+                          Primero seleccioná el insumo
                         </div>
                       ) : (<>
                         {tipo==='placa' && <>
@@ -720,7 +720,7 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
           const tar = tarifas.find(t => t.id === Number(ts.tarifa_id))
           const lbl = [tar?.nombre, (ts.fab_minutos||ts.fab_segundos)?`${ts.fab_minutos}m ${ts.fab_segundos}s`:null, ts.incremento>0?`+${ts.incremento}%`:null].filter(Boolean).join(' · ') || 'Sin configurar'
           return (
-            <div key={idx} style={{ border:'1px solid var(--border)', borderRadius:6, overflow:'hidden' }}>
+            <div key={idx} style={{ border:'1px solid var(--border)', borderRadius: 'var(--radius-sm)', overflow:'hidden' }}>
               <div style={{ display:'flex', alignItems:'center', padding:'5px 8px', background: expandedTarifa === idx ? 'var(--bg-highlight)' : 'var(--bg-card)', gap:6 }}>
                 <span style={{ fontSize:12, fontWeight:600, minWidth:54, color:'var(--text-muted)' }}>Tarifa {idx+1}</span>
                 <span style={{ flex:1, fontSize:12 }}>{lbl}</span>
@@ -738,7 +738,7 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
                     </F>
                     {!ts.tarifa_id ? (
                       <div style={{ gridColumn:'span 2', display:'flex', alignItems:'center', fontSize:11, color:'var(--text-muted)', paddingLeft:4 }}>
-                        👆 Primero seleccioná la tarifa
+                        Primero seleccioná la tarifa
                       </div>
                     ) : (<>
                       <F label="Tiempo (min / seg)">
@@ -783,9 +783,9 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
         <div className="modal-header">
           <h3>{form.id ? 'Editar producto' : 'Nuevo producto'}</h3>
           <div style={{ display:'flex', gap:4, marginLeft:'auto', marginRight:12 }}>
-            <button type="button" onClick={()=>setTab('general')} className="btn btn-sm" style={{ background:tab==='general'?'var(--primary)':undefined, color:tab==='general'?'white':undefined, borderColor:tab==='general'?'var(--primary)':undefined }}>Producto</button>
-            <button type="button" onClick={()=>setTab('web')} className="btn btn-sm" style={{ background:tab==='web'?'var(--primary)':undefined, color:tab==='web'?'white':undefined, borderColor:tab==='web'?'var(--primary)':undefined }}> 🌐 Web</button>
-            <button type="button" onClick={()=>setTab('ml')} className="btn btn-sm" style={{ background:tab==='ml'?'#d97706':undefined, color:tab==='ml'?'white':undefined, borderColor:tab==='ml'?'#d97706':undefined }}>🛒 Mercado Libre</button>
+            <button type="button" onClick={()=>setTab('general')} className="btn btn-sm" style={{ background:tab==='general'?'var(--primary)':undefined, color:tab==='general'?'var(--on-primary)':undefined, borderColor:tab==='general'?'var(--primary)':undefined }}>Producto</button>
+            <button type="button" onClick={()=>setTab('web')} className="btn btn-sm" style={{ background:tab==='web'?'var(--primary)':undefined, color:tab==='web'?'var(--on-primary)':undefined, borderColor:tab==='web'?'var(--primary)':undefined }}> Web</button>
+            <button type="button" onClick={()=>setTab('ml')} className="btn btn-sm" style={{ background:tab==='ml'?'#d97706':undefined, color:tab==='ml'?'white':undefined, borderColor:tab==='ml'?'#d97706':undefined }}>Mercado Libre</button>
           </div>
           <button className="btn btn-ghost btn-sm" onClick={handleCancel}>✕</button>
         </div>
@@ -812,10 +812,10 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
               {rubros.length > 0 && (
                 <F label="Rubro">
                   <div style={{ display:'flex', flexWrap:'wrap', gap:4 }}>
-                    <button type="button" onClick={()=>setRubroFiltro('')} style={{ padding:'2px 9px', borderRadius:5, fontSize:11, cursor:'pointer', border:`1px solid ${!rubroFiltro?'var(--primary)':'var(--border)'}`, background:!rubroFiltro?'var(--primary-faint)':'var(--bg-cell)', color:!rubroFiltro?'var(--primary)':'var(--text-muted)', fontWeight:!rubroFiltro?600:400 }}>Todos</button>
+                    <button type="button" onClick={()=>setRubroFiltro('')} style={{ padding:'2px 9px', borderRadius: 'var(--radius-sm)', fontSize:11, cursor:'pointer', border:`1px solid ${!rubroFiltro?'var(--primary)':'var(--border)'}`, background:!rubroFiltro?'var(--primary-faint)':'var(--bg-cell)', color:!rubroFiltro?'var(--primary)':'var(--text-muted)', fontWeight:!rubroFiltro?600:400 }}>Todos</button>
                     {rubros.map(r => {
                       const sel = rubroFiltro === String(r.id)
-                      return <button key={r.id} type="button" onClick={()=>setRubroFiltro(String(r.id))} style={{ display:'inline-flex', alignItems:'center', gap:3, padding:'2px 9px', borderRadius:5, cursor:'pointer', fontSize:11, border:`1px solid ${sel?r.color:'var(--border)'}`, background:sel?`${r.color}18`:'var(--bg-cell)', color:sel?r.color:'var(--text-muted)', fontWeight:sel?600:400 }}>{r.emoji&&<span>{r.emoji}</span>}{r.nombre}</button>
+                      return <button key={r.id} type="button" onClick={()=>setRubroFiltro(String(r.id))} style={{ display:'inline-flex', alignItems:'center', gap:3, padding:'2px 9px', borderRadius: 'var(--radius-sm)', cursor:'pointer', fontSize:11, border:`1px solid ${sel?r.color:'var(--border)'}`, background:sel?`${r.color}18`:'var(--bg-cell)', color:sel?r.color:'var(--text-muted)', fontWeight:sel?600:400 }}>{r.emoji&&<span>{r.emoji}</span>}{r.nombre}</button>
                     })}
                   </div>
                 </F>
@@ -861,7 +861,7 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
                 {form.imagen_url ? (
                   <div style={{ display:'flex', alignItems:'center', gap:8 }}>
                     <div style={{ position:'relative', flexShrink:0 }}>
-                      <img src={form.imagen_url} alt="" style={{ width:52, height:52, objectFit:'contain', borderRadius:5, border:'1px solid var(--border)', background:'#ffffff', display:'block' }} />
+                      <img src={form.imagen_url} alt="" style={{ width:52, height:52, objectFit:'contain', borderRadius: 'var(--radius-sm)', border:'1px solid var(--border)', background:'#ffffff', display:'block' }} />
                       <button onClick={()=>set('imagen_url','')} style={{ position:'absolute', top:-5, right:-5, background:'var(--danger)', color:'#fff', border:'none', borderRadius:'50%', width:16, height:16, fontSize:10, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>✕</button>
                     </div>
                     <label style={{ cursor:'pointer' }}>
@@ -872,8 +872,8 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
                 ) : (
                   <label style={{ cursor: uploading?'not-allowed':'pointer' }}>
                     <input type="file" accept="image/*" style={{ display:'none' }} onChange={handleImageUpload} disabled={uploading} />
-                    <div style={{ display:'flex', alignItems:'center', gap:8, padding:'6px 10px', border:'1px dashed var(--primary)', borderRadius:6, background:'var(--bg-highlight)' }}>
-                      <span style={{ fontSize:16 }}>🖼️</span>
+                    <div style={{ display:'flex', alignItems:'center', gap:8, padding:'6px 10px', border:'1px dashed var(--primary)', borderRadius: 'var(--radius-sm)', background:'var(--bg-highlight)' }}>
+                      
                       <span style={{ fontSize:12, color:'var(--primary)', fontWeight:500 }}>{uploading?'Subiendo...':'Subir imagen del producto'}</span>
                       <span style={{ fontSize:11, color:'var(--text-muted)', marginLeft:'auto' }}>JPG · PNG · WEBP</span>
                     </div>
@@ -887,7 +887,7 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
               {secLabel(tipoFab === 'Combo' ? 'Productos del combo' : 'Materiales y tarifas')}
 
               {!form.categoria_id
-                ? <div style={{ marginTop:20, textAlign:'center', color:'var(--text-muted)', fontSize:12 }}>👈 Elegí una categoría</div>
+                ? <div style={{ marginTop:20, textAlign:'center', color:'var(--text-muted)', fontSize:12 }}>Elegí una categoría</div>
                 : tipoFab === 'Melamina'
                   ? <>{renderMateriales()}<div style={{ height:1, background:'var(--border)', margin:'4px 0' }} />{renderTarifas()}</>
                   : tipoFab === 'Combo'
@@ -896,7 +896,7 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
                       <div style={{ position:'relative' }}>
                         <input className="input" style={si()} placeholder="Buscar producto por nombre o SKU..." value={buscarCombo} onChange={e=>setBuscarCombo(e.target.value)} />
                         {productosFiltradosCombo.length > 0 && (
-                          <div style={{ position:'absolute', top:'100%', left:0, right:0, zIndex:20, background:'var(--bg-card)', border:'1px solid var(--border)', borderRadius:6, maxHeight:220, overflowY:'auto', boxShadow:'0 4px 12px rgba(0,0,0,0.08)', marginTop:2 }}>
+                          <div style={{ position:'absolute', top:'100%', left:0, right:0, zIndex:20, background:'var(--bg-card)', border:'1px solid var(--border)', borderRadius: 'var(--radius-sm)', maxHeight:220, overflowY:'auto', boxShadow:'0 4px 12px rgba(0,0,0,0.08)', marginTop:2 }}>
                             {productosFiltradosCombo.map(p => (
                               <div key={p.id} onClick={() => agregarAlCombo(p)}
                                 style={{ padding:'8px 12px', borderBottom:'1px solid var(--border)', cursor:'pointer', display:'flex', alignItems:'center', gap:10 }}
@@ -993,7 +993,7 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
                     )}
 
                     {/* Costo base */}
-                    <div style={{ background:'var(--bg-highlight)', border:'1px solid var(--primary)', borderRadius:6, padding:'7px 9px' }}>
+                    <div style={{ background:'var(--bg-highlight)', border:'1px solid var(--primary)', borderRadius: 'var(--radius-sm)', padding:'7px 9px' }}>
                       <div style={{ fontSize:11, color:'var(--primary)', fontWeight:600, textTransform:'uppercase' }}>Costo base</div>
                       <div style={{ fontSize:22, fontWeight:700, color:'var(--primary)', lineHeight:1.2 }}>{fmtMoney(costoBase)}</div>
                     </div>
@@ -1003,7 +1003,7 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
                       <div style={{ display:'flex', flexDirection:'column', gap:3 }}>
                         <div style={{ fontSize:11, fontWeight:700, color:'var(--text-muted)', textTransform:'uppercase' }}>Precio de venta</div>
                         {listas.map(l=>(
-                          <div key={l.id} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'4px 8px', borderRadius:5, background:'var(--bg-cell)', border:'1px solid var(--border)' }}>
+                          <div key={l.id} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'4px 8px', borderRadius: 'var(--radius-sm)', background:'var(--bg-cell)', border:'1px solid var(--border)' }}>
                             <span style={{ fontSize:12, color:'var(--text-muted)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', maxWidth:'48%' }}>{l.nombre}</span>
                             <span style={{ fontSize:14, fontWeight:700, color:'var(--success)', whiteSpace:'nowrap' }}>{fmtMoney(precioVenta(costoBase,l))}</span>
                           </div>
@@ -1038,7 +1038,7 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
                     <span style={{ fontSize:12, fontWeight:600, color:'var(--text-muted)' }}>Foto de portada</span>
                     {form.imagen_web_url ? (
                       <div style={{ position:'relative' }}>
-                        <img src={form.imagen_web_url} alt="" style={{ width:140, height:140, objectFit:'cover', borderRadius:8, border:'1px solid var(--border)', display:'block' }} />
+                        <img src={form.imagen_web_url} alt="" style={{ width:140, height:140, objectFit:'cover', borderRadius: 'var(--radius-sm)', border:'1px solid var(--border)', display:'block' }} />
                         <button onClick={()=>set('imagen_web_url','')} style={{ position:'absolute', top:-6, right:-6, background:'var(--danger)', color:'#fff', border:'none', borderRadius:'50%', width:20, height:20, fontSize:12, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>✕</button>
                         <label style={{ cursor:'pointer', display:'block', marginTop:6 }}>
                           <input type="file" accept="image/*" style={{ display:'none' }} onChange={handleWebCoverUpload} disabled={uploadingWeb} />
@@ -1048,8 +1048,8 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
                     ) : (
                       <label style={{ cursor: uploadingWeb?'not-allowed':'pointer' }}>
                         <input type="file" accept="image/*" style={{ display:'none' }} onChange={handleWebCoverUpload} disabled={uploadingWeb} />
-                        <div style={{ width:140, height:140, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:6, border:'1px dashed var(--primary)', borderRadius:8, background:'var(--bg-highlight)' }}>
-                          <span style={{ fontSize:24 }}>🖼️</span>
+                        <div style={{ width:140, height:140, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:6, border:'1px dashed var(--primary)', borderRadius: 'var(--radius-sm)', background:'var(--bg-highlight)' }}>
+                          
                           <span style={{ fontSize:11, color:'var(--primary)', fontWeight:500, textAlign:'center', padding:'0 8px' }}>{uploadingWeb?'Subiendo...':'Subir portada'}</span>
                         </div>
                       </label>
@@ -1062,13 +1062,13 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
                     <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
                       {(form.imagenes_web || []).map(url => (
                         <div key={url} style={{ position:'relative' }}>
-                          <img loading="lazy" decoding="async" src={url} alt="" style={{ width:70, height:70, objectFit:'cover', borderRadius:6, border:'1px solid var(--border)', display:'block' }} />
+                          <img loading="lazy" decoding="async" src={url} alt="" style={{ width:70, height:70, objectFit:'cover', borderRadius: 'var(--radius-sm)', border:'1px solid var(--border)', display:'block' }} />
                           <button onClick={()=>quitarImagenGaleria(url)} style={{ position:'absolute', top:-5, right:-5, background:'var(--danger)', color:'#fff', border:'none', borderRadius:'50%', width:16, height:16, fontSize:10, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>✕</button>
                         </div>
                       ))}
                       <label style={{ cursor: uploadingGaleria?'not-allowed':'pointer' }}>
                         <input type="file" accept="image/*" multiple style={{ display:'none' }} onChange={handleGaleriaUpload} disabled={uploadingGaleria} />
-                        <div style={{ width:70, height:70, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:2, border:'1px dashed var(--border)', borderRadius:6, background:'var(--bg-highlight)' }}>
+                        <div style={{ width:70, height:70, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:2, border:'1px dashed var(--border)', borderRadius: 'var(--radius-sm)', background:'var(--bg-highlight)' }}>
                           <span style={{ fontSize:18, color:'var(--primary)' }}>+</span>
                           <span style={{ fontSize:9, color:'var(--primary)', fontWeight:500 }}>{uploadingGaleria?'...':'Agregar'}</span>
                         </div>
@@ -1091,7 +1091,7 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
                         <div style={{ display:'flex', alignItems:'center', gap:8, marginTop:6, fontSize:11, color: vid ? '#16a34a' : 'var(--danger)' }}>
                           {vid ? (
                             <>
-                              <img src={`https://i.ytimg.com/vi/${vid}/hqdefault.jpg`} alt="" style={{ width:64, height:36, objectFit:'cover', borderRadius:4, border:'1px solid var(--border)' }} />
+                              <img src={`https://i.ytimg.com/vi/${vid}/hqdefault.jpg`} alt="" style={{ width:64, height:36, objectFit:'cover', borderRadius: 'var(--radius-sm)', border:'1px solid var(--border)' }} />
                               <span>✓ Link válido</span>
                             </>
                           ) : (
@@ -1120,7 +1120,7 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
                       </div>
                       <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
                         {compartidas.map(im => (
-                          <img loading="lazy" decoding="async" key={im.id} src={im.url} alt="" style={{ width:44, height:44, objectFit:'cover', borderRadius:5, border:'1px solid var(--border)' }} />
+                          <img loading="lazy" decoding="async" key={im.id} src={im.url} alt="" style={{ width:44, height:44, objectFit:'cover', borderRadius: 'var(--radius-sm)', border:'1px solid var(--border)' }} />
                         ))}
                       </div>
                     </div>
@@ -1196,7 +1196,7 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
                       const sel=(form.categorias_web_ids||[]).map(String).includes(String(s.id))
                       const toggle=()=>{ const ids=(form.categorias_web_ids||[]).map(String); const sid=String(s.id); set('categorias_web_ids',sel?ids.filter(i=>i!==sid):[...ids,sid]) }
                       return (
-                        <label key={s.id} onClick={toggle} style={{ display:'flex', alignItems:'center', gap:6, cursor:'pointer', padding:'6px 11px', borderRadius:6, userSelect:'none', border:`1px solid ${sel?'var(--primary)':'var(--border)'}`, background:sel?'var(--primary-faint)':'var(--bg-cell)', transition:'all 0.15s' }}>
+                        <label key={s.id} onClick={toggle} style={{ display:'flex', alignItems:'center', gap:6, cursor:'pointer', padding:'6px 11px', borderRadius: 'var(--radius-sm)', userSelect:'none', border:`1px solid ${sel?'var(--primary)':'var(--border)'}`, background:sel?'var(--primary-faint)':'var(--bg-cell)', transition:'all 0.15s' }}>
                           <span style={{ fontSize:13, fontWeight:sel?600:400, color:sel?'var(--primary)':'var(--text)' }}>{sel?'✓ ':''}{s.nombre}</span>
                         </label>
                       )
@@ -1220,10 +1220,10 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
                       const sel=(form.tiendas_ids||[]).map(String).includes(String(t.id))
                       const toggle=()=>{ const ids=(form.tiendas_ids||[]).map(String); const sid=String(t.id); set('tiendas_ids',sel?ids.filter(i=>i!==sid):[...ids,sid]) }
                       return (
-                        <label key={t.id} onClick={toggle} style={{ display:'flex', alignItems:'center', gap:7, cursor:'pointer', padding:'7px 12px', borderRadius:6, userSelect:'none', border:`1px solid ${sel?color:'var(--border)'}`, background:sel?bg:'var(--bg-cell)', transition:'all 0.15s' }}>
+                        <label key={t.id} onClick={toggle} style={{ display:'flex', alignItems:'center', gap:7, cursor:'pointer', padding:'7px 12px', borderRadius: 'var(--radius-sm)', userSelect:'none', border:`1px solid ${sel?color:'var(--border)'}`, background:sel?bg:'var(--bg-cell)', transition:'all 0.15s' }}>
                           <div style={{ width:8, height:8, borderRadius:'50%', background:sel?color:'#cbd5e1', flexShrink:0 }} />
                           <span style={{ fontSize:13, fontWeight:sel?600:400, color:sel?color:'var(--text)' }}>{t.nombre}</span>
-                          <span style={{ fontSize:10, fontWeight:700, padding:'1px 5px', borderRadius:3, background:sel?color:'#e2e8f0', color:sel?'white':'#94a3b8' }}>{t.tipo==='woocommerce'?'WC':'ML'}</span>
+                          <span style={{ fontSize:10, fontWeight:700, padding:'1px 5px', borderRadius: 'var(--radius-sm)', background:sel?color:'#e2e8f0', color:sel?'white':'#94a3b8' }}>{t.tipo==='woocommerce'?'WC':'ML'}</span>
                         </label>
                       )
                     })}
@@ -1264,7 +1264,7 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
                       <div style={{ display:'flex', gap:6 }}>
                         {Object.entries(PROMO_CANALES).map(([k,label])=>(
                           <button key={k} type="button" onClick={()=>set('promo_canal', k)}
-                            style={{ flex:1, padding:'7px 8px', borderRadius:6, fontSize:12, fontWeight:700, cursor:'pointer',
+                            style={{ flex:1, padding:'7px 8px', borderRadius: 'var(--radius-sm)', fontSize:12, fontWeight:700, cursor:'pointer',
                               border:`1px solid ${form.promo_canal===k?'var(--primary)':'var(--border)'}`,
                               background:form.promo_canal===k?'var(--primary-faint)':'var(--surface)',
                               color:form.promo_canal===k?'var(--primary)':'var(--text)' }}>
@@ -1291,7 +1291,7 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
         <div className="modal-footer producto-form-footer" style={{ justifyContent:'space-between', alignItems:'center', flexShrink:0 }}>
           <div style={{ display:'flex', alignItems:'center', gap:16 }}>
             <div style={{ display:'flex', alignItems:'center', gap:6, fontSize:13, fontWeight:600, color:'#16a34a', opacity:savedFlash?1:0, transition:'opacity 0.3s', minWidth:140 }}>
-              <span style={{ fontSize:16 }}>✅</span> Producto guardado
+               Producto guardado
             </div>
             {/* Toggle activo/inactivo */}
             <button
@@ -1299,7 +1299,7 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
               onClick={() => set('activo', !form.activo)}
               style={{
                 display:'flex', alignItems:'center', gap:7,
-                padding:'4px 10px', borderRadius:20, cursor:'pointer',
+                padding:'4px 10px', borderRadius: 'var(--radius-sm)', cursor:'pointer',
                 border:`1px solid ${form.activo !== false ? '#86efac' : '#fca5a5'}`,
                 background: form.activo !== false ? '#f0fdf4' : '#fff1f2',
                 color: form.activo !== false ? '#16a34a' : '#dc2626',
@@ -1328,7 +1328,7 @@ export default function ProductoForm({ initial, onCancel, onSaved, onSavedNext, 
               title="Guarda este producto y abre un nuevo formulario pre-cargado con los mismos datos + SKU de variante"
               style={{ fontWeight:500, color:'var(--primary)', borderColor:'var(--primary)' }}
             >
-              {saving ? 'Guardando...' : '🔀 Guardar y crear variante'}
+              {saving ? 'Guardando...' : 'Guardar y crear variante'}
             </button>
             <button className="btn btn-primary" onClick={()=>handleSave('close')} disabled={saving}>
               {saving ? 'Guardando...' : form.id ? 'Guardar cambios' : 'Guardar y cerrar'}

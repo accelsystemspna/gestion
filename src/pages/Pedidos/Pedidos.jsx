@@ -62,7 +62,7 @@ export default function Pedidos() {
 
   if (falta) {
     return (
-      <div style={{ padding: 20, borderRadius: 8, background: '#fef3c7', border: '1px solid #fcd34d', color: '#78350f', fontSize: 14 }}>
+      <div style={{ padding: 20, borderRadius: 'var(--radius-sm)', background: '#fef3c7', border: '1px solid #fcd34d', color: '#78350f', fontSize: 14 }}>
         Falta crear las tablas de Pedidos en Supabase: pegá el contenido de <strong>supabase_pedidos.sql</strong> en el SQL Editor y tocá Run.
       </div>
     )
@@ -80,36 +80,38 @@ export default function Pedidos() {
         <button className="btn btn-primary" onClick={() => setNuevo(true)}>+ Nuevo pedido</button>
       </div>
 
-      {aviso && <div style={{ padding: '8px 12px', marginBottom: 12, borderRadius: 6, background: 'rgba(14,116,144,0.1)', color: '#0e7490', fontSize: 13 }}>{aviso}</div>}
+      {aviso && <div style={{ padding: '8px 12px', marginBottom: 12, background: 'var(--accent-tenue)', color: 'var(--accent)', fontSize: 13 }}>{aviso}</div>}
 
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginBottom: 14 }}>
+      <div className="solapas" role="tablist">
         {FILTROS.map(([k, label]) => (
-          <button key={k} onClick={() => setFiltro(k)} className="btn btn-sm" style={{
-            background: filtro === k ? 'var(--primary)' : undefined, color: filtro === k ? '#fff' : undefined, borderColor: filtro === k ? 'var(--primary)' : undefined,
-          }}>{label} ({conteos[k] ?? 0})</button>
+          <button key={k} role="tab" aria-selected={filtro === k} onClick={() => setFiltro(k)} className={`solapa${filtro === k ? ' activa' : ''}`}>
+            {label}{conteos[k] ? <span className="cuenta">{conteos[k]}</span> : null}
+          </button>
         ))}
-        <input className="input" style={{ flex: '1 1 220px', maxWidth: 340, padding: '6px 10px', fontSize: 13 }}
-          placeholder="Buscar por cliente, código, celular o título…" value={q} onChange={(e) => setQ(e.target.value)} />
+      </div>
+      <div style={{ marginBottom: 14 }}>
+        <input className="input" style={{ maxWidth: 360 }}
+          placeholder="Buscar por cliente, código, celular o título" value={q} onChange={(e) => setQ(e.target.value)} />
       </div>
 
       {loading ? (
         <div style={{ padding: 30, textAlign: 'center', color: 'var(--text-muted)' }}>Cargando...</div>
       ) : visibles.length === 0 ? (
-        <div style={{ padding: 30, textAlign: 'center', color: 'var(--text-muted)', border: '1px dashed var(--border)', borderRadius: 8 }}>
+        <div style={{ padding: 30, textAlign: 'center', color: 'var(--text-muted)', border: '1px dashed var(--border)', borderRadius: 'var(--radius-sm)' }}>
           {pedidos.length === 0 ? 'Todavía no hay pedidos. Creá uno con “+ Nuevo pedido” o pasá un presupuesto a pedido desde Presupuestos.' : 'No hay pedidos con ese filtro.'}
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           {visibles.map((p) => (
             <div key={p.id} onClick={() => setAbierto(p)} style={{
               display: 'grid', gridTemplateColumns: 'minmax(0,1.6fr) minmax(0,1fr) auto', gap: 12, alignItems: 'center', cursor: 'pointer',
-              padding: '12px 14px', border: '1px solid var(--border)', borderRadius: 10, background: 'var(--surface, var(--bg-card))',
+              padding: '12px 14px', border: '1px solid var(--border)', background: 'var(--bg-card)',
             }}>
               <div style={{ minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                   <strong style={{ fontSize: 14 }}>{p.cliente_nombre}</strong>
                   <EstadoBadge estado={p.estado} />
-                  {p.precio_congelado && <span title="Precio congelado (ya tiene seña)" style={{ fontSize: 12 }}>🔒</span>}
+                  {p.precio_congelado && <span title="Precio congelado (ya tiene seña)" style={{ fontSize: 11, color: 'var(--text-muted)' }}>Precio congelado</span>}
                 </div>
                 <div style={{ fontSize: 13, color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.titulo}</div>
                 <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
@@ -207,13 +209,13 @@ function NuevoPedido({ onCancelar, onCreado }) {
           <div><label style={lbl}>¿De qué se trata? *</label><input className="input" value={f.titulo} onChange={(e) => set('titulo', e.target.value)} required placeholder="Ej. Cuadro de Messi en MDF 45x60" /></div>
           <div><label style={lbl}>Detalle</label><textarea className="input" rows={3} value={f.descripcion} onChange={(e) => set('descripcion', e.target.value)} style={{ resize: 'vertical' }} /></div>
           <div><label style={lbl}>Precio ($)</label><input className="input" type="number" value={f.total} onChange={(e) => set('total', e.target.value)} placeholder="Podés dejarlo vacío y cargarlo después" /></div>
-          {[['imagenes_referencia', '📷 Imágenes de referencia (las que mandó el cliente)'], ['imagenes_resultado', '🎨 Cómo quedaría (imágenes nuestras)']].map(([campo, titulo]) => (
+          {[['imagenes_referencia', 'Imágenes de referencia (las que mandó el cliente)'], ['imagenes_resultado', 'Cómo quedaría (imágenes nuestras)']].map(([campo, titulo]) => (
             <div key={campo}>
               <label style={lbl}>{titulo}</label>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
                 {fotos[campo].map(({ url }) => (
                   <div key={url} style={{ position: 'relative' }}>
-                    <img src={url} alt="" style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: 8, border: '1px solid var(--border)', display: 'block' }} />
+                    <img src={url} alt="" style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)', display: 'block' }} />
                     <button type="button" onClick={() => quitarFoto(campo, url)} style={{ position: 'absolute', top: -6, right: -6, background: 'var(--danger)', color: '#fff', border: 'none', borderRadius: '50%', width: 18, height: 18, fontSize: 11, cursor: 'pointer' }}>✕</button>
                   </div>
                 ))}

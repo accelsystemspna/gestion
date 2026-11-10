@@ -72,7 +72,7 @@ export default function ResumenWoo({ tienda }) {
             const i = estadoWooInfo(e)
             return (
               <div key={e} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', fontSize: 13 }}>
-                <span style={{ width: 10, height: 10, borderRadius: 3, background: i.color }} />
+                <span style={{ width: 10, height: 10, borderRadius: 'var(--radius-sm)', background: i.color }} />
                 <span style={{ flex: 1 }}>{i.label}</span><strong>{n}</strong>
               </div>
             )
@@ -81,7 +81,7 @@ export default function ResumenWoo({ tienda }) {
         <Tarjeta titulo="Productos más vendidos (90 días)">
           {r.top.length === 0 ? <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>Sin ventas.</div> : r.top.map(p => (
             <div key={p.nombre} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', fontSize: 13 }}>
-              {p.imagen ? <img src={p.imagen} alt="" style={{ width: 30, height: 30, borderRadius: 5, objectFit: 'cover' }} /> : <span style={{ width: 30 }} />}
+              {p.imagen ? <img src={p.imagen} alt="" style={{ width: 30, height: 30, borderRadius: 'var(--radius-sm)', objectFit: 'cover' }} /> : <span style={{ width: 30 }} />}
               <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.nombre}</span>
               <strong>{p.cantidad}</strong><span style={{ fontSize: 11, color: 'var(--text-muted)', minWidth: 78, textAlign: 'right' }}>{fmtMoney(p.total)}</span>
             </div>

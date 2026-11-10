@@ -64,7 +64,7 @@ const S = {
   card: {
     background: 'var(--surface)',
     border: '1px solid var(--border)',
-    borderRadius: 8,
+    borderRadius: 'var(--radius-sm)',
     padding: '14px 16px',
     cursor: 'pointer',
     transition: 'border-color 0.15s',
@@ -72,7 +72,7 @@ const S = {
   badge: (color) => ({
     display: 'inline-block',
     padding: '2px 8px',
-    borderRadius: 12,
+    borderRadius: 'var(--radius-sm)',
     fontSize: 11,
     fontWeight: 600,
     background: color + '22',
@@ -199,12 +199,12 @@ function DetallePanel({ cliente, estadoAcceso, onAccesoEnviado, onClose, onEdit,
       setRecalcMsg({
         ok: true,
         text: ventasActualizadas > 0
-          ? `✅ ${ventasActualizadas} venta${ventasActualizadas > 1 ? 's' : ''} actualizada${ventasActualizadas > 1 ? 's' : ''} al precio actual.`
-          : '✅ Los precios ya estaban actualizados.'
+          ? `${ventasActualizadas} venta${ventasActualizadas > 1 ? 's' : ''} actualizada${ventasActualizadas > 1 ? 's' : ''} al precio actual.`
+          : 'Los precios ya estaban actualizados.'
       })
       loadVentas()
     } catch (err) {
-      setRecalcMsg({ ok: false, text: '❌ Error: ' + (err.message ?? err) })
+      setRecalcMsg({ ok: false, text: 'Error: ' + (err.message ?? err) })
     } finally {
       setRecalculating(false)
     }
@@ -294,7 +294,7 @@ function DetallePanel({ cliente, estadoAcceso, onAccesoEnviado, onClose, onEdit,
                 padding: '6px 12px',
                 background: 'var(--surface)',
                 border: '1px solid var(--border)',
-                borderRadius: 6,
+                borderRadius: 'var(--radius-sm)',
                 cursor: 'pointer',
                 fontSize: 13,
               }}
@@ -328,12 +328,12 @@ function DetallePanel({ cliente, estadoAcceso, onAccesoEnviado, onClose, onEdit,
           <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 6 }}>
             {cliente.direccion && (
               <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>
-                📍 {cliente.direccion}
+                {cliente.direccion}
               </div>
             )}
             {cliente.notas && (
               <div style={{ fontSize: 13, color: 'var(--text-muted)', fontStyle: 'italic' }}>
-                💬 {cliente.notas}
+                {cliente.notas}
               </div>
             )}
           </div>
@@ -349,11 +349,11 @@ function DetallePanel({ cliente, estadoAcceso, onAccesoEnviado, onClose, onEdit,
             gap: 12,
           }}
         >
-          <div style={{ background: 'var(--surface)', borderRadius: 8, padding: '12px 14px' }}>
+          <div style={{ background: 'var(--surface)', borderRadius: 'var(--radius-sm)', padding: '12px 14px' }}>
             <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 4 }}>COMPRAS</div>
             <div style={{ fontSize: 22, fontWeight: 700 }}>{ventasActivas.length}</div>
           </div>
-          <div style={{ background: 'var(--surface)', borderRadius: 8, padding: '12px 14px' }}>
+          <div style={{ background: 'var(--surface)', borderRadius: 'var(--radius-sm)', padding: '12px 14px' }}>
             <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 4 }}>TOTAL COMPRADO</div>
             <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--primary)' }}>{fmt(total)}</div>
           </div>
@@ -374,8 +374,7 @@ function DetallePanel({ cliente, estadoAcceso, onAccesoEnviado, onClose, onEdit,
             <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 24 }}>Cargando…</div>
           ) : ventas.length === 0 ? (
             <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 24, fontSize: 14 }}>
-              <div style={{ fontSize: 28, marginBottom: 8 }}>🛒</div>
-              Sin ventas registradas para este cliente
+                            Sin ventas registradas para este cliente
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -386,7 +385,7 @@ function DetallePanel({ cliente, estadoAcceso, onAccesoEnviado, onClose, onEdit,
                 return (
                   <div key={v.id}
                     onClick={() => setVentaDetalleId(v.id)}
-                    style={{ border: '1px solid var(--border)', borderRadius: 8, padding: '10px 14px', background: 'var(--surface)', opacity: anulado ? 0.6 : 1, cursor: 'pointer', transition: 'border-color 0.12s' }}
+                    style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '10px 14px', background: 'var(--surface)', opacity: anulado ? 0.6 : 1, cursor: 'pointer', transition: 'border-color 0.12s' }}
                     onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--primary)'}
                     onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}
                   >
@@ -403,7 +402,7 @@ function DetallePanel({ cliente, estadoAcceso, onAccesoEnviado, onClose, onEdit,
                       </span>
                     </div>
                     <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                      <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 7px', borderRadius: 10, background: est.bg, color: est.color }}>
+                      <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 7px', borderRadius: 'var(--radius-sm)', background: est.bg, color: est.color }}>
                         {est.label}
                       </span>
                       {v.forma_pago && (
@@ -432,13 +431,13 @@ function DetallePanel({ cliente, estadoAcceso, onAccesoEnviado, onClose, onEdit,
                 background: recalculating ? 'var(--surface)' : '#eff6ff',
                 border: '1px solid #93c5fd',
                 color: '#1d4ed8',
-                borderRadius: 6,
+                borderRadius: 'var(--radius-sm)',
                 cursor: recalculating ? 'default' : 'pointer',
                 fontSize: 13,
                 fontWeight: 600,
               }}
             >
-              {recalculating ? '⏳ Actualizando precios…' : '🔄 Actualizar precios de cuenta corriente'}
+              {recalculating ? 'Actualizando precios…' : 'Actualizar precios de cuenta corriente'}
             </button>
           )}
 
@@ -447,7 +446,7 @@ function DetallePanel({ cliente, estadoAcceso, onAccesoEnviado, onClose, onEdit,
             <div
               style={{
                 padding: '8px 12px',
-                borderRadius: 6,
+                borderRadius: 'var(--radius-sm)',
                 fontSize: 13,
                 background: recalcMsg.ok ? '#f0fdf4' : '#fef2f2',
                 border: `1px solid ${recalcMsg.ok ? '#86efac' : '#fca5a5'}`,
@@ -474,7 +473,7 @@ function DetallePanel({ cliente, estadoAcceso, onAccesoEnviado, onClose, onEdit,
               background: 'transparent',
               border: '1px solid #fca5a5',
               color: '#ef4444',
-              borderRadius: 6,
+              borderRadius: 'var(--radius-sm)',
               cursor: 'pointer',
               fontSize: 13,
             }}
@@ -608,14 +607,14 @@ export default function Clientes() {
             minWidth: 220,
             padding: '8px 12px',
             border: '1px solid var(--border)',
-            borderRadius: 6,
+            borderRadius: 'var(--radius-sm)',
             fontSize: 14,
             background: 'var(--surface)',
             color: 'inherit',
           }}
         />
         <select value={orden} onChange={(e) => setOrden(e.target.value)} aria-label="Ordenar"
-          style={{ padding: '8px 10px', border: '1px solid var(--border)', borderRadius: 6, fontSize: 14, background: 'var(--surface)', color: 'inherit' }}>
+          style={{ padding: '8px 10px', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', fontSize: 14, background: 'var(--surface)', color: 'inherit' }}>
           <option value="nombre">Ordenar: nombre A-Z</option>
           <option value="ultima">Ordenar: última compra</option>
           <option value="compras">Ordenar: más compras</option>
@@ -627,13 +626,13 @@ export default function Clientes() {
             padding: '8px 14px',
             background: 'var(--surface)',
             border: '1px solid var(--border)',
-            borderRadius: 6,
+            borderRadius: 'var(--radius-sm)',
             cursor: 'pointer',
             fontSize: 14,
             fontWeight: 500,
           }}
         >
-          📥 Importar Excel
+          Importar Excel
         </button>
         <button
           onClick={() => { setEditTarget(null); setShowForm(true) }}
@@ -641,7 +640,7 @@ export default function Clientes() {
             padding: '8px 14px',
             background: 'var(--primary)',
             border: 'none',
-            borderRadius: 6,
+            borderRadius: 'var(--radius-sm)',
             color: 'white',
             cursor: 'pointer',
             fontSize: 14,
@@ -653,20 +652,11 @@ export default function Clientes() {
       </div>
 
       {/* tabs */}
-      <div style={S.tabBar}>
+      <div className="solapas" role="tablist">
         {tabs.map((t) => (
-          <button key={t} style={S.tab(tab === t)} onClick={() => setTab(t)}>
+          <button key={t} role="tab" aria-selected={tab === t} className={`solapa${tab === t ? ' activa' : ''}`} onClick={() => setTab(t)}>
             {t === 'todos' ? 'Todos' : t === 'saldos' ? 'Saldos a favor' : t}
-            <span
-              style={{
-                marginLeft: 6,
-                background: tab === t ? 'var(--primary)' : 'var(--border)',
-                color: tab === t ? 'white' : 'var(--text-muted)',
-                borderRadius: 10,
-                padding: '1px 7px',
-                fontSize: 11,
-              }}
-            >
+            <span className="cuenta">
               {t === 'todos'
                 ? clientes.length
                 : t === 'saldos'
@@ -687,7 +677,7 @@ export default function Clientes() {
           {search ? 'Sin resultados para la búsqueda.' : tab === 'saldos' ? 'Ningún cliente tiene saldo a favor.' : 'No hay clientes en esta categoría.'}
         </div>
       ) : (
-        <div style={{ border: '1px solid var(--border)', borderRadius: 8, overflowX: 'auto', background: 'var(--surface)' }}>
+        <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', overflowX: 'auto', background: 'var(--surface)' }}>
           {tab === 'saldos' && (
             <div style={{ padding: '10px 12px', borderBottom: '1px solid var(--border)', fontSize: 13 }}>
               Total a favor de los clientes: <strong style={{ color: '#15803d' }}>{fmt(conSaldo.reduce((a, c) => a + saldoDe(c), 0))}</strong>
@@ -751,7 +741,7 @@ export default function Clientes() {
           <div
             style={{
               background: 'var(--bg)',
-              borderRadius: 10,
+              borderRadius: 'var(--radius-sm)',
               padding: 28,
               width: 380,
               boxShadow: '0 8px 32px rgba(0,0,0,0.25)',
@@ -770,7 +760,7 @@ export default function Clientes() {
                   padding: '8px 16px',
                   background: 'var(--surface)',
                   border: '1px solid var(--border)',
-                  borderRadius: 6,
+                  borderRadius: 'var(--radius-sm)',
                   cursor: 'pointer',
                 }}
               >
@@ -782,7 +772,7 @@ export default function Clientes() {
                   padding: '8px 16px',
                   background: '#ef4444',
                   border: 'none',
-                  borderRadius: 6,
+                  borderRadius: 'var(--radius-sm)',
                   color: 'white',
                   cursor: 'pointer',
                   fontWeight: 600,

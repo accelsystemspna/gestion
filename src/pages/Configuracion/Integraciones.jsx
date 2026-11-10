@@ -19,7 +19,7 @@ function TipoBadge({ tipo }) {
   return (
     <span style={{
       display: 'inline-flex', alignItems: 'center', gap: 5,
-      fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 999,
+      fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 'var(--radius-sm)',
       background: t.bg, color: t.color, border: `1px solid ${t.color}33`,
     }}>
       {t.sigla} · {t.label}
@@ -32,7 +32,7 @@ function Toggle({ value, onChange }) {
     <button
       onClick={() => onChange(!value)}
       style={{
-        width: 40, height: 22, borderRadius: 11, border: 'none', cursor: 'pointer',
+        width: 40, height: 22, borderRadius: 'var(--radius-sm)', border: 'none', cursor: 'pointer',
         background: value ? 'var(--primary)' : '#cbd5e1', position: 'relative',
         transition: 'background 0.2s', flexShrink: 0,
       }}
@@ -173,7 +173,7 @@ export default function Integraciones() {
       {loading ? (
         <div style={{ padding: 20, textAlign: 'center', color: 'var(--text-muted)' }}>Cargando...</div>
       ) : tiendas.length === 0 ? (
-        <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)', border: '1px dashed var(--border)', borderRadius: 8 }}>
+        <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)', border: '1px dashed var(--border)', borderRadius: 'var(--radius-sm)' }}>
           No hay tiendas configuradas. Agregá la primera.
         </div>
       ) : (
@@ -185,13 +185,13 @@ export default function Integraciones() {
               : (t.categorias_ids || []).map((id) => categorias.find((c) => String(c.id) === String(id))?.nombre).filter(Boolean)
             return (
               <div key={t.id} style={{
-                border: '1px solid var(--border)', borderRadius: 8, padding: '14px 16px',
+                border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '14px 16px',
                 background: 'var(--bg-card)', display: 'flex', alignItems: 'center', gap: 16,
                 opacity: t.activa ? 1 : 0.55,
               }}>
                 {/* Ícono tipo */}
                 <div style={{
-                  width: 44, height: 44, borderRadius: 10, flexShrink: 0,
+                  width: 44, height: 44, borderRadius: 'var(--radius-sm)', flexShrink: 0,
                   background: TIPOS[t.tipo]?.bg || '#f1f5f9',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontSize: 13, fontWeight: 800, color: TIPOS[t.tipo]?.color || '#64748b',
@@ -205,23 +205,23 @@ export default function Integraciones() {
                     <strong style={{ fontSize: 15 }}>{t.nombre}</strong>
                     <TipoBadge tipo={t.tipo} />
                     {!t.activa && (
-                      <span style={{ fontSize: 11, padding: '1px 7px', borderRadius: 999, background: 'var(--bg-muted)', color: 'var(--text-muted)', fontWeight: 600 }}>
+                      <span style={{ fontSize: 11, padding: '1px 7px', borderRadius: 'var(--radius-sm)', background: 'var(--bg-muted)', color: 'var(--text-muted)', fontWeight: 600 }}>
                         Inactiva
                       </span>
                     )}
                   </div>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
                     {t.url && (
-                      <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>🔗 {t.url}</span>
+                      <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{t.url}</span>
                     )}
                     {lista && (
-                      <span style={{ fontSize: 12, padding: '1px 7px', borderRadius: 4, background: 'var(--primary-faint)', color: 'var(--primary)' }}>
+                      <span style={{ fontSize: 12, padding: '1px 7px', borderRadius: 'var(--radius-sm)', background: 'var(--primary-faint)', color: 'var(--primary)' }}>
                         Lista: {lista.nombre}
                       </span>
                     )}
                     {cats.length > 0 ? (
                       cats.map((c) => (
-                        <span key={c} style={{ fontSize: 12, padding: '1px 7px', borderRadius: 4, background: 'rgba(16,185,129,0.12)', color: 'var(--success)' }}>
+                        <span key={c} style={{ fontSize: 12, padding: '1px 7px', borderRadius: 'var(--radius-sm)', background: 'rgba(16,185,129,0.12)', color: 'var(--success)' }}>
                           {c}
                         </span>
                       ))
@@ -246,7 +246,7 @@ export default function Integraciones() {
                       disabled={syncingId === t.id}
                       title="Re-sincroniza todos los productos asignados a esta tienda"
                     >
-                      {syncingId === t.id ? 'Sincronizando…' : '🔄 Sincronizar ahora'}
+                      {syncingId === t.id ? 'Sincronizando…' : 'Sincronizar ahora'}
                     </button>
                   )}
                   <Toggle value={!!t.activa} onChange={() => toggleActiva(t)} />
@@ -268,7 +268,7 @@ export default function Integraciones() {
       </div>
 
       {/* Info de próximas funciones */}
-      <div style={{ marginTop: 24, padding: '14px 16px', borderRadius: 8, background: 'var(--bg-muted)', border: '1px solid var(--border)' }}>
+      <div style={{ marginTop: 24, padding: '14px 16px', borderRadius: 'var(--radius-sm)', background: 'var(--bg-muted)', border: '1px solid var(--border)' }}>
         <p style={{ margin: 0, fontSize: 13, color: 'var(--text-muted)' }}>
           Los productos se sincronizan automáticamente a WooCommerce y al portal mayorista al guardarlos, y también cuando cambia el precio de un insumo, una tarifa o una lista de precios.
           Usá <strong>Sincronizar ahora</strong> en cada tienda para forzar una resincronización completa cuando quieras.
@@ -361,7 +361,7 @@ function TiendaForm({ initial, listas, categorias, subcategorias, onCancel, onSa
 
           {/* Portal mayorista */}
           {form.tipo === 'mayorista' && (
-            <div style={{ border: '1px solid #0f766e44', borderRadius: 8, padding: '12px 14px', background: 'rgba(15,118,110,0.07)' }}>
+            <div style={{ border: '1px solid #0f766e44', borderRadius: 'var(--radius-sm)', padding: '12px 14px', background: 'rgba(15,118,110,0.07)' }}>
               <p style={{ margin: '0 0 10px', fontSize: 13, fontWeight: 600, color: '#0f766e' }}>Portal mayorista (WordPress)</p>
               <div className="field" style={{ marginBottom: 10 }}>
                 <label>URL de la tienda</label>
@@ -396,7 +396,7 @@ function TiendaForm({ initial, listas, categorias, subcategorias, onCancel, onSa
 
           {/* Credenciales WooCommerce */}
           {form.tipo === 'woocommerce' && (
-            <div style={{ border: '1px solid #7c3aed44', borderRadius: 8, padding: '12px 14px', background: 'rgba(124,58,237,0.07)' }}>
+            <div style={{ border: '1px solid #7c3aed44', borderRadius: 'var(--radius-sm)', padding: '12px 14px', background: 'rgba(124,58,237,0.07)' }}>
               <p style={{ margin: '0 0 10px', fontSize: 13, fontWeight: 600, color: '#7c3aed' }}>Credenciales WooCommerce</p>
               <div className="field" style={{ marginBottom: 10 }}>
                 <label>URL de la tienda</label>
@@ -455,7 +455,7 @@ function TiendaForm({ initial, listas, categorias, subcategorias, onCancel, onSa
 
           {/* Credenciales Mercado Libre */}
           {form.tipo === 'mercadolibre' && (
-            <div style={{ border: '1px solid #d9770644', borderRadius: 8, padding: '12px 14px', background: 'rgba(217,119,6,0.07)' }}>
+            <div style={{ border: '1px solid #d9770644', borderRadius: 'var(--radius-sm)', padding: '12px 14px', background: 'rgba(217,119,6,0.07)' }}>
               <p style={{ margin: '0 0 10px', fontSize: 13, fontWeight: 600, color: '#d97706' }}>Credenciales Mercado Libre</p>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                 <div className="field">
@@ -517,7 +517,7 @@ function TiendaForm({ initial, listas, categorias, subcategorias, onCancel, onSa
                       key={c.id}
                       style={{
                         display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer',
-                        padding: '5px 10px', borderRadius: 6, fontSize: 13,
+                        padding: '5px 10px', borderRadius: 'var(--radius-sm)', fontSize: 13,
                         border: `1px solid ${sel ? 'var(--primary)' : 'var(--border)'}`,
                         background: sel ? 'var(--primary-faint)' : 'var(--bg-cell)',
                         color: sel ? 'var(--primary)' : 'var(--text)',
@@ -559,7 +559,7 @@ function TiendaForm({ initial, listas, categorias, subcategorias, onCancel, onSa
                       key={c.id}
                       style={{
                         display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer',
-                        padding: '5px 10px', borderRadius: 6, fontSize: 13,
+                        padding: '5px 10px', borderRadius: 'var(--radius-sm)', fontSize: 13,
                         border: `1px solid ${sel ? '#0f766e' : 'var(--border)'}`,
                         background: sel ? 'rgba(15,118,110,0.12)' : 'var(--bg-cell)',
                         color: sel ? '#0f766e' : 'var(--text)',

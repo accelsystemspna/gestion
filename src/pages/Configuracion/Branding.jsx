@@ -72,7 +72,7 @@ export default function Branding() {
           style={{
             width: 140,
             height: 140,
-            borderRadius: 8,
+            borderRadius: 'var(--radius-sm)',
             background: '#f1f5f9',
             border: '1px dashed var(--border)',
             display: 'flex',

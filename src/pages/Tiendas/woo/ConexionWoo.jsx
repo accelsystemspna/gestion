@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { invocarWoo, sincronizarPedidos, esLocalUrl, hace } from '../../../lib/wooPanel'
 import { Aviso, Tarjeta } from './ui'
 
-const icono = (ok) => (ok === true ? '✅' : ok === false ? '❌' : '⚠️')
+const color = (ok) => (ok === true ? 'var(--success)' : ok === false ? 'var(--danger)' : 'var(--text-light)')
 
 export default function ConexionWoo({ tienda, onCambio }) {
   const local = esLocalUrl(tienda.url)
@@ -64,7 +64,7 @@ export default function ConexionWoo({ tienda, onCambio }) {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {res.checks.map(c => (
               <div key={c.id} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', fontSize: 13 }}>
-                <span style={{ fontSize: 16, lineHeight: '20px' }}>{icono(c.ok)}</span>
+                <span aria-hidden="true" style={{ width: 8, height: 8, marginTop: 6, flexShrink: 0, borderRadius: '50%', background: color(c.ok) }} />
                 <div><strong>{c.titulo}</strong><div style={{ color: 'var(--text-muted)' }}>{c.detalle}</div></div>
               </div>
             ))}
@@ -106,7 +106,7 @@ export default function ConexionWoo({ tienda, onCambio }) {
         <div style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.6 }}>
           En WooCommerce → Ajustes → Avanzado → Webhooks: tema <strong>Pedido actualizado</strong> (y otro para <strong>Pedido eliminado</strong>), estado <strong>Activo</strong>,
           secret igual al "Webhook Secret" de la tienda en Configuración → Integraciones, y URL de entrega:
-          <code style={{ display: 'block', margin: '6px 0', padding: '6px 8px', background: 'var(--bg-muted)', borderRadius: 6, wordBreak: 'break-all', color: 'var(--text)' }}>
+          <code style={{ display: 'block', margin: '6px 0', padding: '6px 8px', background: 'var(--bg-muted)', borderRadius: 'var(--radius-sm)', wordBreak: 'break-all', color: 'var(--text)' }}>
             {(res?.url_webhook) || `https://<proyecto>.functions.supabase.co/woo-order-webhook?tienda=${tienda.id}`}
           </code>
         </div>

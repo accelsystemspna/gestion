@@ -202,7 +202,7 @@ export default function ComboForm({ initial, onCancel, onSaved, onAvanzado }) {
     <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) onCancel() }}>
       <div className="modal" style={{ maxWidth: 900, width: '96vw' }}>
         <div className="modal-header">
-          <h3 style={{ margin: 0 }}>{esNuevo ? '🧩 Nuevo combo' : `Editar combo — ${sku}`}</h3>
+          <h3 style={{ margin: 0 }}>{esNuevo ? 'Nuevo combo' : `Editar combo — ${sku}`}</h3>
           <button className="btn btn-ghost btn-sm" onClick={onCancel}>✕</button>
         </div>
 
@@ -244,19 +244,19 @@ export default function ComboForm({ initial, onCancel, onSaved, onAvanzado }) {
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                   {fotosDisponibles.map((url) => (
                     <button key={url} onClick={() => setImagenUrl(url)}
-                      style={{ padding: 0, border: url === imagenUrl ? '2px solid var(--primary)' : '2px solid transparent', borderRadius: 6, cursor: 'pointer', background: 'none' }}>
-                      <img loading="lazy" decoding="async" src={url} alt="" style={{ width: 44, height: 44, objectFit: 'contain', borderRadius: 4, background: '#fff', display: 'block' }} />
+                      style={{ padding: 0, border: url === imagenUrl ? '2px solid var(--primary)' : '2px solid transparent', borderRadius: 'var(--radius-sm)', cursor: 'pointer', background: 'none' }}>
+                      <img loading="lazy" decoding="async" src={url} alt="" style={{ width: 44, height: 44, objectFit: 'contain', borderRadius: 'var(--radius-sm)', background: '#fff', display: 'block' }} />
                     </button>
                   ))}
                 </div>
               )}
               <label className="btn btn-sm btn-ghost" style={{ cursor: 'pointer', width: 'fit-content' }}>
-                {uploading ? 'Subiendo...' : '📷 Subir otra foto'}
+                {uploading ? 'Subiendo...' : 'Subir otra foto'}
                 <input type="file" accept="image/*" style={{ display: 'none' }} disabled={uploading} onChange={subirImagen} />
               </label>
               <button type="button" className="btn btn-sm" style={{ width: 'fit-content' }} disabled={armando || fotosDisponibles.length < 2} onClick={armarMiniatura}
                 title="Junta las fotos de todos los productos del combo, más chicas, en una sola imagen">
-                {armando ? 'Armando...' : '🧩 Armar miniatura con todos los cuadros'}
+                {armando ? 'Armando...' : 'Armar miniatura con todos los cuadros'}
               </button>
             </div>
 
@@ -283,7 +283,7 @@ export default function ComboForm({ initial, onCancel, onSaved, onAvanzado }) {
             </label>
 
             {!esNuevo && (
-              <button className="btn btn-sm btn-ghost" onClick={() => onAvanzado?.()}>⚙️ Opciones avanzadas (SEO, promociones, galería web...)</button>
+              <button className="btn btn-sm btn-ghost" onClick={() => onAvanzado?.()}>Opciones avanzadas (SEO, promociones, galería web...)</button>
             )}
           </div>
 
@@ -312,12 +312,12 @@ export default function ComboForm({ initial, onCancel, onSaved, onAvanzado }) {
                 return (
                   <button key={p.id} onClick={() => agregar(p)} disabled={yaAgregado}
                     style={{
-                      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: 6, borderRadius: 8, cursor: yaAgregado ? 'default' : 'pointer',
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: 6, borderRadius: 'var(--radius-sm)', cursor: yaAgregado ? 'default' : 'pointer',
                       border: yaAgregado ? '2px solid var(--primary)' : '1px solid var(--border)', background: yaAgregado ? 'var(--bg-highlight)' : 'var(--bg-card)', opacity: yaAgregado ? 0.7 : 1,
                     }}>
                     {p.imagen_url
-                      ? <img loading="lazy" decoding="async" src={urlLiviana(p.sku, p.imagen_url) || p.imagen_url} onError={(e) => { if (e.currentTarget.src !== p.imagen_url) e.currentTarget.src = p.imagen_url }} alt="" style={{ width: 56, height: 56, objectFit: 'contain', borderRadius: 6, background: '#fff', border: '1px solid var(--border)', display: 'block' }} />
-                      : <div style={{ width: 56, height: 56, borderRadius: 6, background: 'var(--bg-muted)' }} />}
+                      ? <img loading="lazy" decoding="async" src={urlLiviana(p.sku, p.imagen_url) || p.imagen_url} onError={(e) => { if (e.currentTarget.src !== p.imagen_url) e.currentTarget.src = p.imagen_url }} alt="" style={{ width: 56, height: 56, objectFit: 'contain', borderRadius: 'var(--radius-sm)', background: '#fff', border: '1px solid var(--border)', display: 'block' }} />
+                      : <div style={{ width: 56, height: 56, borderRadius: 'var(--radius-sm)', background: 'var(--bg-muted)' }} />}
                     <div style={{ fontSize: 11, textAlign: 'center', lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', width: '100%' }}>{p.nombre}</div>
                     <code style={{ fontSize: 10, color: 'var(--text-muted)' }}>{p.sku}</code>
                   </button>
@@ -349,7 +349,7 @@ export default function ComboForm({ initial, onCancel, onSaved, onAvanzado }) {
                     return (
                       <tr key={d.producto_id}>
                         <td style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          {d.prod?.imagen_url ? <ImageThumb src={d.prod.imagen_url} sku={d.prod.sku} size={30} /> : <div style={{ width: 30, height: 30, borderRadius: 4, background: 'var(--bg-muted)' }} />}
+                          {d.prod?.imagen_url ? <ImageThumb src={d.prod.imagen_url} sku={d.prod.sku} size={30} /> : <div style={{ width: 30, height: 30, borderRadius: 'var(--radius-sm)', background: 'var(--bg-muted)' }} />}
                           <div>
                             <strong style={{ fontSize: 13 }}>{d.prod?.nombre || '(producto eliminado)'}</strong>
                             <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{d.prod?.sku}</div>
@@ -376,14 +376,14 @@ export default function ComboForm({ initial, onCancel, onSaved, onAvanzado }) {
               </table>
             )}
 
-            <div style={{ background: 'var(--bg-highlight)', border: '1px solid var(--primary)', borderRadius: 6, padding: '8px 10px' }}>
+            <div style={{ background: 'var(--bg-highlight)', border: '1px solid var(--primary)', borderRadius: 'var(--radius-sm)', padding: '8px 10px' }}>
               <div style={{ fontSize: 11, color: 'var(--primary)', fontWeight: 600, textTransform: 'uppercase' }}>Costo base del combo</div>
               <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--primary)' }}>{fmtMoney(costoBase)}</div>
             </div>
             {listas.length > 0 && costoBase > 0 && (
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, fontSize: 12 }}>
                 {listas.map((l) => (
-                  <div key={l.id} style={{ padding: '4px 8px', borderRadius: 6, background: 'var(--bg-muted)' }}>
+                  <div key={l.id} style={{ padding: '4px 8px', borderRadius: 'var(--radius-sm)', background: 'var(--bg-muted)' }}>
                     <span style={{ color: 'var(--text-muted)' }}>{l.nombre}: </span>
                     <strong>{fmtMoney(precioVenta(costoBase, l))}</strong>
                   </div>

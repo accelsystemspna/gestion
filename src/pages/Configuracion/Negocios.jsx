@@ -20,7 +20,7 @@ async function callEdge(action, body = {}) {
   return data
 }
 
-const card = { background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10, padding: 20, marginBottom: 16 }
+const card = { background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: 20, marginBottom: 16 }
 const lbl = { fontSize: 12, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }
 const blankNeg = { negocio: '', nombre: '', password: '' }
 const blankUser = { nombre: '', password: '', rol: 'vendedor' }
@@ -145,7 +145,7 @@ export default function Negocios() {
             <input className="input" type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required minLength={6} placeholder="Mínimo 6 caracteres" />
           </div>
           {error && (
-            <div style={{ gridColumn: '1/-1', color: 'var(--danger)', fontSize: 13, padding: '8px 12px', background: 'rgba(239,68,68,0.08)', borderRadius: 6 }}>{error}</div>
+            <div style={{ gridColumn: '1/-1', color: 'var(--danger)', fontSize: 13, padding: '8px 12px', background: 'rgba(239,68,68,0.08)', borderRadius: 'var(--radius-sm)' }}>{error}</div>
           )}
           <div style={{ gridColumn: '1/-1', display: 'flex', justifyContent: 'flex-end' }}>
             <button className="btn btn-primary" type="submit" disabled={saving}>{saving ? 'Creando...' : '+ Crear negocio'}</button>
@@ -188,7 +188,7 @@ export default function Negocios() {
                     const activa = tieneAcceso(neg.org_id, c.id)
                     const comparte = accesos.find((a) => a.org_id === neg.org_id && a.categoria_id === c.id)?.comparte_stock
                     return (
-                      <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 16, fontSize: 13, padding: '6px 10px', border: '1px solid var(--border)', borderRadius: 6 }}>
+                      <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 16, fontSize: 13, padding: '6px 10px', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)' }}>
                         <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', flex: 1 }}>
                           <input type="checkbox" checked={activa} onChange={() => toggleAcceso(neg.org_id, c.id)} />
                           {c.nombre}
@@ -205,7 +205,7 @@ export default function Negocios() {
                 </div>
 
                 <h4 style={{ margin: '18px 0 8px', fontSize: 13 }}>Usuarios</h4>
-                <div style={{ border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden', marginBottom: 12 }}>
+                <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', overflow: 'hidden', marginBottom: 12 }}>
                   <table className="table">
                     <tbody>
                       {equipo.map((u) => (
@@ -224,7 +224,7 @@ export default function Negocios() {
                           </td>
                           <td style={{ width: 40 }}>
                             <button onClick={() => eliminarUsuario(u)} title="Eliminar usuario"
-                              style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', fontSize: 16, padding: '4px 8px' }}>🗑</button>
+                              style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', fontSize: 16, padding: '4px 8px' }}></button>
                           </td>
                         </tr>
                       ))}

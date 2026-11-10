@@ -193,8 +193,8 @@ export default function Backup() {
     setRestoreFile(null)
     setRestoreMsg(
       fail === 0
-        ? `✅ Restauración completada. ${ok} tablas importadas correctamente.`
-        : `⚠️ ${ok} tablas OK, ${fail} con errores. Revisá la consola.`
+        ? `Restauración completada. ${ok} tablas importadas correctamente.`
+        : `${ok} tablas OK, ${fail} con errores. Revisá la consola.`
     )
   }
 
@@ -206,10 +206,9 @@ export default function Backup() {
         <div style={{
           display: 'flex', alignItems: 'center', gap: 12,
           background: '#fffbeb', border: '1px solid #fcd34d',
-          borderRadius: 8, padding: '12px 16px', marginBottom: 20,
+          borderRadius: 'var(--radius-sm)', padding: '12px 16px', marginBottom: 20,
         }}>
-          <span style={{ fontSize: 20 }}>⚠️</span>
-          <div style={{ flex: 1 }}>
+                    <div style={{ flex: 1 }}>
             <div style={{ fontWeight: 600, color: '#92400e', fontSize: 14 }}>Backup pendiente</div>
             <div style={{ fontSize: 13, color: '#b45309', marginTop: 2 }}>
               El backup programado venció el {fmtDatetime(schedule.next)}. Te recomendamos generarlo ahora.
@@ -217,7 +216,7 @@ export default function Backup() {
           </div>
           <button
             onClick={() => setShowConfirm('json')}
-            style={{ padding: '7px 14px', background: '#f59e0b', border: 'none', borderRadius: 6, color: 'white', fontWeight: 600, cursor: 'pointer', fontSize: 13, whiteSpace: 'nowrap' }}
+            style={{ padding: '7px 14px', background: '#f59e0b', border: 'none', borderRadius: 'var(--radius-sm)', color: 'white', fontWeight: 600, cursor: 'pointer', fontSize: 13, whiteSpace: 'nowrap' }}
           >
             Hacer backup
           </button>
@@ -225,7 +224,7 @@ export default function Backup() {
       )}
 
       {/* ── sección backup manual ───────────────────────────────────────────── */}
-      <Section title="💾 Backup manual" subtitle="Descargá una copia de todos tus datos">
+      <Section title="Backup manual" subtitle="Descargá una copia de todos tus datos">
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
           <BackupCard
             icon="{ }"
@@ -236,7 +235,7 @@ export default function Backup() {
             disabled={loading}
           />
           <BackupCard
-            icon="📊"
+            icon=""
             title="Exportar como Excel"
             desc="Una hoja por tabla. Útil para revisar o editar manualmente."
             color="#16a34a"
@@ -246,7 +245,7 @@ export default function Backup() {
         </div>
 
         {(loading || progress) && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: 'var(--surface)', borderRadius: 8, border: '1px solid var(--border)', fontSize: 13, color: 'var(--text-muted)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: 'var(--surface)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)', fontSize: 13, color: 'var(--text-muted)' }}>
             <Spinner />
             {progress || 'Generando backup…'}
           </div>
@@ -258,11 +257,11 @@ export default function Backup() {
           </div>
         )}
 
-        <div style={{ marginTop: 12, padding: 12, background: 'var(--surface)', borderRadius: 8, border: '1px solid var(--border)' }}>
-          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 6 }}>📦 INCLUYE</div>
+        <div style={{ marginTop: 12, padding: 12, background: 'var(--surface)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)' }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 6 }}>INCLUYE</div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
             {TABLAS.map((t) => (
-              <span key={t.key} style={{ fontSize: 11, padding: '3px 9px', borderRadius: 12, background: 'var(--border)', color: 'var(--text-muted)' }}>
+              <span key={t.key} style={{ fontSize: 11, padding: '3px 9px', borderRadius: 'var(--radius-sm)', background: 'var(--border)', color: 'var(--text-muted)' }}>
                 {t.label}
               </span>
             ))}
@@ -271,7 +270,7 @@ export default function Backup() {
       </Section>
 
       {/* ── programación automática ─────────────────────────────────────────── */}
-      <Section title="🕐 Backup automático" subtitle="Recibís un aviso dentro de la app cuando es momento de hacer el backup">
+      <Section title="Backup automático" subtitle="Recibís un aviso dentro de la app cuando es momento de hacer el backup">
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
           <div>
             <div style={{ fontWeight: 600, fontSize: 14 }}>Recordatorio programado</div>
@@ -283,7 +282,7 @@ export default function Backup() {
         </div>
 
         {schedule?.enabled && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14, padding: 16, background: 'var(--surface)', borderRadius: 8, border: '1px solid var(--border)' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14, padding: 16, background: 'var(--surface)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)' }}>
             <div>
               <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 8 }}>FRECUENCIA</div>
               <div style={{ display: 'flex', gap: 8 }}>
@@ -293,7 +292,7 @@ export default function Backup() {
                     onClick={() => changeFrecuencia(f.value)}
                     style={{
                       padding: '8px 16px',
-                      borderRadius: 6,
+                      borderRadius: 'var(--radius-sm)',
                       border: '1px solid',
                       borderColor: schedule.frecuencia === f.value ? 'var(--primary)' : 'var(--border)',
                       background: schedule.frecuencia === f.value ? 'var(--primary)' : 'var(--surface)',
@@ -321,14 +320,14 @@ export default function Backup() {
       </Section>
 
       {/* ── restaurar ───────────────────────────────────────────────────────── */}
-      <Section title="📂 Restaurar backup" subtitle="Importá un backup JSON para recuperar tus datos">
+      <Section title="Restaurar backup" subtitle="Importá un backup JSON para recuperar tus datos">
         <div
           onDrop={(e) => { e.preventDefault(); handleRestoreFile(e.dataTransfer.files[0]) }}
           onDragOver={(e) => e.preventDefault()}
           onClick={() => document.getElementById('restore-input').click()}
           style={{
             border: '2px dashed var(--border)',
-            borderRadius: 10,
+            borderRadius: 'var(--radius-sm)',
             padding: '28px 20px',
             textAlign: 'center',
             cursor: 'pointer',
@@ -338,8 +337,7 @@ export default function Backup() {
           onMouseEnter={(e) => (e.currentTarget.style.borderColor = 'var(--primary)')}
           onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'var(--border)')}
         >
-          <div style={{ fontSize: 28, marginBottom: 8 }}>📂</div>
-          <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 4 }}>
+                    <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 4 }}>
             Arrastrá un archivo .json de backup o hacé clic
           </div>
           <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
@@ -355,7 +353,7 @@ export default function Backup() {
         />
 
         {(restoring || (progress && restoring)) && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 12, padding: '10px 14px', background: 'var(--surface)', borderRadius: 8, border: '1px solid var(--border)', fontSize: 13, color: 'var(--text-muted)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 12, padding: '10px 14px', background: 'var(--surface)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)', fontSize: 13, color: 'var(--text-muted)' }}>
             <Spinner />
             {progress || 'Restaurando datos…'}
           </div>
@@ -363,17 +361,17 @@ export default function Backup() {
 
         {restoreMsg && (
           <div style={{
-            marginTop: 12, padding: '10px 14px', borderRadius: 8, fontSize: 14,
-            background: restoreMsg.startsWith('✅') ? '#f0fdf4' : '#fffbeb',
-            border: `1px solid ${restoreMsg.startsWith('✅') ? '#bbf7d0' : '#fcd34d'}`,
-            color: restoreMsg.startsWith('✅') ? '#166534' : '#92400e',
+            marginTop: 12, padding: '10px 14px', borderRadius: 'var(--radius-sm)', fontSize: 14,
+            background: restoreMsg.startsWith('Restauración completada') ? '#f0fdf4' : '#fffbeb',
+            border: `1px solid ${restoreMsg.startsWith('Restauración completada') ? '#bbf7d0' : '#fcd34d'}`,
+            color: restoreMsg.startsWith('Restauración completada') ? '#166534' : '#92400e',
           }}>
             {restoreMsg}
           </div>
         )}
 
-        <div style={{ marginTop: 12, padding: '10px 14px', background: '#fef2f2', borderRadius: 8, border: '1px solid #fecaca', fontSize: 13, color: '#991b1b' }}>
-          ⚠️ <strong>Atención:</strong> restaurar un backup reemplaza los datos existentes que tengan el mismo ID. Hacé un backup actual antes de restaurar.
+        <div style={{ marginTop: 12, padding: '10px 14px', background: '#fef2f2', borderRadius: 'var(--radius-sm)', border: '1px solid #fecaca', fontSize: 13, color: '#991b1b' }}>
+          <strong>Atención:</strong> restaurar un backup reemplaza los datos existentes que tengan el mismo ID. Hacé un backup actual antes de restaurar.
         </div>
       </Section>
 
@@ -424,7 +422,7 @@ function BackupCard({ icon, title, desc, color, onClick, disabled }) {
       style={{
         padding: '16px 18px',
         border: `1px solid ${color}44`,
-        borderRadius: 10,
+        borderRadius: 'var(--radius-sm)',
         background: `${color}08`,
         cursor: disabled ? 'not-allowed' : 'pointer',
         textAlign: 'left',
@@ -474,7 +472,7 @@ function Toggle({ value, onChange }) {
 
 function InfoRow({ label, value, highlight }) {
   return (
-    <div style={{ background: 'var(--bg)', borderRadius: 6, padding: '10px 12px', border: '1px solid var(--border)' }}>
+    <div style={{ background: 'var(--bg)', borderRadius: 'var(--radius-sm)', padding: '10px 12px', border: '1px solid var(--border)' }}>
       <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 4 }}>{label.toUpperCase()}</div>
       <div style={{ fontSize: 13, fontWeight: 600, color: highlight ? '#d97706' : 'inherit' }}>{value}</div>
     </div>
@@ -501,7 +499,7 @@ function ConfirmModal({ title, body, confirmLabel, confirmColor, onConfirm, onCa
       display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
     }}>
       <div style={{
-        background: 'var(--bg)', borderRadius: 10, width: '100%', maxWidth: 400,
+        background: 'var(--bg)', borderRadius: 'var(--radius-sm)', width: '100%', maxWidth: 400,
         padding: 24, boxShadow: '0 8px 32px rgba(0,0,0,0.25)',
       }}>
         <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 10 }}>{title}</div>
@@ -509,13 +507,13 @@ function ConfirmModal({ title, body, confirmLabel, confirmColor, onConfirm, onCa
         <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
           <button
             onClick={onCancel}
-            style={{ padding: '8px 16px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 6, cursor: 'pointer', fontSize: 14 }}
+            style={{ padding: '8px 16px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', cursor: 'pointer', fontSize: 14 }}
           >
             Cancelar
           </button>
           <button
             onClick={onConfirm}
-            style={{ padding: '8px 20px', background: confirmColor, border: 'none', borderRadius: 6, color: 'white', cursor: 'pointer', fontSize: 14, fontWeight: 600 }}
+            style={{ padding: '8px 20px', background: confirmColor, border: 'none', borderRadius: 'var(--radius-sm)', color: 'white', cursor: 'pointer', fontSize: 14, fontWeight: 600 }}
           >
             {confirmLabel}
           </button>

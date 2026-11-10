@@ -37,8 +37,8 @@ const ESTADO_S = {
 }
 
 const CANAL_S = {
-  web_minorista: { label: '🛒 Web minorista', color: '#0891b2', bg: '#cffafe' },
-  web_mayorista: { label: '🏢 Web mayorista', color: '#7c3aed', bg: '#f5f3ff' },
+  web_minorista: { label: 'Web minorista', color: '#0891b2', bg: '#cffafe' },
+  web_mayorista: { label: 'Web mayorista', color: '#7c3aed', bg: '#f5f3ff' },
 }
 
 export default function VentaDetalle({ ventaId, onClose, onUpdated }) {
@@ -253,7 +253,7 @@ export default function VentaDetalle({ ventaId, onClose, onUpdated }) {
   // ── Render ─────────────────────────────────────────────────────────────────
   if (loading) return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 500, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div style={{ background: 'var(--bg)', borderRadius: 10, padding: 32, fontSize: 14 }}>Cargando...</div>
+      <div style={{ background: 'var(--bg)', borderRadius: 'var(--radius-sm)', padding: 32, fontSize: 14 }}>Cargando...</div>
     </div>
   )
 
@@ -272,7 +272,7 @@ export default function VentaDetalle({ ventaId, onClose, onUpdated }) {
 
   return (<>
     <div style={{ position: 'fixed', inset: 0, zIndex: 500, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-      <div style={{ background: 'var(--bg)', borderRadius: 12, width: '100%', maxWidth: 580, maxHeight: '90vh', display: 'flex', flexDirection: 'column', boxShadow: '0 16px 48px rgba(0,0,0,0.3)' }}>
+      <div style={{ background: 'var(--bg)', borderRadius: 'var(--radius-sm)', width: '100%', maxWidth: 580, maxHeight: '90vh', display: 'flex', flexDirection: 'column', boxShadow: '0 16px 48px rgba(0,0,0,0.3)' }}>
 
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
@@ -281,11 +281,11 @@ export default function VentaDetalle({ ventaId, onClose, onUpdated }) {
               <span style={{ fontWeight: 700, fontSize: 16, color: comp?.color }}>
                 {comp?.label ?? 'Ticket'} #{String(venta.numero ?? 0).padStart(4, '0')}
               </span>
-              <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 10, background: est.bg, color: est.color }}>
+              <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 'var(--radius-sm)', background: est.bg, color: est.color }}>
                 {est.label}
               </span>
               {canal && (
-                <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 10, background: canal.bg, color: canal.color }}>
+                <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 'var(--radius-sm)', background: canal.bg, color: canal.color }}>
                   {canal.label}
                 </span>
               )}
@@ -320,7 +320,7 @@ export default function VentaDetalle({ ventaId, onClose, onUpdated }) {
           </div>
 
           {/* Items */}
-          <div style={{ border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden', flexShrink: 0 }}>
+          <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', overflow: 'hidden', flexShrink: 0 }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
               <thead>
                 <tr style={{ background: 'var(--surface)' }}>
@@ -377,7 +377,7 @@ export default function VentaDetalle({ ventaId, onClose, onUpdated }) {
 
           {/* CAE */}
           {venta.cae && (
-            <div style={{ background: '#f0fdf4', border: '1px solid #86efac', borderRadius: 7, padding: '8px 12px', fontSize: 12 }}>
+            <div style={{ background: '#f0fdf4', border: '1px solid #86efac', borderRadius: 'var(--radius-sm)', padding: '8px 12px', fontSize: 12 }}>
               <div style={{ fontWeight: 700, color: '#15803d' }}>CAE</div>
               <div style={{ fontFamily: 'monospace' }}>{venta.cae}</div>
               {venta.cae_vto && <div style={{ color: '#64748b' }}>Vto: {venta.cae_vto}</div>}
@@ -394,7 +394,7 @@ export default function VentaDetalle({ ventaId, onClose, onUpdated }) {
 
               {esPendiente && (
                 showPagoPicker ? (
-                  <div style={{ background: '#f0fdf4', border: '1px solid #86efac', borderRadius: 8, padding: '12px 14px' }}>
+                  <div style={{ background: '#f0fdf4', border: '1px solid #86efac', borderRadius: 'var(--radius-sm)', padding: '12px 14px' }}>
                     <div style={{ fontSize: 12, fontWeight: 700, color: '#15803d', marginBottom: 10 }}>
                       ¿Cómo pagó el cliente?
                     </div>
@@ -406,25 +406,25 @@ export default function VentaDetalle({ ventaId, onClose, onUpdated }) {
                         { value: 'transferencia', label: 'Transferencia' },
                       ].map(f => (
                         <button key={f.value} onClick={() => setPagoForma(f.value)}
-                          style={{ padding: '7px 14px', borderRadius: 6, border: pagoForma === f.value ? 'none' : '1px solid var(--border)', background: pagoForma === f.value ? '#16a34a' : 'var(--surface)', color: pagoForma === f.value ? 'white' : 'var(--text)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                          style={{ padding: '7px 14px', borderRadius: 'var(--radius-sm)', border: pagoForma === f.value ? 'none' : '1px solid var(--border)', background: pagoForma === f.value ? '#16a34a' : 'var(--surface)', color: pagoForma === f.value ? 'white' : 'var(--text)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
                           {f.label}
                         </button>
                       ))}
                     </div>
                     <div style={{ display: 'flex', gap: 6 }}>
                       <button onClick={() => setShowPagoPicker(false)} disabled={!!accion}
-                        style={{ flex: 1, padding: '8px', borderRadius: 7, border: '1px solid var(--border)', background: 'var(--surface)', cursor: 'pointer', fontSize: 13 }}>
+                        style={{ flex: 1, padding: '8px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)', background: 'var(--surface)', cursor: 'pointer', fontSize: 13 }}>
                         Cancelar
                       </button>
                       <button onClick={marcarPagado} disabled={!!accion}
-                        style={{ flex: 2, padding: '8px', borderRadius: 7, border: 'none', background: accion ? '#e2e8f0' : '#16a34a', color: accion ? '#94a3b8' : 'white', cursor: accion ? 'not-allowed' : 'pointer', fontSize: 13, fontWeight: 700 }}>
+                        style={{ flex: 2, padding: '8px', borderRadius: 'var(--radius-sm)', border: 'none', background: accion ? '#e2e8f0' : '#16a34a', color: accion ? '#94a3b8' : 'white', cursor: accion ? 'not-allowed' : 'pointer', fontSize: 13, fontWeight: 700 }}>
                         {accion === 'pagando' ? 'Procesando...' : 'Confirmar pago'}
                       </button>
                     </div>
                   </div>
                 ) : (
                   <button onClick={() => setShowPagoPicker(true)} disabled={!!accion}
-                    style={{ width: '100%', padding: '9px', borderRadius: 7, border: 'none', background: '#16a34a', color: 'white', cursor: 'pointer', fontSize: 13, fontWeight: 700 }}>
+                    style={{ width: '100%', padding: '9px', borderRadius: 'var(--radius-sm)', border: 'none', background: '#16a34a', color: 'white', cursor: 'pointer', fontSize: 13, fontWeight: 700 }}>
                     Marcar como pagado
                   </button>
                 )
@@ -432,7 +432,7 @@ export default function VentaDetalle({ ventaId, onClose, onUpdated }) {
 
               {!showPagoPicker && (
                 <button onClick={anularVenta} disabled={!!accion}
-                  style={{ width: '100%', padding: '8px', borderRadius: 7, border: '1px solid ' + (accion ? 'var(--border)' : '#ef4444'), background: 'transparent', color: accion ? '#94a3b8' : '#ef4444', cursor: accion ? 'not-allowed' : 'pointer', fontSize: 13, fontWeight: 700 }}>
+                  style={{ width: '100%', padding: '8px', borderRadius: 'var(--radius-sm)', border: '1px solid ' + (accion ? 'var(--border)' : '#ef4444'), background: 'transparent', color: accion ? '#94a3b8' : '#ef4444', cursor: accion ? 'not-allowed' : 'pointer', fontSize: 13, fontWeight: 700 }}>
                   {accion === 'anulando' ? 'Procesando...' : 'Anular venta'}
                 </button>
               )}
@@ -442,24 +442,24 @@ export default function VentaDetalle({ ventaId, onClose, onUpdated }) {
           {/* Eliminar permanentemente */}
           {!showPagoPicker && (
             showEliminar ? (
-              <div style={{ background: '#fff1f2', border: '1px solid #fecdd3', borderRadius: 8, padding: '12px 14px' }}>
+              <div style={{ background: '#fff1f2', border: '1px solid #fecdd3', borderRadius: 'var(--radius-sm)', padding: '12px 14px' }}>
                 <div style={{ fontSize: 13, fontWeight: 600, color: '#be123c', marginBottom: 10 }}>
                   Esta accion eliminara la venta permanentemente. No se puede deshacer.
                 </div>
                 <div style={{ display: 'flex', gap: 6 }}>
                   <button onClick={() => setShowEliminar(false)} disabled={!!accion}
-                    style={{ flex: 1, padding: '8px', borderRadius: 7, border: '1px solid var(--border)', background: 'var(--surface)', cursor: 'pointer', fontSize: 13 }}>
+                    style={{ flex: 1, padding: '8px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)', background: 'var(--surface)', cursor: 'pointer', fontSize: 13 }}>
                     Cancelar
                   </button>
                   <button onClick={eliminarVenta} disabled={!!accion}
-                    style={{ flex: 2, padding: '8px', borderRadius: 7, border: 'none', background: accion ? '#e2e8f0' : '#dc2626', color: 'white', cursor: accion ? 'not-allowed' : 'pointer', fontSize: 13, fontWeight: 700 }}>
+                    style={{ flex: 2, padding: '8px', borderRadius: 'var(--radius-sm)', border: 'none', background: accion ? '#e2e8f0' : '#dc2626', color: 'white', cursor: accion ? 'not-allowed' : 'pointer', fontSize: 13, fontWeight: 700 }}>
                     {accion === 'eliminando' ? 'Eliminando...' : 'Si, eliminar'}
                   </button>
                 </div>
               </div>
             ) : (
               <button onClick={() => setShowEliminar(true)} disabled={!!accion}
-                style={{ width: '100%', padding: '7px', borderRadius: 7, border: '1px solid #fca5a5', background: 'transparent', color: '#dc2626', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>
+                style={{ width: '100%', padding: '7px', borderRadius: 'var(--radius-sm)', border: '1px solid #fca5a5', background: 'transparent', color: '#dc2626', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>
                 Eliminar permanentemente
               </button>
             )
@@ -468,9 +468,9 @@ export default function VentaDetalle({ ventaId, onClose, onUpdated }) {
           {/* Emitir Factura C */}
           {arcaConfig && venta.estado !== 'anulado' && (
             venta.factura_emitida ? (
-              <div style={{ background: '#f0fdf4', border: '1px solid #86efac', borderRadius: 8, padding: '10px 12px' }}>
+              <div style={{ background: '#f0fdf4', border: '1px solid #86efac', borderRadius: 'var(--radius-sm)', padding: '10px 12px' }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: '#16a34a', textTransform: 'uppercase', marginBottom: 4 }}>
-                  ✅ Factura C emitida
+                  Factura C emitida
                 </div>
                 <div style={{ fontSize: 12, color: '#15803d' }}>
                   Nro: {String(arcaConfig.punto_venta).padStart(4,'0')}-{String(venta.nro_factura).padStart(8,'0')}
@@ -483,14 +483,14 @@ export default function VentaDetalle({ ventaId, onClose, onUpdated }) {
                 </div>
               </div>
             ) : !puedeFacturar ? (
-              <div style={{ background: 'var(--bg-muted)', border: '1px dashed var(--border)', borderRadius: 8, padding: '10px 12px', fontSize: 12, color: 'var(--text-muted)' }}>
+              <div style={{ background: 'var(--bg-muted)', border: '1px dashed var(--border)', borderRadius: 'var(--radius-sm)', padding: '10px 12px', fontSize: 12, color: 'var(--text-muted)' }}>
                 Todavía no se puede facturar: el pedido está en <strong>{ESTADOS_WEB[faseWeb]?.label}</strong>.
                 Se habilita cuando esté <strong>Listo para despachar</strong> (se cambia desde Tiendas).
               </div>
             ) : (
               <button onClick={() => setShowFactModal(true)}
-                style={{ width: '100%', padding: '9px', borderRadius: 7, border: '1px solid #2563eb', background: '#eff6ff', color: '#2563eb', cursor: 'pointer', fontSize: 13, fontWeight: 700 }}>
-                🏛️ Emitir Factura C
+                style={{ width: '100%', padding: '9px', borderRadius: 'var(--radius-sm)', border: '1px solid #2563eb', background: '#eff6ff', color: '#2563eb', cursor: 'pointer', fontSize: 13, fontWeight: 700 }}>
+                Emitir Factura C
               </button>
             )
           )}
@@ -499,11 +499,11 @@ export default function VentaDetalle({ ventaId, onClose, onUpdated }) {
           {!showEliminar && (
             <div style={{ display: 'flex', gap: 8 }}>
               <button onClick={() => window.print()}
-                style={{ flex: 1, padding: '9px', borderRadius: 7, border: '1px solid var(--border)', background: 'var(--surface)', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
+                style={{ flex: 1, padding: '9px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)', background: 'var(--surface)', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
                 Imprimir
               </button>
               <button onClick={exportPDF}
-                style={{ flex: 1, padding: '9px', borderRadius: 7, border: 'none', background: 'var(--primary)', color: 'white', cursor: 'pointer', fontSize: 13, fontWeight: 700 }}>
+                style={{ flex: 1, padding: '9px', borderRadius: 'var(--radius-sm)', border: 'none', background: 'var(--primary)', color: 'var(--on-primary)', cursor: 'pointer', fontSize: 13, fontWeight: 700 }}>
                 Exportar PDF
               </button>
             </div>
@@ -532,20 +532,20 @@ export default function VentaDetalle({ ventaId, onClose, onUpdated }) {
       <div className="modal-overlay" style={{ zIndex: 1100 }}>
         <div className="modal" style={{ maxWidth: 460 }}>
           <div className="modal-header">
-            <h3 style={{ fontSize: 16, color: '#15803d' }}>✅ Factura C emitida</h3>
+            <h3 style={{ fontSize: 16, color: '#15803d' }}>Factura C emitida</h3>
             <button className="btn btn-ghost btn-sm" onClick={() => setFactEmitida(null)}>✕</button>
           </div>
           <div className="modal-body" style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
 
             {/* Preview de la factura */}
-            <div style={{ border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden', fontSize: 12 }}>
+            <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', overflow: 'hidden', fontSize: 12 }}>
               {/* Header */}
               <div style={{ background: '#1e3a5f', color: 'white', padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
                   <div style={{ fontWeight: 700, fontSize: 13 }}>{arcaConfig.razon_social || 'CC DISEÑOS'}</div>
                   <div style={{ opacity: 0.8, fontSize: 11 }}>CUIT: {String(arcaConfig.cuit || '').replace(/(\d{2})(\d{8})(\d{1})/, '$1-$2-$3')} · Monotributista</div>
                 </div>
-                <div style={{ textAlign: 'center', border: '2px solid white', padding: '4px 10px', borderRadius: 4 }}>
+                <div style={{ textAlign: 'center', border: '2px solid white', padding: '4px 10px', borderRadius: 'var(--radius-sm)' }}>
                   <div style={{ fontSize: 18, fontWeight: 800 }}>C</div>
                   <div style={{ fontSize: 9 }}>FACTURA</div>
                 </div>
@@ -594,10 +594,10 @@ export default function VentaDetalle({ ventaId, onClose, onUpdated }) {
           <div className="modal-footer">
             <button className="btn" onClick={() => setFactEmitida(null)}>Cerrar</button>
             <button className="btn" onClick={handleWhatsApp} style={{ color: '#16a34a', borderColor: '#86efac' }}>
-              📲 Compartir por WhatsApp
+              Compartir por WhatsApp
             </button>
             <button className="btn btn-primary" onClick={handleDescargarPDF} disabled={descargando}>
-              {descargando ? 'Generando…' : '⬇️ Descargar PDF'}
+              {descargando ? 'Generando…' : 'Descargar PDF'}
             </button>
           </div>
         </div>
@@ -608,18 +608,18 @@ export default function VentaDetalle({ ventaId, onClose, onUpdated }) {
       <div className="modal-overlay" style={{ zIndex: 1100 }}>
         <div className="modal" style={{ maxWidth: 420 }}>
           <div className="modal-header">
-            <h3 style={{ fontSize: 16 }}>🏛️ Emitir Factura C</h3>
+            <h3 style={{ fontSize: 16 }}>Emitir Factura C</h3>
             <button className="btn btn-ghost btn-sm" onClick={() => setShowFactModal(false)}>✕</button>
           </div>
           <div className="modal-body" style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 14 }}>
 
             {arcaConfig.modo === 'homologacion' && (
-              <div style={{ background: '#fef9c3', border: '1px solid #fcd34d', borderRadius: 6, padding: '8px 12px', fontSize: 12, color: '#92400e' }}>
-                🧪 Modo <strong>Homologación</strong> — esta factura es de prueba, no tiene validez fiscal.
+              <div style={{ background: '#fef9c3', border: '1px solid #fcd34d', borderRadius: 'var(--radius-sm)', padding: '8px 12px', fontSize: 12, color: '#92400e' }}>
+                Modo <strong>Homologación</strong> — esta factura es de prueba, no tiene validez fiscal.
               </div>
             )}
 
-            <div style={{ background: '#f8fafc', borderRadius: 8, padding: '10px 14px' }}>
+            <div style={{ background: '#f8fafc', borderRadius: 'var(--radius-sm)', padding: '10px 14px' }}>
               <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Total a facturar</div>
               <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--primary)' }}>{fmtMoney(venta.total)}</div>
               {venta.cliente_nombre && (
@@ -637,7 +637,7 @@ export default function VentaDetalle({ ventaId, onClose, onUpdated }) {
                     style={{
                       flex: 1,
                       background:  factOpts.concepto === v ? 'var(--primary)' : undefined,
-                      color:       factOpts.concepto === v ? 'white' : undefined,
+                      color:       factOpts.concepto === v ? 'var(--on-primary)' : undefined,
                       borderColor: factOpts.concepto === v ? 'var(--primary)' : undefined,
                       fontWeight:  factOpts.concepto === v ? 700 : 400,
                     }}>
@@ -657,7 +657,7 @@ export default function VentaDetalle({ ventaId, onClose, onUpdated }) {
                     style={{
                       flex: 1,
                       background:  factOpts.docTipo === v ? 'var(--primary)' : undefined,
-                      color:       factOpts.docTipo === v ? 'white' : undefined,
+                      color:       factOpts.docTipo === v ? 'var(--on-primary)' : undefined,
                       borderColor: factOpts.docTipo === v ? 'var(--primary)' : undefined,
                       fontWeight:  factOpts.docTipo === v ? 700 : 400,
                     }}>
@@ -682,11 +682,11 @@ export default function VentaDetalle({ ventaId, onClose, onUpdated }) {
             <button className="btn" onClick={() => setShowFactModal(false)} disabled={emitiendo}>Cancelar</button>
             <button className="btn" onClick={() => setShowPreview(true)} disabled={emitiendo}
               style={{ borderColor: '#1a3a5c', color: '#1a3a5c' }}>
-              🔍 Vista previa
+              Vista previa
             </button>
             <button className="btn btn-primary" onClick={emitirFacturaC} disabled={emitiendo}
               style={{ minWidth: 140 }}>
-              {emitiendo ? 'Enviando a ARCA…' : '🏛️ Confirmar y emitir'}
+              {emitiendo ? 'Enviando a ARCA…' : 'Confirmar y emitir'}
             </button>
           </div>
         </div>

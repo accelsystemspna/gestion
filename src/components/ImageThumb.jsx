@@ -51,7 +51,7 @@ export default function ImageThumb({ src, sku, size = 36, radius = 4, alt = '' }
             maxWidth: 'min(80vw, 720px)',
             maxHeight: '78vh',
             objectFit: 'contain',
-            borderRadius: 6,
+            borderRadius: 'var(--radius-sm)',
             display: 'block',
           }}
         />

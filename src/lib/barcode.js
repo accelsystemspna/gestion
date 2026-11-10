@@ -278,7 +278,7 @@ export async function printLabel(producto, opts) {
 </head><body>
   <div class="wrap"><img src="${dataUrl}"/></div>
   <div class="btns">
-    <button class="p" onclick="window.print()">🖨️ Imprimir</button>
+    <button class="p" onclick="window.print()">Imprimir</button>
     <button class="c" onclick="window.close()">Cerrar</button>
   </div>
 </body></html>`)

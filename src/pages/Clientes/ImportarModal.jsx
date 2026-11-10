@@ -30,7 +30,7 @@ const inputStyle = {
   width: '100%',
   padding: '7px 10px',
   border: '1px solid var(--border)',
-  borderRadius: 6,
+  borderRadius: 'var(--radius-sm)',
   fontSize: 13,
   background: 'var(--surface)',
   color: 'inherit',
@@ -170,7 +170,7 @@ export default function ImportarModal({ onClose, onImported, etiquetasExistentes
       <div
         style={{
           background: 'var(--bg)',
-          borderRadius: 10,
+          borderRadius: 'var(--radius-sm)',
           width: '100%',
           maxWidth: 560,
           maxHeight: '90vh',
@@ -213,7 +213,7 @@ export default function ImportarModal({ onClose, onImported, etiquetasExistentes
                 onClick={() => fileRef.current?.click()}
                 style={{
                   border: '2px dashed var(--border)',
-                  borderRadius: 10,
+                  borderRadius: 'var(--radius-sm)',
                   padding: '40px 20px',
                   textAlign: 'center',
                   cursor: 'pointer',
@@ -223,8 +223,7 @@ export default function ImportarModal({ onClose, onImported, etiquetasExistentes
                 onMouseEnter={(e) => (e.currentTarget.style.borderColor = 'var(--primary)')}
                 onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'var(--border)')}
               >
-                <div style={{ fontSize: 36, marginBottom: 10 }}>📂</div>
-                <div style={{ fontWeight: 600, marginBottom: 6 }}>Arrastrá tu archivo aquí o hacé clic</div>
+                                <div style={{ fontWeight: 600, marginBottom: 6 }}>Arrastrá tu archivo aquí o hacé clic</div>
                 <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>Formatos soportados: .xlsx, .xls, .csv</div>
               </div>
               <input
@@ -235,8 +234,8 @@ export default function ImportarModal({ onClose, onImported, etiquetasExistentes
                 onChange={(e) => handleFile(e.target.files[0])}
               />
               {error && <div style={{ color: '#ef4444', fontSize: 13, marginTop: 10 }}>{error}</div>}
-              <div style={{ marginTop: 16, padding: 14, background: 'var(--surface)', borderRadius: 8, border: '1px solid var(--border)' }}>
-                <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 8 }}>💡 Consejos</div>
+              <div style={{ marginTop: 16, padding: 14, background: 'var(--surface)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)' }}>
+                <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 8 }}>Consejos</div>
                 <ul style={{ fontSize: 13, color: 'var(--text-muted)', paddingLeft: 18, lineHeight: 1.8, margin: 0 }}>
                   <li>Cada hoja del Excel se convertirá en una <strong>categoría/etiqueta</strong> de clientes.</li>
                   <li>La primera fila debe tener los encabezados de columna.</li>
@@ -265,13 +264,13 @@ export default function ImportarModal({ onClose, onImported, etiquetasExistentes
                           padding: '7px 10px',
                           background: 'var(--surface)',
                           border: '1px solid var(--border)',
-                          borderRadius: 6,
+                          borderRadius: 'var(--radius-sm)',
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
                           whiteSpace: 'nowrap',
                         }}
                       >
-                        📋 {s.name} <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>({s.rows.length} filas)</span>
+                        {s.name} <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>({s.rows.length} filas)</span>
                       </div>
                       <span style={{ color: 'var(--text-muted)', fontSize: 13 }}>→</span>
                       <input
@@ -371,7 +370,7 @@ export default function ImportarModal({ onClose, onImported, etiquetasExistentes
                   </tbody>
                 </table>
               </div>
-              <div style={{ marginTop: 14, padding: 12, background: 'var(--surface)', borderRadius: 8, border: '1px solid var(--border)', fontSize: 13, color: 'var(--text-muted)' }}>
+              <div style={{ marginTop: 14, padding: 12, background: 'var(--surface)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)', fontSize: 13, color: 'var(--text-muted)' }}>
                 Se importarán{' '}
                 <strong style={{ color: 'inherit' }}>
                   {sheets.reduce((s, sh) => s + sh.rows.length, 0)} clientes
@@ -385,8 +384,7 @@ export default function ImportarModal({ onClose, onImported, etiquetasExistentes
           {/* STEP done */}
           {step === 'done' && result && (
             <div style={{ textAlign: 'center', padding: '24px 0' }}>
-              <div style={{ fontSize: 48, marginBottom: 12 }}>✅</div>
-              <div style={{ fontWeight: 700, fontSize: 18, marginBottom: 8 }}>Importación completada</div>
+                            <div style={{ fontWeight: 700, fontSize: 18, marginBottom: 8 }}>Importación completada</div>
               <div style={{ fontSize: 14, color: 'var(--text-muted)', marginBottom: 20 }}>
                 <strong style={{ color: 'inherit' }}>{result.inserted}</strong> clientes importados
                 {result.skipped > 0 && ` · ${result.skipped} omitidos (sin nombre o duplicados)`}
@@ -397,7 +395,7 @@ export default function ImportarModal({ onClose, onImported, etiquetasExistentes
                   padding: '10px 28px',
                   background: 'var(--primary)',
                   border: 'none',
-                  borderRadius: 6,
+                  borderRadius: 'var(--radius-sm)',
                   color: 'white',
                   cursor: 'pointer',
                   fontSize: 14,
@@ -427,7 +425,7 @@ export default function ImportarModal({ onClose, onImported, etiquetasExistentes
                 padding: '8px 16px',
                 background: 'var(--surface)',
                 border: '1px solid var(--border)',
-                borderRadius: 6,
+                borderRadius: 'var(--radius-sm)',
                 cursor: 'pointer',
                 fontSize: 14,
               }}
@@ -441,7 +439,7 @@ export default function ImportarModal({ onClose, onImported, etiquetasExistentes
                   padding: '8px 20px',
                   background: 'var(--primary)',
                   border: 'none',
-                  borderRadius: 6,
+                  borderRadius: 'var(--radius-sm)',
                   color: 'white',
                   cursor: 'pointer',
                   fontSize: 14,
@@ -459,7 +457,7 @@ export default function ImportarModal({ onClose, onImported, etiquetasExistentes
                     padding: '8px 16px',
                     background: 'var(--surface)',
                     border: '1px solid var(--border)',
-                    borderRadius: 6,
+                    borderRadius: 'var(--radius-sm)',
                     cursor: 'pointer',
                     fontSize: 14,
                   }}
@@ -473,7 +471,7 @@ export default function ImportarModal({ onClose, onImported, etiquetasExistentes
                     padding: '8px 20px',
                     background: 'var(--primary)',
                     border: 'none',
-                    borderRadius: 6,
+                    borderRadius: 'var(--radius-sm)',
                     color: 'white',
                     cursor: 'pointer',
                     fontSize: 14,

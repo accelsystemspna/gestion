@@ -50,7 +50,7 @@ export default function PublicarMLModal({ producto, listas, onClose }) {
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" style={{ maxWidth: 560 }} onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h3 style={{ margin: 0 }}>🛒 Publicar en Mercado Libre</h3>
+          <h3 style={{ margin: 0 }}>Publicar en Mercado Libre</h3>
           <button className="btn btn-sm btn-ghost" onClick={onClose}>✕</button>
         </div>
         <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -59,13 +59,13 @@ export default function PublicarMLModal({ producto, listas, onClose }) {
           </div>
 
           {publicado ? (
-            <div style={{ padding: 12, borderRadius: 8, background: 'rgba(22,163,74,0.1)', color: '#15803d', fontSize: 13 }}>
-              ✅ Publicado ({publicado.estado}). <a href={publicado.permalink} target="_blank" rel="noreferrer">Ver en Mercado Libre</a>
-              {publicado.error_descripcion && <div style={{ color: '#b45309', marginTop: 6 }}>⚠ La descripción no se pudo cargar: {publicado.error_descripcion}</div>}
+            <div style={{ padding: 12, borderRadius: 'var(--radius-sm)', background: 'rgba(22,163,74,0.1)', color: '#15803d', fontSize: 13 }}>
+              Publicado ({publicado.estado}). <a href={publicado.permalink} target="_blank" rel="noreferrer">Ver en Mercado Libre</a>
+              {publicado.error_descripcion && <div style={{ color: '#b45309', marginTop: 6 }}>La descripción no se pudo cargar: {publicado.error_descripcion}</div>}
             </div>
           ) : (<>
             {existentes.length > 0 && (
-              <div style={{ padding: 10, borderRadius: 8, background: 'rgba(217,119,6,0.1)', color: '#92400e', fontSize: 12 }}>
+              <div style={{ padding: 10, borderRadius: 'var(--radius-sm)', background: 'rgba(217,119,6,0.1)', color: '#92400e', fontSize: 12 }}>
                 Este producto ya tiene {existentes.length === 1 ? 'una publicación' : `${existentes.length} publicaciones`} en ML:{' '}
                 {existentes.map((e) => <a key={e.item_id} href={e.permalink} target="_blank" rel="noreferrer" style={{ marginRight: 8 }}>{e.item_id}</a>)}
                 Si publicás de nuevo se crea otra.
@@ -90,13 +90,13 @@ export default function PublicarMLModal({ producto, listas, onClose }) {
               {(producto.ml_descripcion || soloTexto(producto.descripcion)) ? '' : ', sin descripción'}). Envío, garantía y marca se copian de una publicación tuya.
             </div>
             {(producto.ml_descripcion || soloTexto(producto.descripcion)) && (
-              <div style={{ fontSize: 12, maxHeight: 90, overflow: 'auto', padding: 8, border: '1px solid var(--border)', borderRadius: 6, whiteSpace: 'pre-wrap' }}>
+              <div style={{ fontSize: 12, maxHeight: 90, overflow: 'auto', padding: 8, border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', whiteSpace: 'pre-wrap' }}>
                 {producto.ml_descripcion || soloTexto(producto.descripcion)}
               </div>
             )}
             {estado && (
               <div style={{
-                padding: '8px 12px', borderRadius: 6, fontSize: 13,
+                padding: '8px 12px', borderRadius: 'var(--radius-sm)', fontSize: 13,
                 color: estado.tipo === 'ok' ? '#15803d' : 'var(--danger)',
                 background: estado.tipo === 'ok' ? 'rgba(22,163,74,0.1)' : 'rgba(239,68,68,0.08)',
               }}>

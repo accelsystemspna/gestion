@@ -12,7 +12,7 @@ import CobroFacturas from '../../components/CobroFacturas'
 const FORMAS_PAGO = ['Efectivo', 'Transferencia', 'Mercado Pago', 'Tarjeta', 'Otro']
 const sec = { fontSize: 11, fontWeight: 700, letterSpacing: 0.5, textTransform: 'uppercase', color: 'var(--text-muted)', margin: '0 0 8px' }
 const lbl = { fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }
-const caja = { border: '1px solid var(--border)', borderRadius: 10, padding: 14, marginBottom: 12, background: 'var(--surface, var(--bg-card))' }
+const caja = { border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: 14, marginBottom: 12, background: 'var(--surface, var(--bg-card))' }
 
 // Qué botón de avance corresponde a cada estado
 const AVANCE = {
@@ -191,7 +191,7 @@ export default function PedidoDetalle({ pedido, onCambio, onCerrar, onEliminado 
       <div style={{ ...sec, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
         <span>{titulo}</span>
         <label className="btn btn-sm btn-primary" style={{ textTransform: 'none', letterSpacing: 0, cursor: ocupado ? 'not-allowed' : 'pointer', opacity: ocupado ? 0.5 : 1 }}>
-          {ocupado === campo ? 'Subiendo...' : '📷 Agregar fotos'}
+          {ocupado === campo ? 'Subiendo...' : 'Agregar fotos'}
           <input type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={(e) => subirFotos(e, campo)} disabled={!!ocupado} />
         </label>
       </div>
@@ -199,13 +199,13 @@ export default function PedidoDetalle({ pedido, onCambio, onCerrar, onEliminado 
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         {(p[campo] || []).map((url) => (
           <div key={url} style={{ position: 'relative' }}>
-            <a href={url} target="_blank" rel="noreferrer"><img src={url} alt="" loading="lazy" style={{ width: 84, height: 84, objectFit: 'cover', borderRadius: 8, border: '1px solid var(--border)', display: 'block' }} /></a>
+            <a href={url} target="_blank" rel="noreferrer"><img src={url} alt="" loading="lazy" style={{ width: 84, height: 84, objectFit: 'cover', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)', display: 'block' }} /></a>
             <button type="button" onClick={() => quitarFoto(campo, url)} style={{ position: 'absolute', top: -6, right: -6, background: 'var(--danger)', color: '#fff', border: 'none', borderRadius: '50%', width: 18, height: 18, fontSize: 11, cursor: 'pointer' }}>✕</button>
           </div>
         ))}
         <label style={{ cursor: ocupado === campo ? 'not-allowed' : 'pointer' }}>
           <input type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={(e) => subirFotos(e, campo)} disabled={!!ocupado} />
-          <div style={{ width: 84, height: 84, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', border: '1px dashed var(--primary)', borderRadius: 8, color: 'var(--primary)', fontSize: 11 }}>
+          <div style={{ width: 84, height: 84, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', border: '1px dashed var(--primary)', borderRadius: 'var(--radius-sm)', color: 'var(--primary)', fontSize: 11 }}>
             <span style={{ fontSize: 20 }}>+</span>{ocupado === campo ? 'Subiendo...' : 'Agregar'}
           </div>
         </label>
@@ -225,7 +225,7 @@ export default function PedidoDetalle({ pedido, onCambio, onCerrar, onEliminado 
             <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
               Pedido <code style={{ fontWeight: 700 }}>{p.codigo}</code> · PIN <code style={{ fontWeight: 700 }}>{p.pin_requerido === false ? 'sin PIN' : (p.pin || '—')}</code>
               {presupuestoOrigen && <> · Viene del presupuesto N° {presupuestoOrigen.numero}</>}
-              <button type="button" className="btn btn-sm btn-ghost" style={{ marginLeft: 8 }} onClick={copiarDatos}>{copiado === true ? '✓ Copiado' : '📋 Copiar mensaje para el cliente'}</button>
+              <button type="button" className="btn btn-sm btn-ghost" style={{ marginLeft: 8 }} onClick={copiarDatos}>{copiado === true ? '✓ Copiado' : 'Copiar mensaje para el cliente'}</button>
             </div>
           </div>
           <button className="btn btn-ghost btn-sm" onClick={cerrar} title="Cerrar">✕</button>
@@ -295,7 +295,7 @@ export default function PedidoDetalle({ pedido, onCambio, onCerrar, onEliminado 
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
                 <div style={{ fontSize: 26, fontWeight: 700, color: 'var(--primary)' }}>{fmtMoney(p.total)}</div>
                 {congelado
-                  ? <span style={{ fontSize: 12, fontWeight: 700, color: '#15803d' }}>🔒 Precio congelado</span>
+                  ? <span style={{ fontSize: 12, fontWeight: 700, color: '#15803d' }}>Precio congelado</span>
                   : <span style={{ fontSize: 12, color: '#b45309' }}>↻ Se actualiza solo si cambian los materiales (hasta que haya seña)</span>}
               </div>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', margin: '10px 0' }}>
@@ -348,7 +348,7 @@ export default function PedidoDetalle({ pedido, onCambio, onCerrar, onEliminado 
           {/* ── Columna 2 ── */}
           <div>
             <p style={{ margin: '0 0 8px', fontSize: 12, color: 'var(--text-muted)' }}>
-              🕓 Las fotos de los pedidos se borran solas a los 90 días de cargadas. El pedido queda.
+              Las fotos de los pedidos se borran solas a los 90 días de cargadas. El pedido queda.
               {p.imagenes_vencidas_en && ` Última limpieza en este pedido: ${new Date(p.imagenes_vencidas_en).toLocaleDateString('es-AR')}.`}
             </p>
             {fotos('imagenes_referencia', 'Imágenes de referencia (del cliente)', 'Las fotos o ideas que nos pasó el cliente. Se achican solas para no ocupar espacio.')}
@@ -386,7 +386,7 @@ export default function PedidoDetalle({ pedido, onCambio, onCerrar, onEliminado 
             {p.estado === 'presupuestado' && <button className="btn" style={{ color: 'var(--danger)' }} onClick={() => cambiarEstado('rechazado', '¿Marcar el presupuesto como rechazado por el cliente?')} disabled={!!ocupado}>Rechazado</button>}
             {!cerrado && p.estado !== 'presupuestado' && <button className="btn" style={{ color: 'var(--danger)' }} onClick={() => cambiarEstado('cancelado', '¿Cancelar este pedido?')} disabled={!!ocupado}>Cancelar pedido</button>}
             {cerrado && p.estado !== 'entregado' && <button className="btn" onClick={() => cambiarEstado(p.sena_monto > 0 ? 'aceptado' : 'presupuestado')} disabled={!!ocupado}>Reabrir</button>}
-            <button className="btn btn-ghost" style={{ color: 'var(--danger)' }} onClick={eliminar}>🗑 Eliminar</button>
+            <button className="btn btn-ghost" style={{ color: 'var(--danger)' }} onClick={eliminar}>Eliminar</button>
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
             {hayCambios && <button className="btn" onClick={() => setEdit({})}>Descartar cambios</button>}

@@ -67,7 +67,7 @@ export default function ClienteRapido({ cliente = null, inicial = '', onListo, o
           </>}
           {error && <div style={{ fontSize: 13, color: '#dc2626', fontWeight: 500 }}>{error}</div>}
           {repetido && (
-            <div style={{ padding: 10, borderRadius: 6, background: '#fffbeb', border: '1px solid #fcd34d', fontSize: 13, color: '#92400e' }}>
+            <div style={{ padding: 10, borderRadius: 'var(--radius-sm)', background: '#fffbeb', border: '1px solid #fcd34d', fontSize: 13, color: '#92400e' }}>
               Ese celular ya es de <strong>{repetido.nombre}</strong>.
               {!cliente && <button type="button" className="btn btn-sm" style={{ marginLeft: 8 }} onClick={() => onListo(repetido, true)}>Usar este cliente</button>}
             </div>

@@ -83,7 +83,7 @@ export default function Usuarios() {
       <div style={{
         background: 'var(--bg-card)',
         border: '1px solid var(--border)',
-        borderRadius: 10,
+        borderRadius: 'var(--radius-sm)',
         padding: 20,
         marginBottom: 24,
       }}>
@@ -106,7 +106,7 @@ export default function Usuarios() {
           </div>
 
           {error && (
-            <div style={{ gridColumn: '1/-1', color: 'var(--danger)', fontSize: 13, padding: '8px 12px', background: 'rgba(239,68,68,0.08)', borderRadius: 6 }}>
+            <div style={{ gridColumn: '1/-1', color: 'var(--danger)', fontSize: 13, padding: '8px 12px', background: 'rgba(239,68,68,0.08)', borderRadius: 'var(--radius-sm)' }}>
               {error}
             </div>
           )}
@@ -123,7 +123,7 @@ export default function Usuarios() {
       {loading ? (
         <div style={{ padding: 20, textAlign: 'center', color: 'var(--text-muted)' }}>Cargando...</div>
       ) : (
-        <div style={{ border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden' }}>
+        <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', overflow: 'hidden' }}>
           <table className="table">
             <thead>
               <tr>
@@ -167,7 +167,7 @@ export default function Usuarios() {
                         style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', fontSize: 16, padding: '4px 8px' }}
                         title="Eliminar usuario"
                       >
-                        🗑
+                        
                       </button>
                     )}
                   </td>

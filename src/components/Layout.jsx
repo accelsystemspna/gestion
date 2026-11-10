@@ -6,21 +6,23 @@ import { supabase } from '../lib/supabase'
 import { fmtMoney } from '../lib/format'
 import { playCashRegisterSound, unlockAudio } from '../lib/sound'
 import { subscribeToPush, pushSupported } from '../lib/push'
+import IconoMenu from './IconoMenu'
 
 const NOTIF_DISMISSED_KEY = 'notif_banner_dismissed'
 
 const navItems = [
-  { to: '/ventas',        label: 'Ventas',        icon: '🛒' },
-  { to: '/tiendas',       label: 'Tiendas',       icon: '🌐', minAdmin: true },
-  { to: '/productos',     label: 'Productos',     icon: '📦', minAdmin: true },
-  { to: '/presupuesto',   label: 'Presupuestos',  icon: '📄' },
-  { to: '/pedidos',       label: 'Pedidos',       icon: '📋' },
-  { to: '/clientes',      label: 'Clientes',      icon: '👥' },
-  { to: '/materiales',    label: 'Materiales',    icon: '🪵', minAdmin: true },
-  { to: '/facturas',      label: 'Facturas',      icon: '🏛️', minAdmin: true },
-  { to: '/dashboard',     label: 'Dashboard',     icon: '📊', minAdmin: true },
-  { to: '/configuracion', label: 'Configuración', icon: '⚙️', minAdmin: true },
+  { to: '/dashboard',     label: 'Panel',         icono: 'panel',         grupo: 'General', minAdmin: true },
+  { to: '/ventas',        label: 'Ventas',        icono: 'ventas',        grupo: 'General' },
+  { to: '/pedidos',       label: 'Pedidos',       icono: 'pedidos',       grupo: 'General' },
+  { to: '/presupuesto',   label: 'Presupuestos',  icono: 'presupuestos',  grupo: 'General' },
+  { to: '/clientes',      label: 'Clientes',      icono: 'clientes',      grupo: 'General' },
+  { to: '/productos',     label: 'Productos',     icono: 'productos',     grupo: 'Catálogo', minAdmin: true },
+  { to: '/materiales',    label: 'Materiales',    icono: 'materiales',    grupo: 'Catálogo', minAdmin: true },
+  { to: '/tiendas',       label: 'Tiendas',       icono: 'tiendas',       grupo: 'Catálogo', minAdmin: true },
+  { to: '/facturas',      label: 'Facturas',      icono: 'facturas',      grupo: 'Administración', minAdmin: true },
+  { to: '/configuracion', label: 'Configuración', icono: 'configuracion', grupo: 'Administración', minAdmin: true },
 ]
+const GRUPOS = ['General', 'Catálogo', 'Administración']
 
 export default function Layout() {
   const { user, profile, signOut, isAdmin, orgId, negocioNombre } = useAuth()
@@ -156,67 +158,67 @@ export default function Layout() {
 
   const sidebarContent = (
     <>
-      <div style={{ padding: '20px 20px 16px', borderBottom: '1px solid #334155' }}>
-        <div style={{ fontSize: 18, fontWeight: 700, color: 'white' }}>Gestión</div>
-        <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 2 }}>Carpintería · 3D</div>
+      <div style={{ padding: '22px 20px 14px', fontSize: 13, color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+        {negocioNombre || 'Panel de gestión'}
       </div>
 
-      <nav style={{ flex: 1, padding: '12px 8px', display: 'flex', flexDirection: 'column', gap: 2, overflowY: 'auto' }}>
-        {items.map((item) => (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            style={({ isActive }) => ({
-              display: 'flex', alignItems: 'center', gap: 12,
-              padding: '10px 14px', borderRadius: 6, fontSize: 14, fontWeight: 500,
-              color: isActive ? 'white' : '#cbd5e1',
-              background: isActive ? 'var(--sidebar-active)' : 'transparent',
-              transition: 'background 0.15s',
-            })}
-          >
-            <span style={{ fontSize: 16 }}>{item.icon}</span>
-            {item.label}
-            {item.to === '/tiendas' && ventasWebPendientes > 0 && (
-              <span style={{
-                marginLeft: 'auto', background: '#f59e0b', color: '#1e1b0d',
-                borderRadius: 10, fontSize: 11, fontWeight: 800, padding: '1px 7px',
-              }}>
-                {ventasWebPendientes}
-              </span>
-            )}
-          </NavLink>
-        ))}
+      <nav style={{ flex: 1, padding: '0 10px 12px', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
+        {GRUPOS.map((g) => {
+          const delGrupo = items.filter((i) => i.grupo === g)
+          if (!delGrupo.length) return null
+          return (
+            <div key={g} style={{ marginBottom: 10 }}>
+              <div style={{ padding: '10px 10px 6px', fontSize: 11, fontWeight: 500, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-light)' }}>{g}</div>
+              {delGrupo.map((item) => (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  className="menu-item"
+                  style={({ isActive }) => ({
+                    display: 'flex', alignItems: 'center', gap: 12,
+                    padding: '8px 10px', borderRadius: 8, fontSize: 14,
+                    fontWeight: isActive ? 600 : 400,
+                    color: isActive ? 'var(--text)' : 'var(--text-muted)',
+                    background: isActive ? 'var(--accent-tenue)' : 'transparent',
+                    transition: 'background 0.12s, color 0.12s',
+                  })}
+                >
+                  <IconoMenu nombre={item.icono} />
+                  {item.label}
+                  {item.to === '/tiendas' && ventasWebPendientes > 0 && (
+                    <span style={{ marginLeft: 'auto', fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 600, color: 'var(--accent)' }}>
+                      {ventasWebPendientes}
+                    </span>
+                  )}
+                </NavLink>
+              ))}
+            </div>
+          )
+        })}
       </nav>
 
-      <div style={{ padding: 16, borderTop: '1px solid #334155' }}>
+      <div style={{ padding: '14px 20px', borderTop: '1px solid var(--border)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-          <div style={{
-            width: 36, height: 36, borderRadius: '50%', background: 'var(--primary)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: 'white', fontWeight: 600, flexShrink: 0,
-          }}>
-            {(profile?.nombre || user?.email || '?').charAt(0).toUpperCase()}
-          </div>
           <div style={{ minWidth: 0, flex: 1 }}>
-            <div style={{ fontSize: 13, fontWeight: 600, color: 'white', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {profile?.nombre || user?.email}
             </div>
-            <div style={{ fontSize: 11, color: '#94a3b8', textTransform: 'capitalize' }}>
-              {profile?.rol || 'usuario'}{negocioNombre ? ` · ${negocioNombre}` : ''}
+            <div style={{ fontSize: 11, color: 'var(--text-light)', textTransform: 'capitalize' }}>
+              {profile?.rol || 'usuario'}
             </div>
           </div>
         </div>
         <button
           onClick={handleLogout}
           style={{
-            width: '100%', padding: '8px', background: 'transparent',
-            border: '1px solid #475569', color: '#cbd5e1',
-            borderRadius: 6, fontSize: 13, cursor: 'pointer',
+            width: '100%', padding: '7px', background: 'transparent', borderRadius: 8,
+            border: '1px solid var(--border)', color: 'var(--text-muted)',
+            fontSize: 13, cursor: 'pointer',
           }}
         >
           Cerrar sesión
         </button>
-        <div style={{ marginTop: 8, fontSize: 10, color: '#64748b', textAlign: 'center' }}>
+        <div style={{ marginTop: 8, fontSize: 10, color: 'var(--text-light)', textAlign: 'center', fontFamily: 'var(--font-mono)' }}>
           v{__BUILD_TIME__.slice(0, 16).replace('T', ' ')}
         </div>
       </div>
@@ -232,19 +234,18 @@ export default function Layout() {
           onClick={() => { setToast(null); navigate('/tiendas') }}
           style={{
             position: 'fixed', top: 16, right: 16, zIndex: 1000, cursor: 'pointer',
-            background: '#0891b2', color: 'white', borderRadius: 10, padding: '14px 18px',
+            background: 'var(--sidebar)', color: '#ffffff', padding: '14px 18px', borderLeft: '3px solid var(--sidebar-active)',
             boxShadow: '0 8px 28px rgba(0,0,0,0.3)', maxWidth: 320,
             display: 'flex', alignItems: 'flex-start', gap: 10,
             animation: 'slideIn 0.25s ease-out',
           }}
         >
-          <span style={{ fontSize: 24, flexShrink: 0 }}>💰</span>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontWeight: 800, fontSize: 14 }}>Nueva venta desde la web</div>
+            <div style={{ fontWeight: 600, fontSize: 14 }}>Nueva venta desde la web</div>
             <div style={{ fontSize: 13, opacity: 0.95, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {toast.cliente_nombre || 'Consumidor Final'} · {fmtMoney(toast.total)}
             </div>
-            <div style={{ fontSize: 11, opacity: 0.8, marginTop: 4 }}>Tocá para verla en Tiendas →</div>
+            <div style={{ fontSize: 11, opacity: 0.8, marginTop: 4 }}>Tocá para verla en Tiendas</div>
           </div>
           <button
             onClick={(e) => { e.stopPropagation(); setToast(null) }}
@@ -257,20 +258,20 @@ export default function Layout() {
       {mostrarBannerNotif && (
         <div style={{
           position: 'fixed', bottom: 16, right: 16, zIndex: 999, maxWidth: 300,
-          background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10,
+          background: 'var(--bg-card)', border: '1px solid var(--border)',
           padding: '12px 14px', boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
         }}>
-          <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>🔔 Notificaciones de ventas</div>
+          <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>Notificaciones de ventas</div>
           <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 10 }}>
             Activalas para enterarte de una venta nueva aunque tengas el celular bloqueado o la app cerrada.
           </div>
           <div style={{ display: 'flex', gap: 6 }}>
             <button onClick={descartarBannerNotif} disabled={activandoPush}
-              style={{ flex: 1, padding: '6px 8px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--surface)', cursor: 'pointer', fontSize: 12 }}>
+              className="btn btn-sm" style={{ flex: 1 }}>
               Ahora no
             </button>
             <button onClick={pedirPermisoNotif} disabled={activandoPush}
-              style={{ flex: 1, padding: '6px 8px', borderRadius: 6, border: 'none', background: '#0891b2', color: 'white', cursor: activandoPush ? 'default' : 'pointer', fontSize: 12, fontWeight: 700, opacity: activandoPush ? 0.7 : 1 }}>
+              className="btn btn-sm btn-primary" style={{ flex: 1 }}>
               {activandoPush ? 'Activando…' : 'Activar'}
             </button>
           </div>
@@ -279,7 +280,7 @@ export default function Layout() {
 
       {/* ── Sidebar desktop ── */}
       <aside className="layout-sidebar" style={{
-        width: 240, background: 'var(--sidebar)', color: '#cbd5e1',
+        width: 232, background: 'var(--bg-card)', color: 'var(--text)', borderRight: '1px solid var(--border)',
         display: 'flex', flexDirection: 'column',
         position: 'sticky', top: 0, height: '100vh', flexShrink: 0,
       }}>
@@ -299,7 +300,7 @@ export default function Layout() {
       )}
       <aside className={`layout-drawer${open ? ' open' : ''}`} style={{
         position: 'fixed', top: 0, left: 0, height: '100vh', width: 260,
-        background: 'var(--sidebar)', color: '#cbd5e1',
+        background: 'var(--bg-card)', color: 'var(--text)',
         display: 'flex', flexDirection: 'column',
         zIndex: 201, transform: open ? 'translateX(0)' : 'translateX(-100%)',
         transition: 'transform 0.25s ease',
@@ -314,22 +315,22 @@ export default function Layout() {
         <header className="mobile-topbar" style={{
           display: 'none', alignItems: 'center', gap: 12,
           padding: '0 16px', height: 56,
-          background: 'var(--sidebar)', color: 'white',
+          background: 'var(--bg-card)', color: 'var(--text)', borderBottom: '1px solid var(--border)',
           position: 'sticky', top: 0, zIndex: 100, flexShrink: 0,
         }}>
           <button
             onClick={() => setOpen(o => !o)}
             style={{
-              background: 'none', border: 'none', color: 'white',
+              background: 'none', border: 'none', color: 'var(--text)',
               fontSize: 22, cursor: 'pointer', lineHeight: 1, padding: 4,
             }}
           >
             ☰
           </button>
-          <span style={{ fontWeight: 700, fontSize: 16 }}>{pageTitle}</span>
+          <span style={{ fontWeight: 600, fontSize: 15 }}>{pageTitle}</span>
         </header>
 
-        <main className="layout-main" style={{ flex: 1, padding: 32, overflow: 'auto' }}>
+        <main className="layout-main" style={{ flex: 1, padding: '28px 32px', overflow: 'auto' }}>
           <Outlet />
         </main>
       </div>

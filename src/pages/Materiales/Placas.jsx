@@ -159,7 +159,7 @@ export default function Insumos() {
           {negocios.map((n) => {
             const cant = propios.filter((m) => compartido(m.id, n.org_id)).length
             return (
-              <div key={n.org_id} style={{ display: 'flex', alignItems: 'center', gap: 6, border: '1px solid var(--border)', borderRadius: 8, padding: '5px 10px' }}>
+              <div key={n.org_id} style={{ display: 'flex', alignItems: 'center', gap: 6, border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '5px 10px' }}>
                 <span><strong>{n.nombre}</strong> ve {cant} de {propios.length}</span>
                 <button className="btn btn-sm btn-ghost" onClick={() => cambiarAcceso(propios.map((m) => m.id), n.org_id, true)} disabled={cant === propios.length}>Compartir todos</button>
                 <button className="btn btn-sm btn-ghost" onClick={() => cambiarAcceso(propios.map((m) => m.id), n.org_id, false)} disabled={cant === 0}>Quitar todos</button>
@@ -175,11 +175,11 @@ export default function Insumos() {
       {loading ? (
         <div style={{ padding: 20, textAlign: 'center', color: 'var(--text-muted)' }}>Cargando...</div>
       ) : visibles.length === 0 ? (
-        <div style={{ padding: 30, textAlign: 'center', color: 'var(--text-muted)', border: '1px dashed var(--border)', borderRadius: 8 }}>
+        <div style={{ padding: 30, textAlign: 'center', color: 'var(--text-muted)', border: '1px dashed var(--border)', borderRadius: 'var(--radius-sm)' }}>
           No hay insumos cargados.
         </div>
       ) : (
-        <div style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: 8 }}>
+        <div style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)' }}>
           <table className="table">
             <thead>
               <tr>
@@ -350,7 +350,7 @@ function InsumoForm({ initial, onCancel, onSave }) {
 
           {/* Preview precio */}
           {tipo === 'placa' && area > 0 && (
-            <div style={{ marginTop: 14, padding: 12, background: '#f1f5f9', borderRadius: 6, fontSize: 13 }}>
+            <div style={{ marginTop: 14, padding: 12, background: '#f1f5f9', borderRadius: 'var(--radius-sm)', fontSize: 13 }}>
               <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', alignItems: 'baseline' }}>
                 <span>
                   <span style={{ color: 'var(--text-muted)' }}>Precio por cm²: </span>

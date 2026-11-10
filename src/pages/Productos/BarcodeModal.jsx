@@ -52,7 +52,7 @@ export default function BarcodeModal({ producto, lista, branding, onClose }) {
       onClick={onClick}
       disabled={disabled}
       style={{
-        width: 40, height: 22, borderRadius: 11, border: 'none',
+        width: 40, height: 22, borderRadius: 'var(--radius-sm)', border: 'none',
         cursor: disabled ? 'not-allowed' : 'pointer',
         background: on && !disabled ? 'var(--primary)' : '#cbd5e1',
         position: 'relative', flexShrink: 0,
@@ -62,7 +62,7 @@ export default function BarcodeModal({ producto, lista, branding, onClose }) {
       <span style={{
         position: 'absolute', top: 3,
         left: on && !disabled ? 20 : 3,
-        width: 16, height: 16, borderRadius: 8,
+        width: 16, height: 16, borderRadius: 'var(--radius-sm)',
         background: 'white', transition: 'left 0.2s',
       }} />
     </button>
@@ -81,8 +81,8 @@ export default function BarcodeModal({ producto, lista, branding, onClose }) {
 
         <div className="modal-header">
           <h3 style={{ fontSize: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
-            🏷️ Etiqueta con código de barras
-            <code style={{ fontSize: 13, background: '#f1f5f9', padding: '2px 7px', borderRadius: 4, fontWeight: 400 }}>
+            Etiqueta con código de barras
+            <code style={{ fontSize: 13, background: '#f1f5f9', padding: '2px 7px', borderRadius: 'var(--radius-sm)', fontWeight: 400 }}>
               {producto.sku}
             </code>
           </h3>
@@ -93,14 +93,14 @@ export default function BarcodeModal({ producto, lista, branding, onClose }) {
 
           {/* Preview */}
           <div style={{
-            background: '#f8fafc', borderRadius: 10, padding: 16, textAlign: 'center',
+            background: '#f8fafc', borderRadius: 'var(--radius-sm)', padding: 16, textAlign: 'center',
             border: '1px solid var(--border)', minHeight: 120,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
             {generando
               ? <span style={{ color: 'var(--text-muted)', fontSize: 13 }}>Generando…</span>
               : previewUrl
-                ? <img src={previewUrl} alt="preview" style={{ maxWidth: '100%', borderRadius: 4, boxShadow: '0 1px 6px rgba(0,0,0,.12)' }} />
+                ? <img src={previewUrl} alt="preview" style={{ maxWidth: '100%', borderRadius: 'var(--radius-sm)', boxShadow: '0 1px 6px rgba(0,0,0,.12)' }} />
                 : null
             }
           </div>
@@ -191,8 +191,8 @@ export default function BarcodeModal({ producto, lista, branding, onClose }) {
 
         <div className="modal-footer">
           <button className="btn" onClick={onClose}>Cerrar</button>
-          <button className="btn" onClick={handlePrint}>🖨️ Imprimir</button>
-          <button className="btn btn-primary" onClick={handleDownload}>⬇️ Descargar PNG</button>
+          <button className="btn" onClick={handlePrint}>Imprimir</button>
+          <button className="btn btn-primary" onClick={handleDownload}>Descargar PNG</button>
         </div>
 
       </div>

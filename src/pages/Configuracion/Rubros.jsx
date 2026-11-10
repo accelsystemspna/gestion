@@ -6,7 +6,7 @@ const COLORES_SUGERIDOS = [
   '#ef4444', '#d97706', '#ec4899', '#64748b',
 ]
 
-const EMOJIS = ['🪵', '🖨️', '⚡', '🔧', '💎', '🎨', '📦', '🔩']
+const EMOJIS = ['', '', '', '', '', '', '', '']
 
 const blank = { nombre: '', color: '#0ea5e9', emoji: '', descripcion: '' }
 
@@ -59,7 +59,7 @@ export default function Rubros() {
       {loading ? (
         <div style={{ padding: 20, textAlign: 'center', color: 'var(--text-muted)' }}>Cargando...</div>
       ) : rubros.length === 0 ? (
-        <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)', border: '1px dashed var(--border)', borderRadius: 8 }}>
+        <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)', border: '1px dashed var(--border)', borderRadius: 'var(--radius-sm)' }}>
           No hay rubros creados. Agregá el primero para organizar tus categorías.
         </div>
       ) : (
@@ -67,7 +67,7 @@ export default function Rubros() {
           {rubros.map((r) => (
             <div key={r.id} style={{
               border: `2px solid ${r.color}33`,
-              borderRadius: 10, padding: '14px 16px',
+              borderRadius: 'var(--radius-sm)', padding: '14px 16px',
               background: `${r.color}0d`,
               display: 'flex', flexDirection: 'column', gap: 6,
             }}>
@@ -148,7 +148,7 @@ function RubroForm({ initial, onCancel, onSave }) {
                 type="color"
                 value={form.color}
                 onChange={(e) => set('color', e.target.value)}
-                style={{ width: 28, height: 28, border: 'none', padding: 0, cursor: 'pointer', borderRadius: 4 }}
+                style={{ width: 28, height: 28, border: 'none', padding: 0, cursor: 'pointer', borderRadius: 'var(--radius-sm)' }}
                 title="Color personalizado"
               />
             </div>
@@ -163,7 +163,7 @@ function RubroForm({ initial, onCancel, onSave }) {
                   key={e}
                   onClick={() => set('emoji', form.emoji === e ? '' : e)}
                   style={{
-                    fontSize: 20, padding: '4px 8px', borderRadius: 6, cursor: 'pointer',
+                    fontSize: 20, padding: '4px 8px', borderRadius: 'var(--radius-sm)', cursor: 'pointer',
                     border: `2px solid ${form.emoji === e ? form.color : 'var(--border)'}`,
                     background: form.emoji === e ? `${form.color}22` : 'white',
                   }}
@@ -194,7 +194,7 @@ function RubroForm({ initial, onCancel, onSave }) {
           {/* Preview */}
           <div style={{
             display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px',
-            borderRadius: 8, background: `${form.color}0d`, border: `2px solid ${form.color}33`,
+            borderRadius: 'var(--radius-sm)', background: `${form.color}0d`, border: `2px solid ${form.color}33`,
           }}>
             {form.emoji && <span style={{ fontSize: 24 }}>{form.emoji}</span>}
             <div style={{ width: 12, height: 12, borderRadius: '50%', background: form.color, ...(form.emoji ? { display: 'none' } : {}) }} />

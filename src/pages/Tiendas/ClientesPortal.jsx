@@ -76,7 +76,7 @@ export default function ClientesPortal({ tienda, onPendientes }) {
 
       {msg && (
         <div style={{
-          display: 'flex', justifyContent: 'space-between', gap: 10, padding: '10px 14px', marginBottom: 12, borderRadius: 8, fontSize: 13,
+          display: 'flex', justifyContent: 'space-between', gap: 10, padding: '10px 14px', marginBottom: 12, borderRadius: 'var(--radius-sm)', fontSize: 13,
           background: msg.tipo === 'error' ? '#fee2e2' : '#dcfce7', color: msg.tipo === 'error' ? '#7f1d1d' : '#14532d',
         }}>
           <span>{msg.texto}</span>
@@ -89,7 +89,7 @@ export default function ClientesPortal({ tienda, onPendientes }) {
           const n = k === 'todos' ? conteos.total : conteos[k]
           return (
             <button key={k} onClick={() => cambiarFiltro(k)} className="btn btn-sm" style={{
-              background: filtro === k ? 'var(--primary)' : undefined, color: filtro === k ? '#fff' : undefined,
+              background: filtro === k ? 'var(--primary)' : undefined, color: filtro === k ? 'var(--on-primary)' : undefined,
               borderColor: filtro === k ? 'var(--primary)' : undefined,
             }}>{label}{n != null ? ` (${n})` : ''}</button>
           )
@@ -102,7 +102,7 @@ export default function ClientesPortal({ tienda, onPendientes }) {
       {cargando ? (
         <div style={{ padding: 30, textAlign: 'center', color: 'var(--text-muted)' }}>Cargando…</div>
       ) : visibles.length === 0 ? (
-        <div style={{ padding: 30, textAlign: 'center', color: 'var(--text-muted)', border: '1px dashed var(--border)', borderRadius: 8 }}>
+        <div style={{ padding: 30, textAlign: 'center', color: 'var(--text-muted)', border: '1px dashed var(--border)', borderRadius: 'var(--radius-sm)' }}>
           {leads.length === 0 ? 'No hay clientes con ese filtro.' : 'Ningún cliente coincide con la búsqueda.'}
         </div>
       ) : (
@@ -113,12 +113,12 @@ export default function ClientesPortal({ tienda, onPendientes }) {
             return (
               <div key={l.id} style={{
                 display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap',
-                padding: '10px 14px', border: '1px solid var(--border)', borderRadius: 10, background: 'var(--surface)',
+                padding: '10px 14px', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', background: 'var(--surface)',
               }}>
                 <div style={{ minWidth: 0, flex: '1 1 260px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                     <strong style={{ fontSize: 14 }}>{l.nombre || 'Sin nombre'}</strong>
-                    <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 999, background: est.bg, color: est.color }}>{est.label}</span>
+                    <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 'var(--radius-sm)', background: est.bg, color: est.color }}>{est.label}</span>
                   </div>
                   <div style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.6, marginTop: 2 }}>
                     {l.empresa && <div>{l.empresa}</div>}

@@ -90,7 +90,7 @@ export default function Facturas() {
       {/* Encabezado */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
         <div>
-          <h1 style={{ fontSize: 24, marginBottom: 4 }}>🏛️ Facturas emitidas</h1>
+          <h1 style={{ fontSize: 24, marginBottom: 4 }}>Facturas emitidas</h1>
           <p style={{ color: 'var(--text-muted)' }}>
             Historial de facturas C emitidas a ARCA
           </p>
@@ -130,7 +130,7 @@ export default function Facturas() {
               {/* Cabecera del mes */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
                 <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', borderBottom: '2px solid var(--primary)', paddingBottom: 4 }}>
-                  📅 {mesLabel(mes)}
+                  {mesLabel(mes)}
                 </div>
                 <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>
                   {items.length} factura{items.length !== 1 ? 's' : ''} · <strong>{fmtMoney(totalMes)}</strong>
@@ -138,7 +138,7 @@ export default function Facturas() {
               </div>
 
               {/* Tabla */}
-              <div style={{ border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden' }}>
+              <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', overflow: 'hidden' }}>
                 <table className="table" style={{ marginBottom: 0 }}>
                   <thead>
                     <tr>
@@ -180,7 +180,7 @@ export default function Facturas() {
                               onClick={() => handleDescargar(f)}
                               title="Descargar PDF"
                             >
-                              {descargando === f.id ? '…' : '⬇️ PDF'}
+                              {descargando === f.id ? '…' : 'PDF'}
                             </button>
                             <button
                               className="btn btn-sm btn-ghost"
@@ -188,7 +188,7 @@ export default function Facturas() {
                               title="Compartir por WhatsApp"
                               style={{ color: '#16a34a' }}
                             >
-                              📲 WA
+                              WA
                             </button>
                           </td>
                         </tr>

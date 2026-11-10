@@ -71,11 +71,11 @@ export default function Tarifas() {
       {loading ? (
         <div style={{ padding: 20, textAlign: 'center', color: 'var(--text-muted)' }}>Cargando...</div>
       ) : items.length === 0 ? (
-        <div style={{ padding: 30, textAlign: 'center', color: 'var(--text-muted)', border: '1px dashed var(--border)', borderRadius: 8 }}>
+        <div style={{ padding: 30, textAlign: 'center', color: 'var(--text-muted)', border: '1px dashed var(--border)', borderRadius: 'var(--radius-sm)' }}>
           No hay tarifas cargadas.
         </div>
       ) : (
-        <div style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: 8 }}>
+        <div style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)' }}>
           <table className="table">
             <thead>
               <tr>
@@ -196,7 +196,7 @@ function CalcField({ label, unit, hint, value, onChange }) {
           type="number" step="any" min="0"
           value={value}
           onChange={onChange}
-          style={{ width: 96, padding: '4px 8px', fontSize: 13, textAlign: 'right', border: '1px solid #e5e7eb', borderRadius: 6, outline: 'none', background: 'white' }}
+          style={{ width: 96, padding: '4px 8px', fontSize: 13, textAlign: 'right', border: '1px solid #e5e7eb', borderRadius: 'var(--radius-sm)', outline: 'none', background: 'white' }}
           onFocus={e => e.target.style.borderColor = '#3b82f6'}
           onBlur={e  => e.target.style.borderColor = '#e5e7eb'}
         />
@@ -233,12 +233,11 @@ function CalculadoraInline({ onAplicar }) {
   const listo = r.total > 0
 
   return (
-    <div style={{ borderRadius: 10, overflow: 'hidden', border: '1px solid #e5e7eb', marginTop: 4 }}>
+    <div style={{ borderRadius: 'var(--radius-sm)', overflow: 'hidden', border: '1px solid #e5e7eb', marginTop: 4 }}>
 
       {/* Header */}
       <div style={{ background: '#0f2744', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 8 }}>
-        <span style={{ fontSize: 16 }}>🖨️</span>
-        <div>
+                <div>
           <div style={{ fontSize: 13, fontWeight: 700, color: 'white' }}>Calculadora de costo horario</div>
           <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', marginTop: 1 }}>Los valores se actualizan en tiempo real</div>
         </div>
@@ -250,11 +249,11 @@ function CalculadoraInline({ onAplicar }) {
         <div style={{ padding: '14px 16px', background: '#fafafa', borderRight: '1px solid #e5e7eb' }}>
 
           {/* Gastos fijos */}
-          <div style={{ fontSize: 10, fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 6 }}>⚡ Gastos fijos</div>
+          <div style={{ fontSize: 10, fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 6 }}>Gastos fijos</div>
           <CalcField label="Precio del kWh" unit="$" hint="Tarifa eléctrica actual" value={c.kwh} onChange={e => set('kwh', e.target.value)} />
 
           {/* Impresora */}
-          <div style={{ fontSize: 10, fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.07em', marginTop: 14, marginBottom: 6 }}>🖨️ Impresora</div>
+          <div style={{ fontSize: 10, fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.07em', marginTop: 14, marginBottom: 6 }}>Impresora</div>
           <CalcField label="Costo de la impresora"  unit="$"  hint="Precio de compra"        value={c.costo}     onChange={e => set('costo',     e.target.value)} />
           <CalcField label="Vida útil estimada"      unit="hs" hint="Horas de uso total"      value={c.vidaUtil}  onChange={e => set('vidaUtil',  e.target.value)} />
           <CalcField label="Consumo real por hora"   unit="W"  hint="Ver etiqueta o manual"   value={c.consumo}   onChange={e => set('consumo',   e.target.value)} />
@@ -274,7 +273,7 @@ function CalculadoraInline({ onAplicar }) {
 
           {/* Total */}
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', marginTop: 12 }}>
-            <div style={{ background: 'rgba(0,0,0,0.25)', borderRadius: 8, padding: '12px', textAlign: 'center', marginBottom: 10 }}>
+            <div style={{ background: 'rgba(0,0,0,0.25)', borderRadius: 'var(--radius-sm)', padding: '12px', textAlign: 'center', marginBottom: 10 }}>
               <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: 4 }}>Costo total / hora</div>
               <div style={{ fontSize: 26, fontWeight: 900, color: listo ? '#fbbf24' : 'rgba(255,255,255,0.2)', lineHeight: 1 }}>
                 {listo ? fmtMoney(r.total) : '—'}
@@ -285,7 +284,7 @@ function CalculadoraInline({ onAplicar }) {
               onClick={() => listo && onAplicar(r.total)}
               disabled={!listo}
               style={{
-                padding: '9px 12px', borderRadius: 7, border: 'none',
+                padding: '9px 12px', borderRadius: 'var(--radius-sm)', border: 'none',
                 cursor: listo ? 'pointer' : 'not-allowed',
                 background: listo ? '#f59e0b' : 'rgba(255,255,255,0.08)',
                 color: listo ? '#0f2744' : 'rgba(255,255,255,0.25)',

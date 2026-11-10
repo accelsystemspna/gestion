@@ -5,7 +5,7 @@ export function Badge({ children, color, bg, title }) {
   return (
     <span title={title} style={{
       display: 'inline-block', fontSize: 11, fontWeight: 700, padding: '2px 8px',
-      borderRadius: 999, background: bg, color, whiteSpace: 'nowrap',
+      borderRadius: 'var(--radius-sm)', background: bg, color, whiteSpace: 'nowrap',
     }}>{children}</span>
   )
 }
@@ -17,7 +17,7 @@ export function EstadoWoo({ estado }) {
 
 export function Kpi({ label, value, sub, color }) {
   return (
-    <div style={{ flex: '1 1 150px', padding: '12px 14px', border: '1px solid var(--border)', borderRadius: 10, background: 'var(--surface)' }}>
+    <div style={{ flex: '1 1 150px', padding: '12px 14px', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', background: 'var(--surface)' }}>
       <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{label}</div>
       <div style={{ fontSize: 22, fontWeight: 800, color: color || 'var(--text)', marginTop: 2 }}>{value}</div>
       {sub && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>{sub}</div>}
@@ -31,7 +31,7 @@ export function Aviso({ tipo = 'aviso', children, onClose }) {
     ok: { bg: '#dcfce7', fg: '#14532d' }, info: { bg: '#e0f2fe', fg: '#0c4a6e' },
   }[tipo]
   return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, padding: '10px 14px', marginBottom: 12, borderRadius: 8, fontSize: 13, background: colores.bg, color: colores.fg }}>
+    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, padding: '10px 14px', marginBottom: 12, borderRadius: 'var(--radius-sm)', fontSize: 13, background: colores.bg, color: colores.fg }}>
       <span>{children}</span>
       {onClose && <span style={{ cursor: 'pointer', fontWeight: 700 }} onClick={onClose}>✕</span>}
     </div>
@@ -39,7 +39,7 @@ export function Aviso({ tipo = 'aviso', children, onClose }) {
 }
 
 export function Vacio({ children }) {
-  return <div style={{ padding: 30, textAlign: 'center', color: 'var(--text-muted)', border: '1px dashed var(--border)', borderRadius: 8 }}>{children}</div>
+  return <div style={{ padding: 30, textAlign: 'center', color: 'var(--text-muted)', border: '1px dashed var(--border)', borderRadius: 'var(--radius-sm)' }}>{children}</div>
 }
 
 export function Paginador({ pagina, total, porPagina, onCambio }) {
@@ -74,7 +74,7 @@ export function Cajon({ titulo, subtitulo, onClose, children, ancho = 820 }) {
 }
 
 export const Tarjeta = ({ titulo, children, style }) => (
-  <section style={{ border: '1px solid var(--border)', borderRadius: 10, background: 'var(--surface)', padding: '14px 16px', ...style }}>
+  <section style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', background: 'var(--surface)', padding: '14px 16px', ...style }}>
     {titulo && <h3 style={{ margin: '0 0 10px', fontSize: 12, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)' }}>{titulo}</h3>}
     {children}
   </section>

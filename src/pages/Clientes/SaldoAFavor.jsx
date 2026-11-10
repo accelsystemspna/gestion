@@ -56,7 +56,7 @@ export default function SaldoAFavor({ cliente, onCambio }) {
       </div>
 
       {form && (
-        <div style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
           <div style={{ fontWeight: 600, fontSize: 13 }}>{form.signo > 0 ? 'Cargar saldo a favor' : 'Usar o devolver saldo a favor'}</div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
             <input className="input" type="number" min={0} step="0.01" placeholder="Importe" aria-label="Importe" value={form.importe} onChange={(e) => setForm((f) => ({ ...f, importe: e.target.value }))} />

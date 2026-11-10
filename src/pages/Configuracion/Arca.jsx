@@ -57,10 +57,10 @@ export default function Arca() {
         body: { accion: 'test' },
       })
       if (error) throw new Error(error.message)
-      if (data?.ok) setTestMsg({ ok: true,  msg: '✅ Conexión con ARCA exitosa. Token obtenido.' })
-      else          setTestMsg({ ok: false, msg: '❌ ' + (data?.error || 'Error desconocido') })
+      if (data?.ok) setTestMsg({ ok: true,  msg: 'Conexión con ARCA exitosa. Token obtenido.' })
+      else          setTestMsg({ ok: false, msg: '' + (data?.error || 'Error desconocido') })
     } catch (e) {
-      setTestMsg({ ok: false, msg: '❌ ' + e.message })
+      setTestMsg({ ok: false, msg: '' + e.message })
     }
     setTesting(false)
   }
@@ -71,15 +71,13 @@ export default function Arca() {
 
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <div style={{ width: 44, height: 44, borderRadius: 10, background: '#dbeafe', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>
-          🏛️
-        </div>
+        
         <div>
           <div style={{ fontWeight: 700, fontSize: 17 }}>Facturación electrónica — ARCA</div>
           <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>Emití Facturas C directamente desde la app</div>
         </div>
         <span style={{
-          marginLeft: 'auto', padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700,
+          marginLeft: 'auto', padding: '3px 10px', borderRadius: 'var(--radius-sm)', fontSize: 11, fontWeight: 700,
           background: form.modo === 'produccion' ? '#dcfce7' : '#fef9c3',
           color:      form.modo === 'produccion' ? '#16a34a' : '#92400e',
           border:     `1px solid ${form.modo === 'produccion' ? '#86efac' : '#fcd34d'}`,
@@ -92,7 +90,7 @@ export default function Arca() {
       <div className="card" style={{ padding: 16 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ fontWeight: 600, fontSize: 14 }}>
-            📋 Paso previo — Extraer archivos PEM del certificado
+            Paso previo — Extraer archivos PEM del certificado
           </div>
           <button className="btn btn-sm" onClick={() => setPaso(paso === 'cert' ? null : 'cert')}>
             {paso === 'cert' ? 'Ocultar' : 'Ver instrucciones'}
@@ -103,7 +101,7 @@ export default function Arca() {
             <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
               Abrí Git Bash en la carpeta donde está <code>ccgestion.p12</code> y ejecutá:
             </p>
-            <div style={{ background: '#1e293b', borderRadius: 8, padding: '10px 14px', fontFamily: 'monospace', fontSize: 12, color: '#e2e8f0', display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <div style={{ background: '#1e293b', borderRadius: 'var(--radius-sm)', padding: '10px 14px', fontFamily: 'monospace', fontSize: 12, color: '#e2e8f0', display: 'flex', flexDirection: 'column', gap: 6 }}>
               <div><span style={{ color: '#94a3b8' }}># Extraer certificado:</span></div>
               <div>openssl pkcs12 -in ccgestion.p12 -nokeys -clcerts -out cert.pem</div>
               <div style={{ marginTop: 4 }}><span style={{ color: '#94a3b8' }}># Extraer clave privada:</span></div>
@@ -161,7 +159,7 @@ export default function Arca() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
           <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)' }}>Modo</label>
           <div style={{ display: 'flex', gap: 8 }}>
-            {[['homologacion', '🧪 Homologación (pruebas)'], ['produccion', '🚀 Producción']].map(([v, l]) => (
+            {[['homologacion', 'Homologación (pruebas)'], ['produccion', 'Producción']].map(([v, l]) => (
               <button key={v} className="btn btn-sm" onClick={() => set('modo', v)}
                 style={{
                   background:  form.modo === v ? (v === 'produccion' ? '#16a34a' : 'var(--primary)') : undefined,
@@ -175,7 +173,7 @@ export default function Arca() {
           </div>
           {form.modo === 'produccion' && (
             <p style={{ fontSize: 11, color: '#dc2626', marginTop: 2 }}>
-              ⚠️ En modo Producción las facturas son reales y se reportan a ARCA.
+              En modo Producción las facturas son reales y se reportan a ARCA.
             </p>
           )}
         </div>
@@ -185,7 +183,7 @@ export default function Arca() {
         </div>
 
         {form.modo === 'homologacion' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, background: '#fffbeb', border: '1px solid #fcd34d', borderRadius: 8, padding: 12 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, background: '#fffbeb', border: '1px solid #fcd34d', borderRadius: 'var(--radius-sm)', padding: 12 }}>
             <div style={{ fontSize: 13, color: '#92400e' }}>
               Para probar en homologación hace falta el certificado de pruebas de ARCA (es otro). Si lo cargás acá, el de producción queda guardado y no se toca.
             </div>
@@ -229,7 +227,7 @@ export default function Arca() {
         {/* Test result */}
         {testMsg && (
           <div style={{
-            padding: '10px 14px', borderRadius: 8, fontSize: 13,
+            padding: '10px 14px', borderRadius: 'var(--radius-sm)', fontSize: 13,
             background: testMsg.ok ? '#f0fdf4' : '#fff1f2',
             color:      testMsg.ok ? '#16a34a' : '#dc2626',
             border:     `1px solid ${testMsg.ok ? '#86efac' : '#fca5a5'}`,
@@ -241,10 +239,10 @@ export default function Arca() {
         {/* Actions */}
         <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 4 }}>
           <button className="btn" onClick={handleTest} disabled={testing || !form.cert_pem || !form.key_pem}>
-            {testing ? 'Probando…' : '🔌 Probar conexión con ARCA'}
+            {testing ? 'Probando…' : 'Probar conexión con ARCA'}
           </button>
           <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
-            {saving ? 'Guardando…' : saved ? '✅ Guardado' : 'Guardar configuración'}
+            {saving ? 'Guardando…' : saved ? 'Guardado' : 'Guardar configuración'}
           </button>
         </div>
       </div>
