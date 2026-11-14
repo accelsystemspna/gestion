@@ -72,8 +72,19 @@ export default function CobroFacturas({ ventaId = null, pedidoId = null, referen
   const modo = arca?.modo === 'produccion' ? 'produccion' : 'homologacion'
   const senaForma = esVenta ? reg.sena_forma : reg.sena_forma_pago
   const r = resumen({ total: reg.total, sena: reg.sena_monto, saldoCobrado: reg.saldo_cobrado, facturas, modo, facturadoAntes: !!reg.factura_emitida })
+  const partesFrenadas = modo === 'produccion' && !FACTURAR_PARTES_EN_PRODUCCION
   const pct = r.total > 0 ? Math.min(100, (r.facturado / r.total) * 100) : 0
   const receptorFicha = receptorDeCliente(cliente)
+
+  // Cuánto se facturó de cada parte (seña, saldo o una factura por el total)
+  const validas = facturas.filter((f) => f.modo === modo && f.estado !== 'fallida')
+  const sumaDe = (concepto) => redondear(validas.filter((f) => f.concepto === concepto).reduce((a, f) => a + Number(f.importe), 0))
+  const facturasDe = (concepto) => validas.filter((f) => f.concepto === concepto && f.estado === 'emitida')
+  const totalCubierto = !!reg.factura_emitida || (sumaDe('total') > 0 && r.falta === 0)
+  const saldoMonto = redondear(Math.max(r.total - r.sena, 0))
+  const saldoFacturado = sumaDe('saldo')
+  const saldoSinFacturar = redondear(Math.max(Math.min(saldoMonto - saldoFacturado, r.falta), 0))
+
   const base = { cliente_nombre: reg.cliente_nombre, cliente_telefono: reg.cliente_telefono, forma_pago: null }
 
   // ── Seña y saldo ───────────────────────────────────────────────────────────
@@ -128,7 +139,7 @@ export default function CobroFacturas({ ventaId = null, pedidoId = null, referen
   // ── Facturar ───────────────────────────────────────────────────────────────
   const abrirFactura = (concepto) => {
     setSiguiente(false)
-    const sugerido = concepto === 'sena' ? Math.min(r.senaSinFacturar, r.falta) : r.falta
+    const sugerido = concepto === 'sena' ? Math.min(r.senaSinFacturar, r.falta) : concepto === 'saldo' ? saldoSinFacturar : r.falta
     setFact({ concepto, importe: String(sugerido || ''), cf: receptorFicha.docTipo === DOC_CONSUMIDOR, confirmar: false, solicitudId: crypto.randomUUID() })
     setMsg(null)
   }
@@ -151,7 +162,6 @@ export default function CobroFacturas({ ventaId = null, pedidoId = null, referen
     onCambio?.()
   }
 
-  const partesFrenadas = modo === 'produccion' && !FACTURAR_PARTES_EN_PRODUCCION
   const puedeFacturar = r.falta > 0 && !reg.factura_emitida && (!partesFrenadas || r.facturado === 0)
 
   const bajar = (f) => generarFacturaC({ venta: ventaParaFactura(f, base), arcaConfig: arcaParaFactura(f, arca ?? {}), branding: branding ?? {}, download: true })
@@ -159,12 +169,43 @@ export default function CobroFacturas({ ventaId = null, pedidoId = null, referen
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       {/* Cobro */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8, fontSize: 13 }}>
-        <div><div style={lbl}>Total</div><strong style={{ fontSize: 16 }}>{fmtMoney(r.total)}</strong></div>
-        <div><div style={lbl}>Seña</div><strong style={{ fontSize: 16 }}>{fmtMoney(r.sena)}</strong>
-          {r.sena > 0 && <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{[fmtFecha(reg.sena_fecha), senaForma].filter(Boolean).join(' · ')}</div>}</div>
-        <div><div style={lbl}>Saldo</div><strong style={{ fontSize: 16, color: r.saldo > 0 ? '#b45309' : '#15803d' }}>{reg.saldo_cobrado ? 'Cobrado' : fmtMoney(r.saldo)}</strong>
-          {reg.saldo_cobrado && <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{[fmtFecha(reg.saldo_fecha), reg.saldo_forma].filter(Boolean).join(' · ')}</div>}</div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
+        <div style={lbl}>Total del pedido</div>
+        <strong style={{ fontSize: 18 }}>{fmtMoney(r.total)}</strong>
+      </div>
+      <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', overflow: 'hidden' }}>
+        {[
+          {
+            id: 'sena', nombre: 'Seña', monto: r.sena,
+            cobro: r.sena > 0 ? { ok: true, texto: ['Cobrada', fmtFecha(reg.sena_fecha), senaForma].filter(Boolean).join(' · ') } : { ok: null, texto: 'Sin seña' },
+            facturado: r.sena - r.senaSinFacturar, sinFacturar: r.senaSinFacturar, nros: facturasDe('sena'),
+          },
+          {
+            id: 'saldo', nombre: 'Saldo', monto: saldoMonto,
+            cobro: reg.saldo_cobrado ? { ok: true, texto: ['Cobrado', fmtFecha(reg.saldo_fecha), reg.saldo_forma].filter(Boolean).join(' · ') } : { ok: false, texto: 'Falta cobrar' },
+            facturado: saldoFacturado, sinFacturar: saldoSinFacturar, nros: facturasDe('saldo'),
+          },
+        ].filter((p) => p.monto > 0 || p.id === 'saldo').map((p, i) => {
+          const factura = totalCubierto
+            ? { color: '#15803d', texto: 'Incluida en la factura del total' }
+            : p.sinFacturar <= 0 && p.monto > 0
+              ? { color: '#15803d', texto: 'Facturada' + (p.nros.length ? ' · N° ' + p.nros.map(numeroFactura).join(', ') : '') }
+              : p.facturado > 0
+                ? { color: '#b45309', texto: `Facturado ${fmtMoney(p.facturado)} · falta ${fmtMoney(p.sinFacturar)}` }
+                : { color: '#b45309', texto: 'Sin facturar' }
+          const puede = arca && !fact && !totalCubierto && !partesFrenadas && p.sinFacturar > 0 && r.falta > 0
+          return (
+            <div key={p.id} style={{ display: 'grid', gridTemplateColumns: 'minmax(118px, auto) minmax(0, 1fr) minmax(0, 1fr) auto', gap: 10, alignItems: 'center', padding: '10px 12px', fontSize: 13, borderTop: i ? '1px solid var(--border)' : 'none' }}>
+              <div>
+                <div style={{ fontWeight: 600 }}>{p.nombre}</div>
+                <div className="num" style={{ fontSize: 14, whiteSpace: 'nowrap' }}>{fmtMoney(p.monto)}</div>
+              </div>
+              <div style={{ color: p.cobro.ok ? '#15803d' : p.cobro.ok === false ? '#b45309' : 'var(--text-muted)' }}>{p.cobro.texto}</div>
+              <div style={{ color: factura.color }}>{factura.texto}</div>
+              <div>{puede && <button className="btn btn-sm" onClick={() => abrirFactura(p.id === 'saldo' && r.facturado === 0 && r.sena === 0 ? 'total' : p.id)}>Facturar</button>}</div>
+            </div>
+          )
+        })}
       </div>
 
       {cobro ? (
@@ -297,11 +338,8 @@ export default function CobroFacturas({ ventaId = null, pedidoId = null, referen
               Facturar la seña y el saldo por separado se habilita cuando tu contador confirme cómo se describe cada factura.
             </div>
           </div>
-        ) : r.falta > 0 && !reg.factura_emitida ? (
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            {r.senaSinFacturar > 0 && <button className="btn btn-sm" onClick={() => abrirFactura('sena')}>Facturar seña</button>}
-            <button className="btn btn-sm" onClick={() => abrirFactura(r.facturado > 0 ? 'saldo' : 'total')}>Facturar {r.facturado > 0 ? 'saldo' : 'total'}</button>
-          </div>
+        ) : r.falta > 0 && !reg.factura_emitida && r.facturado === 0 && r.sena > 0 ? (
+          <div><button className="btn btn-sm btn-ghost" onClick={() => abrirFactura('total')}>O facturar todo junto ({fmtMoney(r.falta)})</button></div>
         ) : null}
       </div>
 
