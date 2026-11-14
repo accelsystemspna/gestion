@@ -126,6 +126,9 @@ export async function cambiarEstadoWeb({ venta, tienda, nuevo, tracking, notific
   const cambios = { estado_web: nuevo, origen_estado: ESTADOS_WEB[nuevo].woo }
   const cancelar = nuevo === 'cancelado' && venta.estado !== 'anulado' && !venta.factura_emitida
   if (cancelar) cambios.estado = 'anulado'
+  // Mercado Libre solo manda ventas con el pago acreditado: al avanzar de fase quedan como pagadas
+  // (entran como "pendiente de revisión" para que suene el aviso de venta nueva).
+  else if (/^ML#/.test(venta.origen_ref || '') && venta.estado === 'pendiente_revision') cambios.estado = 'pagado'
 
   const { error } = await supabase.from('ventas').update(cambios).eq('id', venta.id)
   if (error) {

@@ -260,10 +260,13 @@ export default function VentaDetalle({ ventaId, onClose, onUpdated }) {
   if (!venta) return null
 
   const comp       = COMPROBANTES.find(c => c.value === venta.comprobante)
-  const est        = ESTADO_S[venta.estado] ?? ESTADO_S.pendiente
+  // Las ventas de Mercado Libre entran con el pago ya acreditado: no se marcan como pagadas a mano.
+  const pagadoEnPlataforma = /^ML#/.test(venta.origen_ref || '') || venta.canal === 'mercadolibre'
+  const estadoVisible = pagadoEnPlataforma && venta.estado === 'pendiente_revision' ? 'pagado' : venta.estado
+  const est        = ESTADO_S[estadoVisible] ?? ESTADO_S.pendiente
   const fpLbl      = FORMAS_PAGO.find(f => f.value === venta.forma_pago)?.label ?? venta.forma_pago
   const esAnulado  = venta.estado === 'anulado'
-  const esPendiente = venta.estado === 'pendiente' || venta.estado === 'parcial' || venta.estado === 'pendiente_revision'
+  const esPendiente = !pagadoEnPlataforma && (venta.estado === 'pendiente' || venta.estado === 'parcial' || venta.estado === 'pendiente_revision')
   const canal = CANAL_S[venta.canal]
   // Un pedido de la web se factura recién cuando está armado (fase "Listo para despachar").
   const esPedidoWeb = !!venta.origen_ref

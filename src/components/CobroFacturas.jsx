@@ -31,7 +31,7 @@ export default function CobroFacturas({ ventaId = null, pedidoId = null, referen
   const [fact, setFact] = useState(null)          // formulario de factura: { concepto, importe, cf, confirmar, solicitudId }
   const [ocupado, setOcupado] = useState(null)
   const [msg, setMsg] = useState(null)
-  const [siguiente, setSiguiente] = useState(false)   // recién se cobró el saldo: mostrar qué sigue
+  const [siguiente, setSiguiente] = useState(false)   // false | 'saldo' (recién se cobró el saldo) | 'sena' (recién se cargó la seña)
 
   const esVenta = !!ventaId
   const esPortal = esVenta && reg?.canal === 'web_mayorista'
@@ -87,6 +87,7 @@ export default function CobroFacturas({ ventaId = null, pedidoId = null, referen
     if (editarSena && (sena < 0 || sena > r.total)) { setMsg({ tipo: 'error', texto: `La seña tiene que estar entre $0 y el total (${fmtMoney(r.total)}).` }); return }
     setOcupado('cobro'); setMsg(null)
     const recienCobrado = cobro.saldoCobrado && !reg.saldo_cobrado
+    const recienSena = editarSena && sena > 0 && sena !== redondear(reg.sena_monto)
     const cambios = {
       saldo_cobrado: cobro.saldoCobrado,
       saldo_fecha: cobro.saldoCobrado ? cobro.saldoFecha : null,
@@ -106,7 +107,8 @@ export default function CobroFacturas({ ventaId = null, pedidoId = null, referen
     }
     setCobro(null); setOcupado(null)
     await cargar()
-    if (recienCobrado) setSiguiente(true)
+    if (recienCobrado) setSiguiente('saldo')
+    else if (recienSena) { setSiguiente('sena'); setMsg({ tipo: 'ok', texto }) }
     else setMsg({ tipo: 'ok', texto })
     onCambio?.()
   }
@@ -193,7 +195,19 @@ export default function CobroFacturas({ ventaId = null, pedidoId = null, referen
         <div><button className="btn btn-sm" onClick={abrirCobro} disabled={!!ocupado}>{editarSena ? 'Cargar seña y saldo' : 'Marcar saldo cobrado'}</button></div>
       )}
 
-      {siguiente && (
+      {siguiente === 'sena' && arca && !partesFrenadas && !reg.factura_emitida && r.senaSinFacturar > 0 && r.falta > 0 && (
+        <div role="status" style={{ border: '1px solid var(--border)', background: 'var(--accent-tenue)', borderRadius: 'var(--radius-sm)', padding: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div style={{ fontWeight: 600 }}>Seña de {fmtMoney(r.sena)} guardada. ¿La facturás ahora?</div>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <button className="btn btn-sm btn-primary" onClick={() => abrirFactura('sena')}>
+              Facturar la seña ({fmtMoney(Math.min(r.senaSinFacturar, r.falta))})
+            </button>
+            <button className="btn btn-sm btn-ghost" onClick={() => setSiguiente(false)}>Más tarde</button>
+          </div>
+        </div>
+      )}
+
+      {siguiente === 'saldo' && (
         <div role="status" style={{ border: '1px solid #86efac', background: '#f0fdf4', borderRadius: 'var(--radius-sm)', padding: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
           <div style={{ fontWeight: 700, color: '#15803d' }}>✓ Saldo cobrado. ¿Qué sigue?</div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
