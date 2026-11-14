@@ -316,7 +316,7 @@ export default function Tiendas() {
 
   // ── Acciones sobre un pedido del portal mayorista (todo pasa por la función portal-api) ──
   // Cada una muestra el resultado en el cartel y refresca la lista. Si el portal falla no se cambia nada.
-  const accionPortal = async (venta, clave, accion, datos, textoOk) => {
+  const accionPortal = async (venta, clave, accion, datos, textoOk, { recargarItems = true } = {}) => {
     setPortalOcupado(clave)
     setMsg(null)
     const r = await portalApi(accion, { venta_id: venta.id, ...datos })
@@ -324,15 +324,24 @@ export default function Tiendas() {
     if (!r.ok) { setMsg({ tipo: 'error', texto: r.error }); return null }
     if (textoOk) setMsg({ tipo: 'ok', texto: typeof textoOk === 'function' ? textoOk(r) : textoOk })
     cargar(true)
-    setVersionItems(n => n + 1)
+    if (recargarItems) setVersionItems(n => n + 1)
     return r
   }
 
-  const cambiarFabricacion = (venta, item, status) =>
-    accionPortal(venta, 'fab', 'order-item-status', { item: String(item), status }, (r) => {
-      const fase = r.estado_web && r.estado_web !== estadoWebDe(venta) ? ` El pedido pasó a «${ESTADOS_WEB[r.estado_web]?.label || r.estado_web}».` : ''
+  // La opción elegida se ve al instante; si el portal la rechaza, vuelve a la anterior.
+  // No se releen los productos enseguida: el portal tarda en guardar y mostraría el valor viejo
+  // (cuando termina avisa y la lista se actualiza sola).
+  const cambiarFabricacion = async (venta, item, status) => {
+    const antes = itemsPedido[venta.id]
+    const aplicar = (its) => its?.map((it) => (item === 'all' || String(it.indice) === String(item) ? { ...it, produccion: status } : it))
+    setItemsPedido((p) => ({ ...p, [venta.id]: aplicar(p[venta.id]) }))
+    const r = await accionPortal(venta, 'fab', 'order-item-status', { item: String(item), status }, (res) => {
+      const fase = res.estado_web && res.estado_web !== estadoWebDe(venta) ? ` El pedido pasó a «${ESTADOS_WEB[res.estado_web]?.label || res.estado_web}».` : ''
       return 'Fabricación actualizada en el portal.' + fase
-    })
+    }, { recargarItems: false })
+    if (!r) setItemsPedido((p) => ({ ...p, [venta.id]: antes }))
+    return r
+  }
 
   const avisarCliente = (venta) =>
     accionPortal(venta, 'aviso', 'order-notify', {}, (r) => {
