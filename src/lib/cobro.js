@@ -11,9 +11,9 @@ export const DETALLE_FACTURA = {
   total: (ref, titulo) => (titulo ? `${titulo} (pedido ${ref})` : `Pedido ${ref}`),
 }
 
-// Facturar por partes en producción (facturas reales) queda apagado hasta que el contador confirme el texto.
+// Facturar por partes en producción (facturas reales): habilitado el 2026-11-14 por la usuaria con estos textos.
 // En homologación (pruebas) se puede facturar igual.
-export const FACTURAR_PARTES_EN_PRODUCCION = false
+export const FACTURAR_PARTES_EN_PRODUCCION = true
 
 export const CONCEPTOS = { sena: 'Seña', saldo: 'Saldo', total: 'Total' }
 
