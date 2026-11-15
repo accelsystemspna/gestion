@@ -182,7 +182,7 @@ export default function VentaDetalle({ ventaId, onClose, onUpdated }) {
       const { data: cli } = await supabase.from('clientes').select('saldo').eq('id', venta.cliente_id).single()
       if (cli) {
         await supabase.from('clientes')
-          .update({ saldo: (Number(cli.saldo) || 0) + (venta.total || 0) })
+          .update({ saldo: (Number(cli.saldo) || 0) + Math.max((venta.total || 0) - (Number(venta.cobrado_cc) || 0), 0) })
           .eq('id', venta.cliente_id)
       }
     }
@@ -208,7 +208,7 @@ export default function VentaDetalle({ ventaId, onClose, onUpdated }) {
       const { data: cli } = await supabase.from('clientes').select('saldo').eq('id', venta.cliente_id).single()
       if (cli) {
         await supabase.from('clientes')
-          .update({ saldo: (Number(cli.saldo) || 0) + (venta.total || 0) })
+          .update({ saldo: (Number(cli.saldo) || 0) + Math.max((venta.total || 0) - (Number(venta.cobrado_cc) || 0), 0) })
           .eq('id', venta.cliente_id)
       }
     }
@@ -227,7 +227,7 @@ export default function VentaDetalle({ ventaId, onClose, onUpdated }) {
       const { data: cli } = await supabase.from('clientes').select('saldo').eq('id', venta.cliente_id).single()
       if (cli) {
         await supabase.from('clientes')
-          .update({ saldo: (Number(cli.saldo) || 0) + (venta.total || 0) })
+          .update({ saldo: (Number(cli.saldo) || 0) + Math.max((venta.total || 0) - (Number(venta.cobrado_cc) || 0), 0) })
           .eq('id', venta.cliente_id)
       }
     }

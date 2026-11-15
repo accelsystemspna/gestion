@@ -131,7 +131,7 @@ export default function Dashboard() {
           .gte('fecha', desde30)
           .order('fecha', { ascending: false }),
         supabase.from('ventas').select('total, estado').like('fecha', `${mesAntStr}%`),
-        supabase.from('ventas').select('cliente_id, cliente_nombre, total').eq('forma_pago', 'cuenta_corriente').in('estado', ['pendiente', 'parcial']).not('cliente_id', 'is', null),
+        supabase.from('ventas').select('cliente_id, cliente_nombre, total, cobrado_cc').eq('forma_pago', 'cuenta_corriente').in('estado', ['pendiente', 'parcial']).not('cliente_id', 'is', null),
         supabase.from('productos').select('*', { count: 'exact', head: true }),
         supabase.from('clientes').select('*', { count: 'exact', head: true }),
       ])
@@ -250,7 +250,7 @@ export default function Dashboard() {
       for (const v of (cliDeudaRes.data ?? [])) {
         const id = v.cliente_id
         if (!ccMap[id]) ccMap[id] = { nombre: v.cliente_nombre || 'Sin nombre', saldo: 0 }
-        ccMap[id].saldo -= v.total ?? 0  // negativo = debe
+        ccMap[id].saldo -= Math.max((v.total ?? 0) - (Number(v.cobrado_cc) || 0), 0)  // negativo = debe (descuenta los pagos a cuenta)
       }
       setDeudas(
         Object.values(ccMap)

@@ -8,6 +8,7 @@ import { sincronizarTicketCliente } from '../../lib/documentosCliente'
 import ImportarModal from './ImportarModal'
 import VentaDetalle from '../Ventas/VentaDetalle'
 import SaldoAFavor from './SaldoAFavor'
+import CuentaCorriente from './CuentaCorriente'
 import { fmtCuit, soloDigitos } from '../../lib/cuit'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -358,6 +359,14 @@ function DetallePanel({ cliente, estadoAcceso, onAccesoEnviado, onClose, onEdit,
             <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--primary)' }}>{fmt(total)}</div>
           </div>
         </div>
+
+        {/* cuenta corriente: deuda y pagos a cuenta */}
+        {ventas.some(v => v.forma_pago === 'cuenta_corriente') && (
+          <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)' }}>
+            <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8, color: 'var(--text-muted)' }}>CUENTA CORRIENTE</div>
+            <CuentaCorriente cliente={cliente} onCambio={loadVentas} />
+          </div>
+        )}
 
         {/* saldo a favor */}
         <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)' }}>
