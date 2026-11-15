@@ -74,7 +74,7 @@ begin
     v_resto := round(v_resto - v_parte, 2);
   end loop;
 
-  update public.clientes set saldo = coalesce(saldo, 0) + round(p_importe, 2) where id = p_cliente;
+  -- La deuda se calcula de las ventas (total - cobrado_cc): clientes no guarda saldo.
   return query select * from public.cc_pagos where grupo = v_grupo order by created_at;
 end $$;
 revoke all on function public.registrar_pago_cc(uuid, numeric, date, text, bigint) from public, anon;
@@ -102,7 +102,6 @@ begin
     v_cliente := r.cliente_id;
   end loop;
   if v_cliente is null then raise exception 'No se encontró el pago.'; end if;
-  update public.clientes set saldo = coalesce(saldo, 0) - round(v_total, 2) where id = v_cliente;
   delete from public.cc_pagos where grupo = p_grupo and org_id = v_org;
 end $$;
 revoke all on function public.anular_pago_cc(uuid) from public, anon;
