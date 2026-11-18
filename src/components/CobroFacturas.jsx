@@ -249,7 +249,7 @@ export default function CobroFacturas({ ventaId = null, pedidoId = null, referen
       )}
 
       {siguiente === 'saldo' && (
-        <div role="status" style={{ border: '1px solid #86efac', background: '#f0fdf4', borderRadius: 'var(--radius-sm)', padding: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div role="status" style={{ border: '1px solid #86efac', background: '#f0fdf4', color: '#14532d', borderRadius: 'var(--radius-sm)', padding: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
           <div style={{ fontWeight: 700, color: '#15803d' }}>✓ Saldo cobrado. ¿Qué sigue?</div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             {puedeFacturar && (
@@ -262,7 +262,7 @@ export default function CobroFacturas({ ventaId = null, pedidoId = null, referen
             )}
             <button className="btn btn-sm btn-ghost" onClick={() => setSiguiente(false)}>Listo, nada más</button>
           </div>
-          {!puedeFacturar && r.falta === 0 && <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Ya está todo facturado.</div>}
+          {!puedeFacturar && r.falta === 0 && <div style={{ fontSize: 12, color: '#4b5563' }}>Ya está todo facturado.</div>}
         </div>
       )}
 
@@ -317,7 +317,7 @@ export default function CobroFacturas({ ventaId = null, pedidoId = null, referen
               </label>
             )}
             {fact.confirmar ? (
-              <div style={{ background: modo === 'produccion' ? '#fef2f2' : '#fffbeb', border: `1px solid ${modo === 'produccion' ? '#fecaca' : '#fcd34d'}`, borderRadius: 'var(--radius-sm)', padding: '8px 10px', fontSize: 13 }}>
+              <div style={{ background: modo === 'produccion' ? '#fef2f2' : '#fffbeb', border: `1px solid ${modo === 'produccion' ? '#fecaca' : '#fcd34d'}`, color: modo === 'produccion' ? '#7f1d1d' : '#78350f', borderRadius: 'var(--radius-sm)', padding: '8px 10px', fontSize: 13 }}>
                 Se emite en ARCA {modo === 'produccion' ? <strong>en producción (factura real)</strong> : 'en homologación (de prueba)'} una Factura C por <strong>{fmtMoney(importe)}</strong>. Una vez emitida no se puede anular desde el programa.
                 <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 8 }}>
                   <button className="btn btn-sm" onClick={() => setFact((f) => ({ ...f, confirmar: false }))} disabled={!!ocupado}>Volver</button>

@@ -350,25 +350,25 @@ function InsumoForm({ initial, onCancel, onSave }) {
 
           {/* Preview precio */}
           {tipo === 'placa' && area > 0 && (
-            <div style={{ marginTop: 14, padding: 12, background: '#f1f5f9', borderRadius: 'var(--radius-sm)', fontSize: 13 }}>
+            <div style={{ marginTop: 14, padding: 12, background: '#f1f5f9', color: '#1e293b', borderRadius: 'var(--radius-sm)', fontSize: 13 }}>
               <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', alignItems: 'baseline' }}>
                 <span>
-                  <span style={{ color: 'var(--text-muted)' }}>Precio por cm²: </span>
+                  <span style={{ color: '#64748b' }}>Precio por cm²: </span>
                   <strong>{fmtMoney(cm2)}</strong>
                 </span>
                 {Number(form.desperdicio) > 0 && (
                   <span>
-                    <span style={{ color: 'var(--text-muted)' }}>Con {form.desperdicio}% desperdicio: </span>
+                    <span style={{ color: '#64748b' }}>Con {form.desperdicio}% desperdicio: </span>
                     <strong style={{ color: 'var(--primary)' }}>
                       {fmtMoney(cm2 * (1 + Number(form.desperdicio) / 100))}
                     </strong>
-                    <span style={{ color: 'var(--text-muted)', fontSize: 11, marginLeft: 4 }}>
+                    <span style={{ color: '#64748b', fontSize: 11, marginLeft: 4 }}>
                       (precio efectivo al cortar)
                     </span>
                   </span>
                 )}
               </div>
-              <div style={{ color: 'var(--text-muted)', marginTop: 4, fontSize: 12 }}>
+              <div style={{ color: '#64748b', marginTop: 4, fontSize: 12 }}>
                 {area.toFixed(0)} cm² totales
                 {Number(form.desperdicio) > 0 && (
                   <span style={{ marginLeft: 8 }}>
