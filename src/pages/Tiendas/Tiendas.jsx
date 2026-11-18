@@ -32,7 +32,7 @@ const CLAVE_PAPEL = 'mayorista_etiqueta_papel'
 
 // Bultos de la etiqueta (supabase_etiqueta_bultos.sql): si falta la columna se carga sin ella
 const COL_BULTOS = ', etiqueta_bultos'
-const COLUMNAS = COLUMNAS_BASE + ', origen_numero, origen_logistica, origen_tracking, origen_tracking_url, origen_estado_portal, cliente_dni, cliente_empresa, cliente_direccion_envio, contacto_preferido'
+const COLUMNAS = COLUMNAS_BASE + ', sena_monto, saldo_cobrado, origen_numero, origen_logistica, origen_tracking, origen_tracking_url, origen_estado_portal, cliente_dni, cliente_empresa, cliente_direccion_envio, contacto_preferido'
 
 // Número con el que se reconoce el pedido: el del portal (2026-0014) o el de WooCommerce (#123)
 const numeroPedido = (v) => v.origen_numero ? `Pedido ${v.origen_numero}` : ordenWooId(v) ? `Pedido #${ordenWooId(v)}` : `Venta N° ${v.numero}`
@@ -59,6 +59,60 @@ const SIGUIENTE = {
   esperando_pago: { a: 'en_preparacion', label: 'Confirmar pago' },
   en_preparacion: { a: 'listo',          label: 'Marcar listo para despachar' },
   listo:          { a: 'completado',     label: 'Marcar despachado' },
+}
+
+// Pasos de un pedido del portal mayorista: qué está hecho y qué sigue.
+function PasosPedido({ v, e, fact, prod, onFacturar }) {
+  const despachado = e === 'completado'
+  const listo = despachado || e === 'listo' || !!prod?.todoListo
+  const pasos = [
+    { id: 'sena', titulo: 'Seña', hecho: Number(v.sena_monto) > 0 || !!v.saldo_cobrado, opcional: true,
+      ayuda: 'Si el cliente dejó seña, cargala abajo en "Seña, saldo y facturas" y facturala.' },
+    { id: 'fab', titulo: 'Fabricación', hecho: listo,
+      detalle: prod && !listo ? `${prod.listos} de ${prod.total} listos` : null,
+      ayuda: 'Marcá cada producto como listo (o usá "Marcar todos como") en la lista de productos.' },
+    { id: 'saldo', titulo: 'Cobrar saldo', hecho: !!v.saldo_cobrado,
+      ayuda: 'Cuando el cliente pague el resto, tocá "Cargar seña y saldo" y marcá "Saldo cobrado".' },
+    { id: 'fact', titulo: 'Facturar', hecho: fact.completa,
+      detalle: !fact.completa && fact.monto > 0 ? `falta ${fmtMoney(fact.falta)}` : null,
+      ayuda: fact.monto > 0 ? 'Ya facturaste una parte: facturá lo que falta.' : 'Facturá el pedido, todo junto o por partes.',
+      accion: !fact.completa ? { texto: fact.monto > 0 ? 'Facturar lo que falta' : 'Ir a facturar', fn: onFacturar } : null },
+    { id: 'desp', titulo: 'Despachar', hecho: despachado,
+      ayuda: 'Con todo listo, tocá "Despachar" y cargá el seguimiento si lo tenés.' },
+  ]
+  // La seña es opcional: si ya se avanzó a un paso posterior, no se pide.
+  const siguiente = pasos.find((p, i) => !p.hecho && !(p.opcional && pasos.slice(i + 1).some((q) => q.hecho)))
+  return (
+    <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', overflow: 'hidden' }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap' }}>
+        {pasos.map((p, i) => {
+          const actual = siguiente?.id === p.id
+          const saltado = !p.hecho && p.opcional && !actual
+          return (
+            <div key={p.id} style={{
+              flex: '1 1 110px', padding: '8px 10px', fontSize: 12, borderLeft: i ? '1px solid var(--border)' : 'none',
+              background: actual ? 'var(--bg-muted)' : 'transparent',
+            }}>
+              <div style={{ fontWeight: 700, color: p.hecho ? '#15803d' : actual ? 'var(--text)' : 'var(--text-muted)' }}>
+                {p.hecho ? '✓ ' : `${i + 1}. `}{p.titulo}
+              </div>
+              <div style={{ color: 'var(--text-muted)', fontSize: 11 }}>
+                {p.hecho ? 'Hecho' : saltado ? 'Sin seña' : p.detalle || (actual ? 'Sigue esto' : 'Pendiente')}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+      {siguiente ? (
+        <div style={{ borderTop: '1px solid var(--border)', padding: '10px 12px', display: 'flex', gap: 10, alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', fontSize: 13 }}>
+          <span><strong>Próximo paso:</strong> {siguiente.ayuda}</span>
+          {siguiente.accion && <button className="btn btn-sm btn-primary" onClick={siguiente.accion.fn}>{siguiente.accion.texto}</button>}
+        </div>
+      ) : (
+        <div style={{ borderTop: '1px solid var(--border)', padding: '10px 12px', fontSize: 13, color: '#15803d', fontWeight: 600 }}>Pedido completo: cobrado, facturado y despachado.</div>
+      )}
+    </div>
+  )
 }
 
 // Foto + código + cantidad de cada producto del pedido
@@ -128,6 +182,7 @@ export default function Tiendas() {
   const { orgId } = useAuth()
   const [tiendas, setTiendas]   = useState([])
   const [ventas, setVentas]     = useState([])
+  const [facturadoVenta, setFacturadoVenta] = useState({})   // venta_id → importe facturado (seña + saldo + total)
   const [loading, setLoading]   = useState(true)
   const [errorSql, setErrorSql] = useState('')
   const [sel, setSel]           = useState('todas')       // 'todas' o id de tienda
@@ -167,6 +222,15 @@ export default function Tiendas() {
       pedirVentas(COLUMNAS + COL_BULTOS).then((r) => (r.error ? pedirVentas(COLUMNAS) : r)),
     ])
     setTiendas(t.data || [])
+    // Facturas por partes ya emitidas (del mismo modo de ARCA que se usa ahora)
+    const [{ data: cfgArca }, { data: facs }] = await Promise.all([
+      supabase.from('arca_config').select('modo').eq('user_id', orgId).maybeSingle(),
+      supabase.from('facturas').select('venta_id, importe, modo').eq('estado', 'emitida').not('venta_id', 'is', null).limit(10000),
+    ])
+    const modoArca = cfgArca?.modo === 'produccion' ? 'produccion' : 'homologacion'
+    const sumas = {}
+    for (const x of facs || []) if (x.modo === modoArca) sumas[x.venta_id] = (sumas[x.venta_id] || 0) + Number(x.importe)
+    setFacturadoVenta(sumas)
     // Si todavía falta el SQL del portal mayorista, se cargan los pedidos sin esos datos.
     let v = v0
     let avisoSql = ''
@@ -279,7 +343,7 @@ export default function Tiendas() {
   // ── Cambio de estado ──────────────────────────────────────────────────────
   const accionar = async (venta, nuevo, extra = {}) => {
     if (nuevo === 'cancelado' && !window.confirm('¿Cancelar este pedido? Se anula la venta y se devuelve el stock.')) return false
-    if (nuevo === 'completado' && !venta.factura_emitida &&
+    if (nuevo === 'completado' && !facturacion(venta).completa &&
         !window.confirm('Este pedido todavía no está facturado. ¿Marcarlo como despachado igual?')) return false
     setTrabajando(venta.id)
     setMsg(null)
@@ -513,9 +577,9 @@ export default function Tiendas() {
         {esMay && e === 'en_preparacion' && (
           <button className="btn btn-sm" disabled={ocupado} onClick={() => abrirDespacho(v)}>Despachar</button>
         )}
-        {e === 'listo' && !v.factura_emitida && (
-          <button className="btn btn-sm" style={{ borderColor: '#2563eb', color: '#2563eb' }} onClick={() => setDetalleId(v.id)}>
-            Facturar
+        {e === 'listo' && !facturacion(v).completa && (
+          <button className="btn btn-sm" style={{ borderColor: '#2563eb', color: '#2563eb' }} onClick={() => irAFacturar(v)}>
+            {facturacion(v).monto > 0 ? 'Facturar lo que falta' : 'Facturar'}
           </button>
         )}
         {e === 'listo' && (
@@ -524,7 +588,7 @@ export default function Tiendas() {
         {sig && (
           <button className="btn btn-sm btn-ghost" disabled={ocupado} style={{ color: 'var(--danger)' }} onClick={() => accionar(v, 'cancelado')}>Cancelar</button>
         )}
-        {e === 'cancelado' && !v.factura_emitida && (
+        {e === 'cancelado' && !facturacion(v).alguna && (
           <button className="btn btn-sm btn-ghost" style={{ color: 'var(--danger)' }}
             onClick={() => eliminarCancelados([v], '¿Eliminar este pedido cancelado? Se borra definitivamente del programa.')}>
             Eliminar
@@ -547,6 +611,24 @@ export default function Tiendas() {
     </div>
   )
 
+  // Facturación de un pedido: por el total (vieja) o sumando las facturas de seña y saldo
+  const facturacion = (v) => {
+    const monto = Math.round((facturadoVenta[v.id] || 0) * 100) / 100
+    const total = Number(v.total) || 0
+    const completa = !!v.factura_emitida || (total > 0 && monto >= total - 0.01)
+    const falta = completa ? 0 : Math.max(Math.round((total - monto) * 100) / 100, 0)
+    return { completa, monto, falta, alguna: !!v.factura_emitida || monto > 0 }
+  }
+  const textoFactura = (v) => {
+    const fa = facturacion(v)
+    return fa.completa ? 'Facturada' : fa.monto > 0 ? `Facturado ${fmtMoney(fa.monto)} · falta ${fmtMoney(fa.falta)}` : 'Sin facturar'
+  }
+  // "Facturar": en el portal mayorista lleva al detalle, a la parte de seña, saldo y facturas
+  const irAFacturar = (v) => {
+    if (tiendaDeVenta(v)?.tipo !== 'mayorista') { setDetalleId(v.id); return }
+    setPedidoId(v.id)
+    setTimeout(() => document.getElementById('cobro-' + v.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 250)
+  }
   const pedidoAbierto = pedidoId ? (ventas.find(v => v.id === pedidoId) || null) : null
 
   return (
@@ -652,7 +734,7 @@ export default function Tiendas() {
               placeholder={tab === 'pedidos' ? 'Buscar por cliente, email o N° de pedido…' : 'Buscar cliente…'}
               value={q} onChange={e => setQ(e.target.value)} />
             {tab === 'pedidos' && filtro === 'cancelado' && (() => {
-              const borrables = visibles.filter(v => !v.factura_emitida)
+              const borrables = visibles.filter(v => !facturacion(v).alguna)
               if (!borrables.length) return null
               return (
                 <button className="btn btn-sm" style={{ color: 'var(--danger)', borderColor: 'var(--danger)' }}
@@ -709,7 +791,7 @@ export default function Tiendas() {
                       </div>
                       <div style={{ flex: '0 1 150px', fontSize: 12, color: 'var(--text-muted)' }}>
                         <div>{pagoTexto(v)}</div>
-                        <div style={{ color: v.factura_emitida ? '#15803d' : 'var(--text-muted)' }}>{v.factura_emitida ? 'Facturada' : 'Sin facturar'}</div>
+                        <div style={{ color: facturacion(v).completa ? '#15803d' : facturacion(v).monto > 0 ? '#b45309' : 'var(--text-muted)' }}>{textoFactura(v)}</div>
                       </div>
                       <div style={{ flex: '0 0 auto', fontWeight: 800, fontSize: 16, minWidth: 90, textAlign: 'right' }}>{fmtMoney(v.total)}</div>
                       <div onClick={(ev) => ev.stopPropagation()} style={{ display: 'flex', gap: 6, flexWrap: 'wrap', flex: '1 1 auto', justifyContent: 'flex-end' }}>
@@ -901,7 +983,8 @@ export default function Tiendas() {
                   </div>
                 )}
 
-                {e === 'listo' && !v.factura_emitida && (
+                {esMay && e !== 'cancelado' && <PasosPedido v={v} e={e} fact={facturacion(v)} prod={resumenProduccion(itemsPedido[v.id])} onFacturar={() => irAFacturar(v)} />}
+                {!esMay && e === 'listo' && !facturacion(v).completa && (
                   <div style={{ padding: '10px 12px', borderRadius: 'var(--radius-sm)', background: '#ede9fe', color: '#4c1d95', fontSize: 13 }}>
                     El pedido está armado. Ahora podés <strong>facturarlo</strong> y despacharlo.
                   </div>
@@ -945,7 +1028,7 @@ export default function Tiendas() {
                 </div>
 
                 {esMay && (
-                  <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: 14 }}>
+                  <div id={'cobro-' + v.id} style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: 14, scrollMarginTop: 12 }}>
                     <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 10 }}>Seña, saldo y facturas</div>
                     <CobroFacturas key={v.id} ventaId={v.id} referencia={v.origen_numero || `V-${v.numero}`} onCambio={() => cargar(true)} />
                   </div>
@@ -1013,7 +1096,7 @@ export default function Tiendas() {
                     <div style={{ lineHeight: 1.7, color: 'var(--text-muted)' }}>
                       <div>{pagoTexto(v)}</div>
                       <div style={{ fontWeight: 800, fontSize: 18, color: 'var(--text)' }}>{fmtMoney(v.total)}</div>
-                      <div style={{ color: v.factura_emitida ? '#15803d' : undefined }}>{v.factura_emitida ? 'Facturada' : 'Sin facturar'}</div>
+                      <div style={{ color: facturacion(v).completa ? '#15803d' : facturacion(v).monto > 0 ? '#b45309' : undefined }}>{textoFactura(v)}</div>
                     </div>
                   </div>
                 </div>
@@ -1095,9 +1178,9 @@ export default function Tiendas() {
                   <input type="checkbox" checked={notificarCli} onChange={e => setNotificarCli(e.target.checked)} />
                   Avisar al cliente
                 </label>
-                {!v.factura_emitida && (
+                {!facturacion(v).completa && (
                   <div style={{ padding: '8px 10px', borderRadius: 'var(--radius-sm)', background: '#fef3c7', color: '#78350f', fontSize: 12 }}>
-                    Este pedido todavía no está facturado.
+                    {facturacion(v).monto > 0 ? `Falta facturar ${fmtMoney(facturacion(v).falta)} de este pedido.` : 'Este pedido todavía no está facturado.'}
                   </div>
                 )}
               </div>
