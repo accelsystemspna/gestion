@@ -20,13 +20,13 @@ const fmtFecha = (iso) => {
  * Genera la URL del QR de verificación AFIP.
  * https://www.afip.gob.ar/fe/qr/?p=BASE64_JSON
  */
-function buildQrUrl({ cuit, ptoVta, nroCmp, importe, cae, fecha, docTipo = 99, docNro = 0 }) {
+function buildQrUrl({ cuit, ptoVta, nroCmp, importe, cae, fecha, docTipo = 99, docNro = 0, tipoCmp = 11 }) {
   const obj = {
     ver:        1,
     fecha:      String(fecha).slice(0, 10),
     cuit:       Number(cuit),
     ptoVta:     Number(ptoVta),
-    tipoCmp:    11,          // Factura C
+    tipoCmp:    Number(tipoCmp),   // 11 Factura C · 13 Nota de crédito C
     nroCmp:     Number(nroCmp),
     importe:    Number(importe),
     moneda:     'PES',
@@ -49,7 +49,10 @@ function buildQrUrl({ cuit, ptoVta, nroCmp, importe, cae, fecha, docTipo = 99, d
  * @param {object} params.branding      - Logo y contacto
  * @param {boolean} params.download     - true = descargar, false = devolver blob URL
  */
-export async function generarFacturaC({ venta, arcaConfig, branding = {}, download = true, comoBlob = false }) {
+export async function generarFacturaC({ venta, arcaConfig, branding = {}, download = true, comoBlob = false, notaCredito = null }) {
+  // notaCredito: { asociada: 'Factura C N° 0003-00000012 del 18/11/2026' } → arma la Nota de crédito C (cód. 013)
+  const esNC = !!notaCredito
+  const titulo = esNC ? 'NOTA DE CRÉDITO' : 'FACTURA'
   const nroPv    = String(arcaConfig.punto_venta ?? 3).padStart(4, '0')
   const nroComp  = String(venta.nro_factura ?? 0).padStart(8, '0')
   const cuit     = String(arcaConfig.cuit ?? '').replace(/\D/g, '')
@@ -71,12 +74,14 @@ export async function generarFacturaC({ venta, arcaConfig, branding = {}, downlo
     fecha,
     docTipo: nombreDoc ? venta.factura_doc_tipo : DOC_CONSUMIDOR,
     docNro:  nombreDoc ? venta.factura_doc_nro : 0,
+    tipoCmp: esNC ? 13 : 11,
   }), { width: 220, margin: 1 }).catch(() => null)
 
   const receptor = [
     { f: 2, celda: [{ et: 'Cliente' }, { t: venta.cliente_nombre || 'Consumidor Final', bold: true }] },
     { celda: [{ et: 'Documento' }, nombreDoc ? { t: `${nombreDoc} ${fmtCuit(venta.factura_doc_nro)}`, mono: true } : { t: 'Sin identificar' }] },
     { celda: [{ et: 'Condición IVA' }, { t: venta.factura_cond_iva || 'Consumidor Final' }] },
+    ...(esNC ? [{ f: 2, celda: [{ et: 'Comprobante que anula' }, { t: notaCredito.asociada }] }] : []),
   ]
   const domicilio = arcaConfig.domicilio || branding?.direccion
   const razon = arcaConfig.razon_social || branding?.nombre || ''
@@ -104,7 +109,7 @@ export async function generarFacturaC({ venta, arcaConfig, branding = {}, downlo
     c.doc.line(x1, y, x1, y + alto)
     c.doc.line(x2, y, x2, y + alto)
     texto(c, 'C', (x1 + x2) / 2, y + alto / 2 + c.fs * 0.5, { mono: true, bold: true, size: c.fs * (c.media ? 2.4 : 3), align: 'center' })
-    texto(c, 'COD. 011', (x1 + x2) / 2, y + alto / 2 + c.fs * 1.75, { mono: true, size: c.fs * 0.72, align: 'center' })
+    texto(c, esNC ? 'COD. 013' : 'COD. 011', (x1 + x2) / 2, y + alto / 2 + c.fs * 1.75, { mono: true, size: c.fs * 0.72, align: 'center' })
     const xd = x2 + c.pad
     if (!c.media) {
       // Igual que el presupuesto y el ticket: título y número arriba, campos abajo
@@ -112,13 +117,13 @@ export async function generarFacturaC({ venta, arcaConfig, branding = {}, downlo
       const xm = (x2 + c.x1) / 2
       c.doc.line(x2, y + altoTit, c.x1, y + altoTit)
       c.doc.line(xm, y + altoTit, xm, y + alto)
-      texto(c, 'FACTURA', xd, y + altoTit - 13, { bold: true, size: c.fs * 1.9 })
+      texto(c, titulo, xd, y + altoTit - 13, { bold: true, size: c.fs * (esNC ? 1.5 : 1.9) })
       texto(c, `N° ${nroPv}-${nroComp}`, c.x1 - c.pad, y + altoTit - 13, { mono: true, align: 'right' })
       dibujarCelda(c, [{ et: 'Fecha de emisión' }, { t: fmtFecha(fecha), mono: true }], xd, y + altoTit + c.pad * 0.5)
       dibujarCelda(c, [{ et: 'Punto de venta' }, { t: nroPv, mono: true }], xm + c.pad, y + altoTit + c.pad * 0.5)
     } else {
       const bt = y + c.pad + c.fs * 1.1
-      texto(c, 'FACTURA', xd, bt, { bold: true, size: c.fs * 1.4 })
+      texto(c, titulo, xd, bt, { bold: true, size: c.fs * (esNC ? 1.05 : 1.4) })
       dibujarCelda(c, [{ t: `N° ${nroPv}-${nroComp}`, mono: true }, { et: 'Fecha de emisión' }, { t: fmtFecha(fecha), mono: true }], xd, bt + 1)
     }
     if (emisor) {
@@ -187,7 +192,7 @@ export async function generarFacturaC({ venta, arcaConfig, branding = {}, downlo
   // ── Salida ────────────────────────────────────────────────────────────────
   const { doc } = c
   if (comoBlob) return doc.output('blob')
-  const nombre = `factura-C-${nroPv}-${nroComp}.pdf`
+  const nombre = `${esNC ? 'nota-credito-C' : 'factura-C'}-${nroPv}-${nroComp}.pdf`
   if (download) {
     doc.save(nombre)
     return null

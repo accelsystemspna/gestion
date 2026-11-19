@@ -2,211 +2,11 @@
 // Autentica con WSAA de ARCA y emite Factura C via WSFE
 import { serve }        from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-// @ts-ignore
-import forge            from 'npm:node-forge@1.3.1'
+import { URLS, getToken, ultimoNro, emitirFactura, fechaHoyARCCYYMMDD, accesoArca, fechaISO } from '../_shared/arca.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin':  '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
-
-// ── URLs ARCA ─────────────────────────────────────────────────────────────────
-const URLS = {
-  wsaa: {
-    homo: 'https://wsaahomo.afip.gov.ar/ws/services/LoginCms',
-    prod: 'https://wsaa.afip.gov.ar/ws/services/LoginCms',
-  },
-  wsfe: {
-    homo: 'https://wswhomo.afip.gov.ar/wsfev1/service.asmx',
-    prod: 'https://servicios1.afip.gov.ar/wsfev1/service.asmx',
-  },
-}
-
-// ── Fecha Argentina (UTC-3) ────────────────────────────────────────────────────
-function fechaAR(offsetMs = 0): string {
-  const d = new Date(Date.now() + offsetMs)
-  const ar = new Date(d.getTime() - 3 * 3600 * 1000)
-  return ar.toISOString().replace(/\.\d+Z$/, '-03:00')
-}
-
-function fechaHoyARCCYYMMDD(): string {
-  const d = new Date()
-  const ar = new Date(d.getTime() - 3 * 3600 * 1000)
-  return ar.toISOString().slice(0, 10).replace(/-/g, '')
-}
-
-// ── Firma PKCS7 para WSAA ─────────────────────────────────────────────────────
-function firmarTRA(traXml: string, certPem: string, keyPem: string): string {
-  const p7 = forge.pkcs7.createSignedData()
-  p7.content = forge.util.createBuffer(traXml, 'utf8')
-  p7.addCertificate(certPem)
-  p7.addSigner({
-    key:         forge.pki.privateKeyFromPem(keyPem),
-    certificate: forge.pki.certificateFromPem(certPem),
-    digestAlgorithm: forge.pki.oids.sha256,
-    authenticatedAttributes: [],
-  })
-  p7.sign({ detached: false })
-  const der = forge.asn1.toDer(p7.toAsn1()).getBytes()
-  return forge.util.encode64(der)
-}
-
-// ── Obtener token WSAA ────────────────────────────────────────────────────────
-async function getToken(
-  certPem: string,
-  keyPem: string,
-  homo: boolean,
-): Promise<{ token: string; sign: string; expiracion: string }> {
-
-  const tra = `<?xml version="1.0" encoding="UTF-8"?>
-<loginTicketRequest version="1.0">
-  <header>
-    <uniqueId>${Math.floor(Date.now() / 1000)}</uniqueId>
-    <generationTime>${fechaAR(-60_000)}</generationTime>
-    <expirationTime>${fechaAR(600_000)}</expirationTime>
-  </header>
-  <service>wsfe</service>
-</loginTicketRequest>`
-
-  const cms  = firmarTRA(tra, certPem, keyPem)
-  const url  = homo ? URLS.wsaa.homo : URLS.wsaa.prod
-  const body = `<?xml version="1.0" encoding="UTF-8"?>
-<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
-                  xmlns:wsaa="http://wsaa.view.sua.dvadac.desein.afip.gov.ar">
-  <soapenv:Header/>
-  <soapenv:Body>
-    <wsaa:loginCms><wsaa:in0>${cms}</wsaa:in0></wsaa:loginCms>
-  </soapenv:Body>
-</soapenv:Envelope>`
-
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/xml; charset=utf-8', 'SOAPAction': '' },
-    body,
-  })
-  const xml = await res.text()
-
-  // ARCA devuelve el XML interno con entidades HTML — decodificar antes de parsear
-  const decoded = xml
-    .replace(/&lt;/g, '<').replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/&apos;/g, "'")
-
-  const token = decoded.match(/<token>([\s\S]*?)<\/token>/)?.[1]?.trim()
-  const sign  = decoded.match(/<sign>([\s\S]*?)<\/sign>/)?.[1]?.trim()
-
-  if (!token || !sign) throw new Error('WSAA error: ' + xml.slice(0, 2000))
-
-  const expiracion = new Date(Date.now() + 11 * 3600 * 1000).toISOString()
-  return { token, sign, expiracion }
-}
-
-// ── SOAP helper WSFE ──────────────────────────────────────────────────────────
-async function soapWSFE(url: string, action: string, body: string): Promise<string> {
-  const res = await fetch(url, {
-    method:  'POST',
-    headers: {
-      'Content-Type': 'text/xml; charset=utf-8',
-      'SOAPAction': `http://ar.gov.afip.dif.FEV1/${action}`,
-    },
-    body,
-  })
-  return res.text()
-}
-
-// ── Último número autorizado ──────────────────────────────────────────────────
-async function ultimoNro(
-  url: string, token: string, sign: string,
-  cuit: string, ptoVta: number, cbteTipo: number,
-): Promise<number> {
-  const xml = await soapWSFE(url, 'FECompUltimoAutorizado', `<?xml version="1.0" encoding="utf-8"?>
-<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
-               xmlns:ar="http://ar.gov.afip.dif.FEV1/">
-  <soap:Body>
-    <ar:FECompUltimoAutorizado>
-      <ar:Auth>
-        <ar:Token>${token}</ar:Token>
-        <ar:Sign>${sign}</ar:Sign>
-        <ar:Cuit>${cuit}</ar:Cuit>
-      </ar:Auth>
-      <ar:PtoVta>${ptoVta}</ar:PtoVta>
-      <ar:CbteTipo>${cbteTipo}</ar:CbteTipo>
-    </ar:FECompUltimoAutorizado>
-  </soap:Body>
-</soap:Envelope>`)
-  const match = xml.match(/<CbteNro>(\d+)<\/CbteNro>/)
-  return match ? parseInt(match[1]) : 0
-}
-
-// ── Emitir factura ────────────────────────────────────────────────────────────
-async function emitirFactura(params: {
-  url:         string
-  token:       string
-  sign:        string
-  cuit:        string
-  ptoVta:      number
-  cbteTipo:    number  // 11 = Factura C
-  concepto:    number  // 1=Productos 2=Servicios 3=Ambos
-  docTipo:     number  // 99=Consumidor Final 80=CUIT
-  docNro:      string
-  importe:     number
-  fecha:       string  // YYYYMMDD
-  nroFactura:  number
-}): Promise<{ cae: string; caeVto: string; nroFactura: number }> {
-
-  const xml = await soapWSFE(params.url, 'FECAESolicitar', `<?xml version="1.0" encoding="utf-8"?>
-<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
-               xmlns:ar="http://ar.gov.afip.dif.FEV1/">
-  <soap:Body>
-    <ar:FECAESolicitar>
-      <ar:Auth>
-        <ar:Token>${params.token}</ar:Token>
-        <ar:Sign>${params.sign}</ar:Sign>
-        <ar:Cuit>${params.cuit}</ar:Cuit>
-      </ar:Auth>
-      <ar:FeCAEReq>
-        <ar:FeCabReq>
-          <ar:CantReg>1</ar:CantReg>
-          <ar:PtoVta>${params.ptoVta}</ar:PtoVta>
-          <ar:CbteTipo>${params.cbteTipo}</ar:CbteTipo>
-        </ar:FeCabReq>
-        <ar:FeDetReq>
-          <ar:FECAEDetRequest>
-            <ar:Concepto>${params.concepto}</ar:Concepto>
-            <ar:DocTipo>${params.docTipo}</ar:DocTipo>
-            <ar:DocNro>${params.docNro}</ar:DocNro>
-            <ar:CbteDesde>${params.nroFactura}</ar:CbteDesde>
-            <ar:CbteHasta>${params.nroFactura}</ar:CbteHasta>
-            <ar:CbteFch>${params.fecha}</ar:CbteFch>
-            <ar:ImpTotal>${params.importe.toFixed(2)}</ar:ImpTotal>
-            <ar:ImpTotConc>0.00</ar:ImpTotConc>
-            <ar:ImpNeto>${params.importe.toFixed(2)}</ar:ImpNeto>
-            <ar:ImpOpEx>0.00</ar:ImpOpEx>
-            <ar:ImpIVA>0.00</ar:ImpIVA>
-            <ar:ImpTrib>0.00</ar:ImpTrib>
-            <ar:MonId>PES</ar:MonId>
-            <ar:MonCotiz>1</ar:MonCotiz>
-          </ar:FECAEDetRequest>
-        </ar:FeDetReq>
-      </ar:FeCAEReq>
-    </ar:FECAESolicitar>
-  </soap:Body>
-</soap:Envelope>`)
-
-  const resultado = xml.match(/<Resultado>(.*?)<\/Resultado>/)?.[1]
-  if (resultado !== 'A') {
-    const obs = [...xml.matchAll(/<Msg>(.*?)<\/Msg>/g)].map(m => m[1]).join(' | ')
-    throw new Error('ARCA rechazó la factura: ' + (obs || xml.slice(0, 500)))
-  }
-
-  const cae    = xml.match(/<CAE>(.*?)<\/CAE>/)?.[1] ?? ''
-  const caeVto = xml.match(/<CAEFchVto>(.*?)<\/CAEFchVto>/)?.[1] ?? ''
-
-  // Formatear fecha vto YYYYMMDD → YYYY-MM-DD
-  const vtoFmt = caeVto.length === 8
-    ? `${caeVto.slice(0,4)}-${caeVto.slice(4,6)}-${caeVto.slice(6,8)}`
-    : caeVto
-
-  return { cae, caeVto: vtoFmt, nroFactura: params.nroFactura }
 }
 
 // ── Handler principal ─────────────────────────────────────────────────────────
@@ -329,6 +129,75 @@ serve(async (req) => {
         return responder({ ok: true, factura: factura ?? { id: reserva.id, ...r } })
       } catch (err) {
         await supabaseClient.from('facturas').update({ estado: 'fallida', error: String(err?.message ?? err).slice(0, 500) }).eq('id', reserva.id)
+        return responder({ ok: false, error: err?.message ?? String(err) })
+      }
+    }
+
+    // ── Nota de crédito C: anula total o parcialmente una factura emitida ──────
+    // Se asocia a la factura de la venta (ventas.nro_factura) o a una factura por partes (factura_id).
+    if (body.accion === 'nota_credito') {
+      const responder = (data: unknown, status = 200) => new Response(JSON.stringify(data), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status,
+      })
+      const ventaId = Number(body.venta_id)
+      const facturaId = typeof body.factura_id === 'string' && body.factura_id ? body.factura_id : null
+      const monto = Math.round(Number(body.importe) * 100) / 100
+      const motivo = String(body.motivo ?? '').trim().slice(0, 200)
+      if (!ventaId) return responder({ ok: false, error: 'Falta la venta.' }, 400)
+      if (!Number.isFinite(monto) || monto <= 0) return responder({ ok: false, error: 'El importe tiene que ser mayor a cero.' }, 400)
+      if (!motivo) return responder({ ok: false, error: 'Contá el motivo (ej: devolución).' }, 400)
+      if (!/^[0-9a-f-]{36}$/i.test(String(body.solicitud_id ?? ''))) return responder({ ok: false, error: 'Solicitud inválida.' }, 400)
+
+      const { data: venta } = await supabaseClient.from('ventas')
+        .select('id, total, fecha, factura_emitida, nro_factura, factura_fecha, factura_doc_tipo, factura_doc_nro, factura_cond_iva')
+        .eq('id', ventaId).eq('org_id', orgId).maybeSingle()
+      if (!venta) return responder({ ok: false, error: 'No se encontró la venta.' }, 404)
+
+      const modoAhora = homo ? 'homologacion' : 'produccion'
+      let asoc: { pto: number, nro: number, fecha: string, docTipo: number, docNro: string, condIva: string | null, tope: number }
+      if (facturaId) {
+        const { data: fa } = await supabaseClient.from('facturas').select('*').eq('id', facturaId).eq('venta_id', ventaId).maybeSingle()
+        if (!fa || fa.estado !== 'emitida') return responder({ ok: false, error: 'Esa factura no está emitida.' }, 400)
+        if (fa.modo !== modoAhora) return responder({ ok: false, error: 'Esa factura es de otro modo de ARCA (prueba / producción).' }, 400)
+        asoc = { pto: Number(fa.punto_venta), nro: Number(fa.nro_factura), fecha: String(fa.fecha), docTipo: Number(fa.doc_tipo ?? 99), docNro: fa.doc_nro ?? '0', condIva: fa.cond_iva ?? null, tope: Number(fa.importe) }
+      } else {
+        if (!venta.factura_emitida || !venta.nro_factura) return responder({ ok: false, error: 'La venta no tiene factura emitida.' }, 400)
+        asoc = {
+          pto: Number(cfg.punto_venta), nro: Number(venta.nro_factura), fecha: String(venta.factura_fecha || venta.fecha).slice(0, 10),
+          docTipo: Number(venta.factura_doc_tipo ?? 99), docNro: venta.factura_doc_nro || '0', condIva: venta.factura_cond_iva ?? null, tope: Number(venta.total),
+        }
+      }
+      if (asoc.docTipo === 99) asoc.docNro = '0'
+
+      const { data: reserva, error: errReserva } = await supabaseClient.rpc('reservar_nota_credito', {
+        p_org: orgId, p_venta: ventaId, p_factura: facturaId, p_importe: monto, p_motivo: motivo, p_solicitud: body.solicitud_id,
+        p_modo: modoAhora, p_doc_tipo: asoc.docTipo, p_doc_nro: asoc.docTipo === 99 ? null : asoc.docNro, p_cond_iva: asoc.condIva,
+        p_asoc_pto: asoc.pto, p_asoc_nro: asoc.nro, p_asoc_fecha: asoc.fecha, p_tope: asoc.tope,
+      })
+      if (errReserva) return responder({ ok: false, error: errReserva.message }, 400)
+      if (!reserva.nueva) {
+        const { data: previa } = await supabaseClient.from('notas_credito').select('*').eq('id', reserva.id).single()
+        if (previa?.estado === 'emitida') return responder({ ok: true, nota: previa })
+        return responder({ ok: false, error: previa?.estado === 'fallida' ? (previa.error || 'ARCA no la autorizó.') : 'Esa nota de crédito se está emitiendo. Esperá un momento y actualizá.' }, 409)
+      }
+
+      try {
+        const cuitE = cfg.cuit.replace(/-/g, '')
+        const pto = Number(cfg.punto_venta)
+        const nro = (await ultimoNro(wsfeUrl, token, sign, cuitE, pto, 13)) + 1
+        const fechaArca = fechaHoyARCCYYMMDD()
+        const r = await emitirFactura({
+          url: wsfeUrl, token, sign, cuit: cuitE, ptoVta: pto, cbteTipo: 13, concepto: cfg.concepto ?? 1,
+          docTipo: asoc.docTipo, docNro: asoc.docNro, importe: monto, fecha: fechaArca, nroFactura: nro,
+          asociado: { tipo: 11, ptoVta: asoc.pto, nro: asoc.nro, cuit: cuitE, fecha: asoc.fecha.replace(/-/g, '') },
+        })
+        const { data: nota, error: errG } = await supabaseClient.from('notas_credito').update({
+          estado: 'emitida', cae: r.cae, cae_vto: r.caeVto, nro: r.nroFactura, punto_venta: pto, fecha: fechaISO(fechaArca),
+        }).eq('id', reserva.id).select('*').single()
+        if (errG) console.error('[emitir-factura] NC sin guardar', reserva.id, r, errG)
+        return responder({ ok: true, nota: nota ?? { id: reserva.id, ...r } })
+      } catch (err) {
+        await supabaseClient.from('notas_credito').update({ estado: 'fallida', error: String(err?.message ?? err).slice(0, 500) }).eq('id', reserva.id)
         return responder({ ok: false, error: err?.message ?? String(err) })
       }
     }

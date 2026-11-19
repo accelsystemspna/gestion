@@ -8,8 +8,10 @@ export default function MercadoLibreCard() {
   const [estado, setEstado]   = useState(null)   // null = cargando | { conectada, nickname, error }
   const [msg, setMsg]         = useState(null)   // { tipo: 'ok' | 'error', texto }
   const [ocupado, setOcupado] = useState('')
+  const [facturar, setFacturar] = useState(null)   // factura automática al despachar (null = sin dato)
 
   const cargar = async () => {
+    mlApi('facturacion_config').then((r) => setFacturar(r.conectada ? !!r.facturar_al_despachar : null)).catch(() => setFacturar(null))
     try { setEstado(await mlApi('status')) }
     catch (err) { setEstado({ conectada: false, error: err.message }) }
   }
@@ -57,6 +59,14 @@ export default function MercadoLibreCard() {
     setOcupado('')
   }
 
+  const cambiarFacturar = async (v) => {
+    if (v && !confirm('Cada venta de Mercado Libre se va a facturar sola (Factura C real en ARCA) cuando Mercado Libre la marque como despachada. Las de compradores con CUIT quedan para hacer a mano. ¿Activar?')) return
+    setOcupado('facturar'); setMsg(null)
+    try { const r = await mlApi('facturacion_config', { facturar_al_despachar: v }); setFacturar(!!r.facturar_al_despachar) }
+    catch (err) { setMsg({ tipo: 'error', texto: err.message }) }
+    setOcupado('')
+  }
+
   const color = '#d97706'
   return (
     <div style={{ marginTop: 24, padding: 18, borderRadius: 'var(--radius-sm)', border: `1px solid ${color}55`, background: 'rgba(217,119,6,0.06)' }}>
@@ -83,6 +93,17 @@ export default function MercadoLibreCard() {
             : estado && <button className="btn btn-primary btn-sm" onClick={conectar} disabled={!!ocupado}>{ocupado === 'conectar' ? 'Abriendo...' : 'Conectar con Mercado Libre'}</button>)}
         </div>
       </div>
+      {estado?.conectada && facturar !== null && (
+        <label style={{ marginTop: 12, display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 13, cursor: isMaster ? 'pointer' : 'default' }}>
+          <input type="checkbox" checked={facturar} disabled={!isMaster || !!ocupado} onChange={(e) => cambiarFacturar(e.target.checked)} style={{ marginTop: 2 }} />
+          <span>
+            <strong>Facturar automáticamente al despachar</strong>
+            <span style={{ display: 'block', color: 'var(--text-muted)', fontSize: 12 }}>
+              Cuando Mercado Libre marca la venta como despachada se emite la Factura C, y el programa la sube a la venta en Mercado Libre la próxima vez que esté abierto. Compradores con CUIT: a mano.
+            </span>
+          </span>
+        </label>
+      )}
       {msg && (
         <div style={{
           marginTop: 10, fontSize: 13, padding: '8px 12px', borderRadius: 'var(--radius-sm)',

@@ -54,6 +54,13 @@ export default function Layout() {
   // Cerrar drawer al cambiar de ruta
   useEffect(() => { setOpen(false) }, [location.pathname])
 
+  // Facturas y notas de crédito de Mercado Libre que faltan subir a la venta en ML
+  useEffect(() => {
+    if (!orgId || !isAdmin) return
+    const t = setTimeout(() => import('../lib/mlFiscal').then((m) => m.subirPendientesML(orgId)).catch(() => {}), 8000)
+    return () => clearTimeout(t)
+  }, [orgId, isAdmin])
+
   // Desbloquear el audio del aviso de venta con el primer toque en la app
   // (los navegadores, sobre todo en celular, no dejan sonar nada disparado
   // por el servidor si antes no hubo una interacción directa del usuario)

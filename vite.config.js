@@ -19,6 +19,7 @@ export default defineConfig({
       filename: 'sw.js',
       injectManifest: {
         globPatterns: ['**/*.{js,css,html,svg,png,ico,woff,woff2}'],
+        maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,   // el programa principal pasa de 2 MB
       },
       manifest: {
         name: 'Gestión — Carpintería · Melamina · Impresión 3D',

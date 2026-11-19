@@ -4,7 +4,8 @@ export const CONDICIONES_IVA = ['Consumidor Final', 'Responsable Inscripto', 'Re
 export const DOC_CONSUMIDOR = 99
 export const DOC_CUIT = 80
 export const DOC_CUIL = 86
-export const NOMBRE_DOC = { [DOC_CUIT]: 'CUIT', [DOC_CUIL]: 'CUIL' }
+export const DOC_DNI = 96
+export const NOMBRE_DOC = { [DOC_CUIT]: 'CUIT', [DOC_CUIL]: 'CUIL', [DOC_DNI]: 'DNI' }
 
 export const soloDigitos = (t) => String(t ?? '').replace(/\D/g, '')
 

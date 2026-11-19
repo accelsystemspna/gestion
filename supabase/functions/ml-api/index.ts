@@ -2,7 +2,7 @@
 // Acciones: connect_url, status, disconnect, import_orders (+ publicaciones y preguntas).
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { ML_AUTH, credencialesApp, redirectUri, mlFetch } from '../_shared/ml.ts'
+import { ML_AUTH, ML_API, credencialesApp, redirectUri, mlFetch, tokenVigente, mensajeError } from '../_shared/ml.ts'
 import { procesarOrdenML } from '../_shared/ml_orders.ts'
 import { publicarItem, htmlATexto } from '../_shared/ml_publicar.ts'
 
@@ -282,6 +282,64 @@ serve(async (req) => {
       if (!r.ok) return json({ ok: false, error: r.error, titulo_actual: it.data.title }, 422)
       await admin.from('ml_publicaciones').update({ titulo: r.data?.title ?? titulo, actualizada_en: new Date().toISOString() }).eq('id', pub.id)
       return json({ ok: true, titulo_anterior: it.data.title, titulo_nuevo: r.data?.title ?? titulo })
+    }
+
+    // ── Facturación automática al despachar: ver / cambiar el interruptor ──
+    if (action === 'facturacion_config') {
+      const c = (await admin.from('ml_cuentas').select('facturar_al_despachar').eq('org_id', org).maybeSingle()).data
+      if (!c) return json({ conectada: false })
+      if (typeof body.facturar_al_despachar === 'boolean') {
+        if (!esMaster) return json({ error: 'Solo el master puede cambiarlo' }, 403)
+        await admin.from('ml_cuentas').update({ facturar_al_despachar: body.facturar_al_despachar }).eq('org_id', org)
+        return json({ conectada: true, facturar_al_despachar: body.facturar_al_despachar })
+      }
+      return json({ conectada: true, facturar_al_despachar: !!c.facturar_al_despachar })
+    }
+
+    // ── Subir la factura (o la nota de crédito) en PDF a la venta de ML ──
+    // body: { venta_id, nota_id?, pdf_base64 }. ML la muestra al comprador y saca el aviso de "factura pendiente".
+    if (action === 'subir_fiscal') {
+      const ventaId = Number(body.venta_id)
+      const notaId = typeof body.nota_id === 'string' && body.nota_id ? body.nota_id : null
+      const b64 = String(body.pdf_base64 ?? '')
+      if (!ventaId || !b64) return json({ error: 'Faltan datos' }, 400)
+      const { data: venta } = await admin.from('ventas').select('id, origen_numero, origen_ref, factura_emitida, nro_factura')
+        .eq('id', ventaId).eq('org_id', org).maybeSingle()
+      if (!venta || !/^ML#/.test(venta.origen_ref ?? '')) return json({ error: 'No es una venta de Mercado Libre' }, 404)
+      let nombre = `factura-${venta.nro_factura ?? venta.id}.pdf`
+      if (notaId) {
+        const { data: nota } = await admin.from('notas_credito').select('id, estado, nro').eq('id', notaId).eq('venta_id', ventaId).maybeSingle()
+        if (!nota || nota.estado !== 'emitida') return json({ error: 'La nota de crédito no está emitida' }, 400)
+        nombre = `nota-credito-${nota.nro}.pdf`
+      } else if (!venta.factura_emitida) return json({ error: 'La venta no está facturada' }, 400)
+
+      const orden = await mlFetch(admin, org, `/orders/${venta.origen_numero}`)
+      if (!orden.ok) return json({ error: orden.error }, 422)
+      const pack = orden.data?.pack_id ?? orden.data?.id
+      const bytes = Uint8Array.from(atob(b64), (ch) => ch.charCodeAt(0))
+      const subir = async (token: string) => {
+        const form = new FormData()
+        form.append('fiscal_document', new Blob([bytes], { type: 'application/pdf' }), nombre)
+        const res = await fetch(`${ML_API}/packs/${pack}/fiscal_documents`, {
+          method: 'POST', headers: { 'Authorization': `Bearer ${token}` }, body: form, signal: AbortSignal.timeout(30000),
+        })
+        const txt = await res.text()
+        let data: any = null
+        try { data = txt ? JSON.parse(txt) : null } catch { data = txt }
+        return { res, data }
+      }
+      let { res, data } = await subir(await tokenVigente(admin, org))
+      if (res.status === 401) ({ res, data } = await subir(await tokenVigente(admin, org, true)))
+      const ahora = new Date().toISOString()
+      if (!res.ok) {
+        const error = mensajeError(data, res.status)
+        if (notaId) await admin.from('notas_credito').update({ ml_subida_error: error }).eq('id', notaId)
+        else await admin.from('ventas').update({ ml_subida_error: error }).eq('id', ventaId)
+        return json({ ok: false, error }, 422)
+      }
+      if (notaId) await admin.from('notas_credito').update({ ml_subida: ahora, ml_subida_error: null }).eq('id', notaId)
+      else await admin.from('ventas').update({ ml_factura_subida: ahora, ml_subida_error: null }).eq('id', ventaId)
+      return json({ ok: true, ml: data })
     }
 
     return json({ error: 'Acción desconocida' }, 400)

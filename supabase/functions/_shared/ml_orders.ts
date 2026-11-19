@@ -4,6 +4,7 @@
 import { mlFetch } from './ml.ts'
 import { expandirCombos } from './combos.ts'
 import { sendPushToOrg } from './webpush.ts'
+import { facturarVentaML } from './ml_facturar.ts'
 
 type Cuenta = { org_id: string, ml_user_id: number, tienda_id: number | null }
 
@@ -86,6 +87,18 @@ export async function procesarOrdenML(
     if (cancelar) {
       const { data: its } = await admin.from('venta_items').select('producto_id, cantidad').eq('venta_id', existente.id)
       await moverStock(admin, its ?? [], 1)
+    }
+    // Despachada: factura automática (si está activada en la cuenta)
+    if (estadoWeb === 'completado' && existente.estado_web !== 'completado' && !existente.factura_emitida) {
+      await facturarVentaML(admin, org, existente.id, order.id)
+    }
+    // Cancelada con factura: hay que hacer la nota de crédito
+    if (estadoWeb === 'cancelado' && existente.estado_web !== 'cancelado' && existente.factura_emitida) {
+      await sendPushToOrg(admin, org, {
+        title: 'Venta de Mercado Libre cancelada con factura',
+        body: `${existente.cliente_nombre || 'Venta'} · ${fmtMoney(Number(existente.total))}: hacé la nota de crédito desde la venta.`,
+        url: '/ventas', tag: 'nc-ml-' + existente.id,
+      }).catch(() => {})
     }
     return { ok: true, accion: 'actualizada', venta_id: existente.id }
   }

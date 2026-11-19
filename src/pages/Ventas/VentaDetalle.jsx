@@ -7,6 +7,7 @@ import { generarComprobanteVenta } from '../../lib/comprobanteVenta'
 import { CONDICIONES_IVA, DOC_CONSUMIDOR, DOC_CUIT, DOC_CUIL, NOMBRE_DOC, cuitValido, receptorDeCliente, soloDigitos } from '../../lib/cuit'
 import { ajustarStock } from '../../lib/stock'
 import FacturaCPreview from './FacturaCPreview'
+import NotasCredito from '../../components/NotasCredito'
 import ImageThumb from '../../components/ImageThumb'
 import { ESTADOS_WEB, FASES_FACTURABLES, estadoWebDe } from '../../lib/pedidosWeb'
 import { useAuth } from '../../lib/AuthContext'
@@ -496,6 +497,16 @@ export default function VentaDetalle({ ventaId, onClose, onUpdated }) {
                 Emitir Factura C
               </button>
             )
+          )}
+
+          {/* Devoluciones (nota de crédito) y subida a Mercado Libre */}
+          {arcaConfig && venta.factura_emitida && (
+            <NotasCredito venta={venta} items={items} arcaConfig={arcaConfig} branding={branding} onCambio={onUpdated} />
+          )}
+          {!venta.factura_emitida && venta.ml_factura_error && (
+            <div style={{ fontSize: 12, padding: '8px 10px', borderRadius: 'var(--radius-sm)', background: '#fffbeb', border: '1px solid #fcd34d', color: '#78350f' }}>
+              No se facturó sola: {venta.ml_factura_error}
+            </div>
           )}
 
           {/* Imprimir / PDF */}
